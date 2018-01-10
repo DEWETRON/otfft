@@ -1,4 +1,5 @@
-# otfft OTFFT is a high-speed FFT library using the Stockham's
+# otfft
+OTFFT is a high-speed FFT library using the Stockham's
 algorithm and AVX.  In addition, C++ template metaprogramming
 technique is used in OTFFT. And OTFFT is a mixed-radix FFT.
 
@@ -23,23 +24,29 @@ depending on your used build system and operating system.
     using OTFFT::simd_malloc;
     using OTFFT::simd_free;
 
-    void f(int N) { complex_t* x = (complex_t*)
-    simd_malloc(N*sizeof(complex_t)); // do something OTFFT::FFT
-    fft(N); // creation of FFT object. N is sequence length.
-    fft.fwd(x); // execution of transformation. x is input and output
-    // do something simd_free(x); } ```
+    void f(int N)
+    {
+        complex_t* x = (complex_t*) simd_malloc(N*sizeof(complex_t));
+        // do something
+        OTFFT::FFT fft(N); // creation of FFT object. N is sequence length.
+        fft.fwd(x); // execution of transformation. x is input and output
+        // do something
+        simd_free(x);
+}
 ```
 
 complex_t is defined as follows.
 
 ``` c++
-    struct complex_t { double Re, Im;
+    struct complex_t
+    {
+        double Re, Im;
 
-    complex_t() : Re(0), Im(0) {} complex_t(const double& x) :
-    Re(x), Im(0) {} complex_t(const double& x, const double& y) :
-    Re(x), Im(y) {} complex_t(const std::complex<double>& z) :
-    Re(z.real()), Im(z.imag()) {} operator std::complex<double>()
-    { return std::complex(Re, Im); }
+        complex_t() : Re(0), Im(0) {}
+        complex_t(const double& x) : Re(x), Im(0) {}
+        complex_t(const double& x, const double& y) : Re(x), Im(y) {}
+        complex_t(const std::complex<double>& z) : Re(z.real()), Im(z.imag()) {}
+        operator std::complex<double>(){ return std::complex(Re, Im); }
 
     // ...
     };
@@ -47,15 +54,15 @@ complex_t is defined as follows.
 
 There are member functions, such as the following.
 
-    fwd(x) -- DFT(with 1/N normalization) x:input/output fwd0(x) --
-    DFT(non normalization) x:input/output fwdu(x) -- DFT(unitary
-    transformation) x:input/output fwdn(x) -- DFT(with 1/N
-    normalization) x:input/output
+    fwd(x)  -- DFT(with 1/N normalization) x:input/output
+    fwd0(x) -- DFT(non normalization) x:input/output
+    fwdu(x) -- DFT(unitary transformation) x:input/output
+    fwdn(x) -- DFT(with 1/N normalization) x:input/output
 
-    inv(x) -- IDFT(non normalization) x:input/output inv0(x) --
-    IDFT(non normalization) x:input/output invu(x) -- IDFT(unitary
-    transformation) x:input/output invn(x) -- IDFT(with 1/N
-    normalization) x:input/output
+    inv(x)  -- IDFT(non normalization) x:input/output
+    inv0(x) -- IDFT(non normalization) x:input/output
+    invu(x) -- IDFT(unitary transformation) x:input/output
+    invn(x) -- IDFT(with 1/N normalization) x:input/output
 
 To change the FFT size, do the following.
 
@@ -69,12 +76,20 @@ To use in a multi-threaded environment, we do as follows.
     using OTFFT::simd_malloc;
     using OTFFT::simd_free;
 
-    void f(int N) { complex_t* x = (complex_t*)
-    simd_malloc(N*sizeof(complex_t)); complex_t* y = (complex_t*)
-    simd_malloc(N*sizeof(complex_t)); // do someting OTFFT::FFT0
-    fft(N); fft.fwd(x, y); // x is input/output. y is work area // do
-    something fft.inv(x, y); // x is input/output. y is work area //
-    do someting simd_free(y); simd_free(x); }
+    void f(int N)
+    {
+        complex_t* x = (complex_t*) simd_malloc(N*sizeof(complex_t));
+        complex_t* y = (complex_t*) simd_malloc(N*sizeof(complex_t));
+        // do someting
+        OTFFT::FFT0 fft(N);
+        fft.fwd(x, y); // x is input/output. y is work area
+        // do something
+        fft.inv(x, y);
+        // x is input/output. y is work area
+        // do someting
+        simd_free(y);
+        simd_free(x);
+    }
 ```
 
 Please note that "OTFFT::FFT" was changed to "OTFFT::FFT0".
