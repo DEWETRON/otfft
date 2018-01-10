@@ -1,0 +1,13 @@
+//
+// DO NOT ADD IT TO SOURCE CONTROL.
+//
+// otfft_config.h header for compile time configuration is GENERATED!
+//
+
+#pragma once
+
+#cmakedefine OTFFT_WITH_SSE2
+
+#cmakedefine OTFFT_WITH_AVX
+
+#cmakedefine OTFFT_WITH_AVX2
