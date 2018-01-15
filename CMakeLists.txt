@@ -38,14 +38,13 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   #
-  # define SW_APP_ROOT
-  get_filename_component(SW_APP_ROOT ../.. ABSOLUTE)
+  # define PROJECT_ROOT
+  get_filename_component(PROJECT_ROOT ../.. ABSOLUTE)
 
   # expand cmake search path to check for project settings
   set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
-    ${SW_APP_ROOT}/build_util/cmake
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake
   )
 
   #
@@ -59,15 +58,18 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   #
   # Set the output directory so that all artefacts will be at the same place
   SetCommonOutputDirectory()
+
+  
   message(STATUS "CMAKE_LIBRARY_OUTPUT_DIRECTORY = ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
   message(STATUS "CMAKE_ARCHIVE_OUTPUT_DIRECTORY = ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
   message(STATUS "CMAKE_RUNTIME_OUTPUT_DIRECTORY = ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-endif()
 
-# Support for OpenMP
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.7)
-  message(STATUS "OpenMP disabled")
-else()
+
+  # Support for OpenMP
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.7)
+    message(STATUS "OpenMP disabled")
+  else()
+  endif()
   find_package(OpenMP REQUIRED)
 endif()
 
