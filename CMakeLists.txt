@@ -11,6 +11,10 @@ set(LIBNAME otfft)
 project(otfft)
 
 #
+# Enable unit tests
+enable_testing()
+
+#
 # otfft Standalone target support
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 2.8.11)
