@@ -1,4 +1,4 @@
-# otfft
+# otfft ![travis-ci](https://travis-ci.org/DEWETRON/otfft.svg?branch=master)
 OTFFT is a high-speed FFT library using the Stockham's
 algorithm and AVX.  In addition, C++ template metaprogramming
 technique is used in OTFFT. And OTFFT is a mixed-radix FFT.
@@ -7,8 +7,9 @@ technique is used in OTFFT. And OTFFT is a mixed-radix FFT.
 OTFFT is developed by OK Ojisan(Takuya OKAHISA). It's original
 homepage is http://wwwa.pikara.ne.jp/okojisan/otfft-en/.
 
-The DEWETRON fork uses the original source code with improvements: *
-multi cpu ISS builds (AVX, SSE2,...)  * unit test coverage
+The DEWETRON fork uses the original source code with improvements:
+* multi cpu ISS builds (AVX, SSE2,...)
+* unit test coverage
 
 At the time of this writing, there is no existing up-to-date fork.
 
