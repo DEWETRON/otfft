@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+
+# Generated header
+inc/otfft_config.h

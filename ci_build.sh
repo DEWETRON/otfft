@@ -12,7 +12,7 @@ cmake ..
 
 # build
 export OMP_NUM_THREADS=4
-make -j4
+make -j4 || exit 1
 
 # test
-ctest
+ctest || exit 1

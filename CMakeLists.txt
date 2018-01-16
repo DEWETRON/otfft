@@ -75,6 +75,9 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   else()
   endif()
   find_package(OpenMP REQUIRED)
+
+
+  find_package(Boost COMPONENTS unit_test_framework)
 endif()
 
 if(OPENMP_FOUND)
@@ -394,4 +397,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   )
 endif()
 
-add_subdirectory(unit_tests)
+if (Boost_FOUND)
+  add_subdirectory(unit_tests)
+endif()
