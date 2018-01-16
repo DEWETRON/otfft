@@ -1,4 +1,4 @@
-# otfft ![travis-ci](https://travis-ci.org/DEWETRON/otfft.svg?branch=master)
+# otfft [![travis-ci](https://travis-ci.org/DEWETRON/otfft.svg?branch=master)](https://travis-ci.org/DEWETRON/otfft)
 OTFFT is a high-speed FFT library using the Stockham's
 algorithm and AVX.  In addition, C++ template metaprogramming
 technique is used in OTFFT. And OTFFT is a mixed-radix FFT.
