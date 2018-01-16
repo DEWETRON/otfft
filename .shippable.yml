@@ -1,0 +1,16 @@
+# shippable CI build file
+
+language: c
+compiler:
+  - gcc
+build:
+  pre_ci_boot:
+    image_name: drydock/u16cppall
+    image_tag: tip
+  ci:
+    - shippable_retry sudo apt-get -y -qq update
+    - shippable_retry sudo apt-get -y -qq install --no-install-recommends cmake extra-cmake-modules
+    # Check versions of gcc, g++ and cmake
+    - gcc -v && g++ -v && cmake --version
+    # Run your build commands next
+    - ./ci_build.sh
