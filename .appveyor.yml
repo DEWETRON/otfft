@@ -30,12 +30,12 @@ environment:
     BOOST_ROOT: "C:\\Libraries\\boost_1_58_0"
 
   matrix:
-    - GENERATOR: "Visual Studio 2013 Win64"
+    - GENERATOR: "Visual Studio 12 2013 Win64"
       CONFIG: Release
-      BOOST_LIBRARYDIR: "%BOOST_ROOT%\\lib64-msvc-13.0"
-    - GENERATOR: "Visual Studio 2013 Win64"
+      BOOST_LIBRARYDIR: "%BOOST_ROOT%\\lib64-msvc-12.0"
+    - GENERATOR: "Visual Studio 12 2013 Win64"
       CONFIG: Debug
-      BOOST_LIBRARYDIR: "%BOOST_ROOT%\\lib64-msvc-13.0"
+      BOOST_LIBRARYDIR: "%BOOST_ROOT%\\lib64-msvc-12.0"
 
 
 
