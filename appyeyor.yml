@@ -1,0 +1,48 @@
+#---------------------------------#
+#      general configuration      #
+#---------------------------------#
+version: '{build}'
+
+branches:
+  only:
+  - master
+
+# Do not build on tags (GitHub and BitBucket)
+skip_tags: true
+
+# Start builds on tags only (GitHub and BitBucket)
+skip_non_tags: true
+
+# Maximum number of concurrent jobs for the project
+max_jobs: 1
+
+image:
+- Visual Studio 2013
+
+# clone directory
+clone_folder: c:\projects\otfft
+
+# set clone depth
+clone_depth: 5   
+
+environment:
+  global:
+    BOOST_ROOT: "C:\\Libraries\\boost_1_58_0"
+
+  matrix:
+    - GENERATOR: "Visual Studio 2013 Win64"
+      CONFIG: Release
+      BOOST_LIBRARYDIR: "%BOOST_ROOT%\\lib64-msvc-13.0"
+    - GENERATOR: "Visual Studio 2013 Win64"
+      CONFIG: Debug
+      BOOST_LIBRARYDIR: "%BOOST_ROOT%\\lib64-msvc-13.0"
+
+
+
+build_script:
+  - cmake "-G%GENERATOR%" -H. -B_builds
+  - cmake --build _builds --config "%CONFIG%"
+
+test_script:
+  - ps: cd _builds
+  - ctest -VV -C "%CONFIG%"
