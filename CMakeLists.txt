@@ -103,14 +103,6 @@ endif()
 # Generate otfft_config.h file
 configure_file(src/otfft_config.h.in ${CMAKE_CURRENT_LIST_DIR}/inc/otfft_config.h)
 
-
-#
-# System includes have warnings switched off
-include_directories(
-  SYSTEM
-  ${Boost_INCLUDE_DIRS}
-)
-
 #
 # Library includes have pedantic warnings switched on
 include_directories(
@@ -139,7 +131,7 @@ set(OTFFT_HEADER_FILES
   src/otfft_avxdif8.h
   src/otfft_avxdif8omp.h
   src/otfft_avxdif16.h
-  src/otfft_avxdif16omp.h
+  src/otfft_avxdif16omp.h<
   src/otfft_avxdit4.h
   src/otfft_avxdit4omp.h
   src/otfft_avxdit8.h

@@ -33,3 +33,6 @@
 
 # Generated header
 inc/otfft_config.h
+
+# build dir
+build
