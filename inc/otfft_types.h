@@ -20,10 +20,6 @@
 #include <complex>
 #include <new>
 
-#if __cplusplus < 201103L
-#define noexcept
-#endif
-
 #if __GNUC__ >= 3
 #define force_inline  __attribute__((const,always_inline))
 #define force_inline2 __attribute__((pure,always_inline))
@@ -34,17 +30,24 @@
 #define force_inline3
 #endif
 
-#ifdef _MSC_VER
-//=============================================================================
-// for Visual C++
-//=============================================================================
 
-#if _MSC_VER < 1900
-#define noexcept
+
+//=============================================================================
+// noexcept is not supported for all compilers
+#if defined(__clang__)
+#  if !__has_feature(cxx_noexcept)
+#    define noexcept
+#  endif
+#else
+#  if defined(__GXX_EXPERIMENTAL_CXX0X__) && __GNUC__ * 10 + __GNUC_MINOR__ >= 46 || \
+      defined(_MSC_VER) && _MSC_VER >= 1900
+	// everything fine ...
+#  else
+#    define noexcept
+#  endif
 #endif
-
 //=============================================================================
-#endif // _MSC_VER
+
 
 #ifdef __MINGW32__
 #include <malloc.h>

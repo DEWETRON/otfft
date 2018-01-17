@@ -7,6 +7,9 @@
 
 #include "otfft_config.h"
 #include "otfft_platform.h"
+#include "otfft.h"
+#include "otfft_misc.h"
+
 
 #include <thread>
 #include <array>
@@ -37,8 +40,6 @@
 #endif
 #endif
 
-#include "otfft.h"
-#include "otfft_misc.h"
 
 #ifdef OTFFT_WITH_AVX2
 #include "otfft_avx2.h"
