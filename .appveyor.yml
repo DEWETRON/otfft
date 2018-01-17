@@ -22,32 +22,39 @@ clone_folder: c:\projects\otfft
 # set clone depth
 clone_depth: 5   
 
+# images
+image:
+  - Visual Studio 2017
+  - Visual Studio 2013
+
 environment:
   matrix:
     - GENERATOR: "Visual Studio 15 2017 Win64"
-      image: Visual Studio 2017
       CONFIG: Release     
       BOOST_ROOT: "C:\\Libraries\\boost_1_65_1"
       BOOST_LIBRARYDIR: "%BOOST_ROOT%\\lib64-msvc-14.1"
 
     - GENERATOR: "Visual Studio 15 2017 Win64"
-      image: Visual Studio 2017
       CONFIG: Debug
       BOOST_ROOT: "C:\\Libraries\\boost_1_65_1"
       BOOST_LIBRARYDIR: "%BOOST_ROOT%\\lib64-msvc-14.1"
 
     - GENERATOR: "Visual Studio 12 2013 Win64"
-      image: Visual Studio 2013
       CONFIG: Release
       BOOST_ROOT: "C:\\Libraries\\boost_1_58_0"
       BOOST_LIBRARYDIR: "%BOOST_ROOT%\\lib64-msvc-12.0"
 
     - GENERATOR: "Visual Studio 12 2013 Win64"
-      image: Visual Studio 2013
       CONFIG: Debug
       BOOST_ROOT: "C:\\Libraries\\boost_1_58_0"
       BOOST_LIBRARYDIR: "%BOOST_ROOT%\\lib64-msvc-12.0"
 
+matrix:
+  exclude:
+    - image: Visual Studio 2017
+      GENERATOR: "Visual Studio 12 2013 Win64"
+    - image: Visual Studio 2013
+      GENERATOR: "Visual Studio 15 2017 Win64"
 
 build_script:
   - cmake "-G%GENERATOR%" -H. -B_builds
