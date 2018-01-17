@@ -45,4 +45,5 @@ build_script:
 
 test_script:
   - ps: cd _builds
+  - set PATH=%BOOST_LIBRARYDIR%;%PATH%
   - ctest -VV -C "%CONFIG%"
