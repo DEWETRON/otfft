@@ -131,7 +131,7 @@ set(OTFFT_HEADER_FILES
   src/otfft_avxdif8.h
   src/otfft_avxdif8omp.h
   src/otfft_avxdif16.h
-  src/otfft_avxdif16omp.h<
+  src/otfft_avxdif16omp.h
   src/otfft_avxdit4.h
   src/otfft_avxdit4omp.h
   src/otfft_avxdit8.h
