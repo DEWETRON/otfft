@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include "otfft_types.h"
-
 namespace OTFFT_NAMESPACE {
 
 namespace OTFFT_EightStep { ///////////////////////////////////////////////////

@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "otfft_misc.h"
 #include "otfft_avxdit8.h"
 #include "otfft_avxdit16omp.h"
 
@@ -18,7 +17,7 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
     using namespace OTFFT;
     using namespace OTFFT_MISC;
 
-    static const int OMP_THRESHOLD = 1<<11;
+    constexpr int OMP_THRESHOLD = 1<<11;
 
     ///////////////////////////////////////////////////////////////////////////////
     // Forward Buffterfly Operation

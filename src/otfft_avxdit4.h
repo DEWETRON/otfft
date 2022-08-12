@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "otfft_misc.h"
 #include "otfft_avxdit4omp.h"
 
 namespace OTFFT_NAMESPACE {
@@ -17,7 +16,12 @@ namespace OTFFT_AVXDIT4 { /////////////////////////////////////////////////////
     using namespace OTFFT;
     using namespace OTFFT_MISC;
 
-    static const int OMP_THRESHOLD = 1<<15;
+#ifdef DO_SINGLE_THREAD
+constexpr int OMP_THRESHOLD = 1<<30;
+#else
+//constexpr int OMP_THRESHOLD = 1<<15;
+constexpr int OMP_THRESHOLD = 1<<13;
+#endif
 
     ///////////////////////////////////////////////////////////////////////////////
     // Forward Butterfly Operation

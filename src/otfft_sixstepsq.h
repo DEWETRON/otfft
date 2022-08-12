@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "otfft_types.h"
 #include "otfft_avxdif16.h"
 
 namespace OTFFT_NAMESPACE {

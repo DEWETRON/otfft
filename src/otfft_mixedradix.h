@@ -9,9 +9,6 @@
 
 #include "otfft_misc.h"
 
-#define _USE_MATH_DEFINES
-#include <math.h>
-
 namespace OTFFT_NAMESPACE {
 
 namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
@@ -19,7 +16,11 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
     using namespace OTFFT;
     using namespace OTFFT_MISC;
 
-    static const int OMP_THRESHOLD = 1<<15;
+#ifdef DO_SINGLE_THREAD
+constexpr int OMP_THRESHOLD = 1<<30;
+#else
+constexpr int OMP_THRESHOLD = 1<<15;
+#endif
 
     struct cpx {
         xmm z;
@@ -27,11 +28,11 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
         operator xmm() const noexcept { return z; }
     };
 
-    static inline cpx operator+(const cpx &a, const cpx &b) noexcept
+    static inline cpx operator+(const cpx a, const cpx b) noexcept
     {
         return addpz(a, b);
     }
-    static inline cpx operator*(const cpx &a, const cpx &b) noexcept
+    static inline cpx operator*(const cpx a, const cpx b) noexcept
     {
         return mulpz(a, b);
     }

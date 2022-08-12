@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include "otfft_misc.h"
-
 namespace OTFFT_NAMESPACE {
 
 namespace OTFFT_AVXDIT4omp { //////////////////////////////////////////////////

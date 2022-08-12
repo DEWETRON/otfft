@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "otfft_misc.h"
 #include "otfft_avxdif4.h"
 #include "otfft_avxdif8omp.h"
 
