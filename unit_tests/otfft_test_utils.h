@@ -3,6 +3,9 @@
 
 #include "otfft.h"
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -49,7 +52,7 @@ namespace test
             const double normalized_frequency = m_frequency / m_sample_rate;
             for (std::size_t sample_idx{0}; sample_idx < sample_count; ++sample_idx)
             {
-                m_data[sample_idx] = m_amplitude * std::sin(2. * CONSTANT::PI * normalized_frequency * sample_idx + m_phase * 2. * CONSTANT::PI);
+                m_data[sample_idx] = m_amplitude * std::sin(2. * M_PI * normalized_frequency * sample_idx + m_phase * 2. * M_PI);
             }
         }
 

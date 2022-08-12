@@ -11,6 +11,9 @@
 #include <random>
 #include <vector>
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 namespace
 {
     template <OTFFT::TransformationType TR_TYPE, OTFFT::OptimizationType OPT_TYPE>
@@ -22,6 +25,7 @@ namespace
         auto gen = std::bind(dist, mersenne_engine);
 
         std::vector<OTFFT::complex_t> expected;
+        expected.reserve(SIZE);
 
         for (auto n = 0; n < SIZE; ++n)
         {
@@ -70,6 +74,7 @@ namespace
         auto gen = std::bind(dist, mersenne_engine);
 
         std::vector<double> expected;
+        expected.reserve(SIZE);
 
         for (auto n = 0; n < SIZE; ++n)
         {

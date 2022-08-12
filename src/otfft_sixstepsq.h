@@ -13,8 +13,13 @@ namespace OTFFT_NAMESPACE {
 
 namespace OTFFT_SixStep { /////////////////////////////////////////////////////
 
-    static const int OMP_THRESHOLD1 = 1<<13;
-    static const int OMP_THRESHOLD2 = 1<<17;
+#ifdef DO_SINGLE_THREAD
+    constexpr int OMP_THRESHOLD1 = 1<<30;
+    constexpr int OMP_THRESHOLD2 = 1<<30;
+#else
+    constexpr int OMP_THRESHOLD1 = 1<<13;
+    constexpr int OMP_THRESHOLD2 = 1<<17;
+#endif
 
     template <int log_N, int s, int mode, bool sng> struct fwdffts_body
     {

@@ -37,7 +37,7 @@ namespace OTFFT_NAMESPACE
 
             void setup(const int n)
             {
-                const double theta0 = 2*CONSTANT::PI/n;
+                const double theta0 = 2*M_PI/n;
                 N = n;
                 weight.setup(n+1); W = &weight;
                 if (n < OMP_THRESHOLD) {

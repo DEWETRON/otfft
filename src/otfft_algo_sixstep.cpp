@@ -30,12 +30,13 @@ namespace OTFFT_NAMESPACE
 
         struct FFT0 : FFT_IF
         {
+            typedef complex_t* __restrict complex_ptr;
             int N, log_N;
             simd_array<complex_t> weight;
-            complex_t* __restrict W;
             simd_array<complex_t> weight_sub;
-            complex_t* __restrict Ws;
             simd_array<index_t> index;
+            complex_ptr W;
+            complex_ptr Ws;
             index_t* __restrict ip;
 
             FFT0() noexcept;

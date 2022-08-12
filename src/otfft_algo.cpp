@@ -211,7 +211,7 @@ namespace OTFFT_NAMESPACE
         for (log_N = 0; n > 1; n >>= 1) log_N++;
         fft.setup(N/2);
         weight.setup(N+1); U = &weight;
-        const double theta0 = 2*CONSTANT::PI/N;
+        const double theta0 = 2*M_PI/N;
         const int Nh = N/2;
         const int Nq = N/4;
         const int Ne = N/8;
@@ -505,7 +505,7 @@ namespace OTFFT_NAMESPACE
         N = n;
         rfft.setup(N);
         weight.setup(N+1); V = &weight;
-        const double theta0 = CONSTANT::PI/(2*N);
+        const double theta0 = M_PI/(2*N);
         const int Nh = N/2;
         if (N < 2) {}
         else if (N < OMP_THRESHOLD_W) for (int p = 0; p <= Nh; p++) {
@@ -743,7 +743,7 @@ namespace OTFFT_NAMESPACE
         work1.setup(L); a = &work1;
         work2.setup(L); b = &work2;
         weight.setup(N2+1); W = &weight;
-        const double theta0 = CONSTANT::PI/N;
+        const double theta0 = M_PI/N;
         W[0] = W[N2] = 1; W[N] = -1;
         if (N < OMP_THRESHOLD_W) for (int p = 1; p < N; p++) {
             const double theta = p * theta0;
