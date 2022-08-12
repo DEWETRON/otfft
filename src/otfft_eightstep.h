@@ -25,15 +25,15 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
 
     template <int log_N, int mode> struct fwdfftr
     {
-        static const int N = 1 << log_N;
-        static const int N0 = 0;
-        static const int N1 = N/8;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
+        static constexpr int N = 1 << log_N;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/8;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
 
         static inline void transpose_kernel(
                 const int p, complex_vector x, complex_vector y) noexcept
@@ -90,6 +90,7 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
             const ymm  s15 =       subpz2(x1, x5);
             const ymm  a37 =       addpz2(x3, x7);
             const ymm js37 = jxpz2(subpz2(x3, x7));
+
             const ymm    a04_p1_a26 =        addpz2(a04,  a26);
             const ymm    s04_mj_s26 =        subpz2(s04, js26);
             const ymm    a04_m1_a26 =        subpz2(a04,  a26);
@@ -168,15 +169,15 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
 
     template <int log_N, int mode> struct invfftr
     {
-        static const int N = 1 << log_N;
-        static const int N0 = 0;
-        static const int N1 = N/8;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
+        static constexpr int N = 1 << log_N;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/8;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
 
         static inline void transpose_kernel(
                 const int p, complex_vector x, complex_vector y) noexcept
@@ -202,6 +203,7 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
             const ymm x5 = scalepz2<N,mode>(getpz2(x+p+N5));
             const ymm x6 = scalepz2<N,mode>(getpz2(x+p+N6));
             const ymm x7 = scalepz2<N,mode>(getpz2(x+p+N7));
+
             const ymm  a04 =       addpz2(x0, x4);
             const ymm  s04 =       subpz2(x0, x4);
             const ymm  a26 =       addpz2(x2, x6);
@@ -210,6 +212,7 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
             const ymm  s15 =       subpz2(x1, x5);
             const ymm  a37 =       addpz2(x3, x7);
             const ymm js37 = jxpz2(subpz2(x3, x7));
+
             const ymm    a04_p1_a26 =        addpz2(a04,  a26);
             const ymm    s04_pj_s26 =        addpz2(s04, js26);
             const ymm    a04_m1_a26 =        subpz2(a04,  a26);

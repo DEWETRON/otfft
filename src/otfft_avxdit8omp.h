@@ -22,15 +22,15 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
 
     template <int n, int s> struct fwdcore
     {
-        static const int N  = n*s;
-        static const int N0 = 0;
-        static const int N1 = N/8;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
+        static constexpr int N  = n*s;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/8;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -59,6 +59,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
                 const ymm y5 = mulpz2(w5p, getpz2(yq_s8p+s*5));
                 const ymm y6 = mulpz2(w6p, getpz2(yq_s8p+s*6));
                 const ymm y7 = mulpz2(w7p, getpz2(yq_s8p+s*7));
+
                 const ymm  a04 =       addpz2(y0, y4);
                 const ymm  s04 =       subpz2(y0, y4);
                 const ymm  a26 =       addpz2(y2, y6);
@@ -89,14 +90,14 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
 
     template <int N> struct fwdcore<N,1>
     {
-        static const int N0 = 0;
-        static const int N1 = N/8;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/8;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -164,7 +165,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
 
     template <int s, bool eo, int mode> struct fwdend<8,s,eo,mode>
     {
-        static const int N = 8*s;
+        static constexpr int N = 8*s;
 
         void operator()(complex_vector x, complex_vector y) const noexcept
         {
@@ -300,15 +301,15 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
 
     template <int n, int s> struct invcore
     {
-        static const int N  = n*s;
-        static const int N0 = 0;
-        static const int N1 = N/8;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
+        static constexpr int N  = n*s;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/8;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -337,6 +338,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
                 const ymm y5 = mulpz2(w5p, getpz2(yq_s8p+s*5));
                 const ymm y6 = mulpz2(w6p, getpz2(yq_s8p+s*6));
                 const ymm y7 = mulpz2(w7p, getpz2(yq_s8p+s*7));
+
                 const ymm  a04 =       addpz2(y0, y4);
                 const ymm  s04 =       subpz2(y0, y4);
                 const ymm  a26 =       addpz2(y2, y6);
@@ -367,19 +369,18 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
 
     template <int N> struct invcore<N,1>
     {
-        static const int N0 = 0;
-        static const int N1 = N/8;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/8;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
         {
-            //const_complex_vector WN = W + N;
 #pragma omp for schedule(static) nowait
             for (int p = 0; p < N/8; p += 2) {
                 complex_vector x_p  = x + p;
@@ -444,7 +445,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
 
     template <int s, bool eo, int mode> struct invend<8,s,eo,mode>
     {
-        static const int N  = 8*s;
+        static constexpr int N  = 8*s;
 
         void operator()(complex_vector x, complex_vector y) const noexcept
         {
@@ -581,7 +582,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
     inline void fwd(const int log_N,
                     complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_length;
+        constexpr int mode = scale_length;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -615,7 +616,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
     inline void fwd0(const int log_N,
                      complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_1;
+        constexpr int mode = scale_1;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -649,7 +650,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
     inline void fwdu(const int log_N,
                      complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_unitary;
+        constexpr int mode = scale_unitary;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -691,7 +692,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
     inline void inv(const int log_N,
                     complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_1;
+        constexpr int mode = scale_1;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -731,7 +732,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
     inline void invu(const int log_N,
                      complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_unitary;
+        constexpr int mode = scale_unitary;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -765,7 +766,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
     inline void invn(const int log_N,
                      complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_length;
+        constexpr int mode = scale_length;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;

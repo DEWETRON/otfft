@@ -9,10 +9,10 @@ using namespace OTFFT;
 
 typedef struct FFT_IF
 {
-    virtual ~FFT_IF() {}
+    virtual ~FFT_IF() = default;
 
     virtual void setup(int n) = 0;
-    virtual void setup2(const int n) = 0;
+    virtual void setup2(int n) = 0;
     virtual void fwd(complex_vector x, complex_vector y) const noexcept = 0;
     virtual void fwd0(complex_vector x, complex_vector y) const noexcept = 0;
     virtual void fwdu(complex_vector x, complex_vector y) const noexcept = 0;

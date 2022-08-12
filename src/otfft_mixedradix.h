@@ -496,7 +496,7 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
     void fwdfftany(const int r, const int n, const int s, const bool eo,
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const xmm zero = { 0, 0 };
+        constexpr xmm zero = { 0, 0 };
         const int N = n*s;
         int k = r;
         while (n%k != 0) {
@@ -1053,7 +1053,7 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
     void invfftany(const int r, const int n, const int s, const bool eo,
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const xmm zero = { 0, 0 };
+        constexpr xmm zero = { 0, 0 };
         const int N = n*s;
         int k = r;
         while (n%k != 0) {
@@ -1632,7 +1632,7 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
     void fwdfftanyp(const int r, const int n, const int s, const bool eo,
                     complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const xmm zero = { 0, 0 };
+        constexpr xmm zero = { 0, 0 };
         const int N = n*s;
         int k = r;
         while (n%k != 0) {
@@ -2216,7 +2216,7 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
     void invfftanyp(const int r, const int n, const int s, const bool eo,
                     complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const xmm zero = { 0, 0 };
+        constexpr xmm zero = { 0, 0 };
         const int N = n*s;
         int k = r;
         while (n%k != 0) {

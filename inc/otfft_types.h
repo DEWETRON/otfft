@@ -82,8 +82,8 @@ namespace OTFFT
         complex_t() noexcept : Re(0), Im(0) {}
         complex_t(double x) noexcept : Re(x), Im(0) {}
         complex_t(double x, double y) noexcept : Re(x), Im(y) {}
-        complex_t(const std::complex<double>& z) : Re(z.real()), Im(z.imag()) {}
-        operator std::complex<double>() { return std::complex<double>(Re, Im); }
+        complex_t(const std::complex<double>& z) noexcept : Re(z.real()), Im(z.imag()) {}
+        operator std::complex<double>() const { return std::complex<double>(Re, Im); }
 
         complex_t& operator+=(const complex_t& z) noexcept
         {
@@ -173,6 +173,11 @@ namespace OTFFT
     {
         return complex_t(-z.Im, -z.Re);
     }
+    static inline complex_t mjx(const complex_t& z) noexcept force_inline;
+    static inline complex_t mjx(const complex_t& z) noexcept
+    {
+        return complex_t(z.Im, -z.Re);
+    }
     static inline complex_t v8x(const complex_t& z) noexcept force_inline;
     static inline complex_t v8x(const complex_t& z) noexcept
     {
@@ -229,10 +234,10 @@ namespace OTFFT
 
 namespace OTFFT
 {
-    static inline double sqrt_aux(double a, double x, double y)
+    constexpr double sqrt_aux(double a, double x, double y)
     {
         return x == y ? x : sqrt_aux(a, (x + a/x)/2, x);
     }
 
-    static inline double mysqrt(double x) { return sqrt_aux(x, x/2, x); }
+    constexpr double mysqrt(double x) { return sqrt_aux(x, x/2, x); }
 } // namespace OTFFT

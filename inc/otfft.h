@@ -50,7 +50,7 @@ namespace OTFFT
     class ComplexFFT
     {
     public:
-        virtual ~ComplexFFT() {}
+        virtual ~ComplexFFT() = default;
 
         /**
          * @brief Setup the sequence length of the algorithm (up to 2^30)
@@ -97,7 +97,7 @@ namespace OTFFT
     class RealFFT
     {
     public:
-        virtual ~RealFFT() {}
+        virtual ~RealFFT() = default;
 
         /**
          * @brief Setup the sequence length of the algorithm (up to 2^30)
@@ -144,7 +144,7 @@ namespace OTFFT
     class RealDCT
     {
     public:
-        virtual ~RealDCT() {}
+        virtual ~RealDCT() = default;
 
         /**
          * @brief Setup the sequence length of the algorithm (up to 2^30)

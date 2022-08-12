@@ -19,10 +19,11 @@ namespace OTFFT_Sixstep { /////////////////////////////////////////////////////
 
     template <int log_N, int s, int mode, bool sng> struct fwdffts_body
     {
-        static const int log_n = log_N/2;
-        static const int N = 1 << log_N;
-        static const int n = 1 << log_n;
-        static const int m = n/2*(n/2+1)/2;
+        static constexpr int log_n = log_N/2;
+        static constexpr int N = 1 << log_N;
+        static constexpr int n = 1 << log_n;
+        static constexpr int m = n/2*(n/2+1)/2;
+        static constexpr int Ns = N*s;
 
         static void transpose_kernel(const int k, const int p, complex_vector x) noexcept
         {
@@ -216,10 +217,11 @@ namespace OTFFT_Sixstep { /////////////////////////////////////////////////////
 
     template <int log_N, int s, int mode, bool sng> struct invffts_body
     {
-        static const int log_n = log_N/2;
-        static const int N = 1 << log_N;
-        static const int n = 1 << log_n;
-        static const int m = n/2*(n/2+1)/2;
+        static constexpr int log_n = log_N/2;
+        static constexpr int N = 1 << log_N;
+        static constexpr int n = 1 << log_n;
+        static constexpr int m = n/2*(n/2+1)/2;
+        static constexpr int Ns = N*s;
 
         static inline void transpose_kernel(
                 const int k, const int p, complex_vector x) noexcept
