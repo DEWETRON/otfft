@@ -389,6 +389,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   )
 endif()
 
+if (UNIX)
+  find_program(MEMORYCHECK_COMMAND valgrind)
+  set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full" )
+endif(UNIX)
+
 if (Boost_FOUND)
   add_subdirectory(unit_tests)
 endif()
