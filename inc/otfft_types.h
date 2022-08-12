@@ -20,6 +20,10 @@
 #include <complex>
 #include <new>
 
+#if __cplusplus < 201103L
+#define noexcept
+#endif
+
 #if __GNUC__ >= 3
 #define force_inline  __attribute__((const,always_inline))
 #define force_inline2 __attribute__((pure,always_inline))
@@ -30,24 +34,17 @@
 #define force_inline3
 #endif
 
-
-
+#ifdef _MSC_VER
 //=============================================================================
-// noexcept is not supported for all compilers
-#if defined(__clang__)
-#  if !__has_feature(cxx_noexcept)
-#    define noexcept
-#  endif
-#else
-#  if defined(__GXX_EXPERIMENTAL_CXX0X__) && __GNUC__ * 10 + __GNUC_MINOR__ >= 46 || \
-      defined(_MSC_VER) && _MSC_VER >= 1900
-	// everything fine ...
-#  else
-#    define noexcept
-#  endif
+// for Visual C++
+//=============================================================================
+
+#if _MSC_VER < 1900
+#define noexcept
 #endif
-//=============================================================================
 
+//=============================================================================
+#endif // _MSC_VER
 
 #ifdef __MINGW32__
 #include <malloc.h>
@@ -83,9 +80,8 @@ namespace OTFFT
         double Re, Im;
 
         complex_t() noexcept : Re(0), Im(0) {}
-        complex_t(const double& x) noexcept : Re(x), Im(0) {}
-        complex_t(const double& x, const double& y) noexcept : Re(x), Im(y) {}
-        complex_t(const complex_t& z) noexcept : Re(z.Re), Im(z.Im) {}
+        complex_t(double x) noexcept : Re(x), Im(0) {}
+        complex_t(double x, double y) noexcept : Re(x), Im(y) {}
         complex_t(const std::complex<double>& z) : Re(z.real()), Im(z.imag()) {}
         operator std::complex<double>() { return std::complex<double>(Re, Im); }
 

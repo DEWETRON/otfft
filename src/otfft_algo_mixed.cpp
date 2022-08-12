@@ -28,11 +28,11 @@ namespace OTFFT_NAMESPACE
     {
         struct FFT0 : FFT_IF
         {
-            int N, log_N;
+            int N;
             simd_array<complex_t> weight;
             complex_t* __restrict W;
 
-            FFT0() noexcept : N(0), log_N(0), W(0) {}
+            FFT0() noexcept : N(0), W(0) {}
             FFT0(const int n) { setup(n); }
 
             void setup(int n)

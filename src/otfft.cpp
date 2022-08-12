@@ -6,10 +6,9 @@
 // from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
 
 #include "otfft_config.h"
-#include "otfft_platform.h"
 #include "otfft.h"
 #include "otfft_misc.h"
-
+#include "otfft_platform.h"
 
 #include <thread>
 #include <array>
@@ -40,7 +39,6 @@
 #endif
 #endif
 
-
 #ifdef OTFFT_WITH_AVX2
 #include "otfft_avx2.h"
 #endif
@@ -52,8 +50,6 @@
 #ifdef OTFFT_WITH_SSE2
 #include "otfft_sse2.h"
 #endif
-
-
 
 namespace
 {

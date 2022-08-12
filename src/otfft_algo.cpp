@@ -70,7 +70,7 @@ namespace OTFFT_NAMESPACE
             case 22: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
             case 23: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
             case 24: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
-            default: obj = OTFFT_MixedRadix::instance(); obj->setup(log_N); break;
+            default: obj = OTFFT_MixedRadix::instance(); obj->setup(N); break;
             }
         }
         catch (...)
@@ -119,7 +119,7 @@ namespace OTFFT_NAMESPACE
             case 22: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
             case 23: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
             case 24: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
-            default: obj = OTFFT_MixedRadix::instance(); obj->setup(log_N); break;
+            default: obj = OTFFT_MixedRadix::instance(); obj->setup(N); break;
             }
         }
         catch (...)
