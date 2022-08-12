@@ -7,18 +7,14 @@
 # from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
 #
 
+cmake_minimum_required(VERSION 3.0)
+
 set(LIBNAME otfft)
 project(otfft)
 
 #
-# Enable unit tests
-enable_testing()
-
-#
 # otfft Standalone target support
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  cmake_minimum_required(VERSION 2.8.11)
-
   #
   # Set used policies
 
@@ -27,9 +23,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if(POLICY CMP0017)
     cmake_policy(SET CMP0017 OLD)
   endif(POLICY CMP0017)
-
-  # Automatically link QT libs without warning
-  cmake_policy(SET CMP0020 NEW)
 
   # Continue to use the COMPILE_DEFINITIONS_<Config> properties
   if(POLICY CMP0043)
@@ -58,6 +51,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   #
   # Get general cmake settings
   include(CMakeSettings)
+  
+  #
+  # Enable unit tests
+  enable_testing()
+  include (CTest)
 
   #
   # Set the output directory so that all artefacts will be at the same place
