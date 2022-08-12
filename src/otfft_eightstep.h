@@ -11,12 +11,12 @@
 
 namespace OTFFT_NAMESPACE {
 
-namespace OTFFT_Eightstep { /////////////////////////////////////////////////////
+namespace OTFFT_EightStep { ///////////////////////////////////////////////////
 
     using namespace OTFFT;
     using namespace OTFFT_MISC;
-    using OTFFT_Sixstep::weight_t;
-    using OTFFT_Sixstep::const_index_vector;
+    using OTFFT_SixStep::weight_t;
+    using OTFFT_SixStep::const_index_vector;
 
     static const int OMP_THRESHOLD1 = 1<<13;
     static const int OMP_THRESHOLD2 = 1<<16;
@@ -117,14 +117,14 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
                 for (int p = 0; p < N1; p += 2) {
                     fft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N0, x+N0, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N1, x+N1, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N2, x+N2, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N3, x+N3, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N4, x+N4, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N5, x+N5, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N6, x+N6, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N7, x+N7, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N0, x+N0, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N1, x+N1, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N2, x+N2, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N3, x+N3, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N4, x+N4, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N5, x+N5, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N6, x+N6, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N7, x+N7, W, Ws);
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);
                 }
@@ -138,7 +138,7 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
                 }
                 #pragma omp for schedule(static)
                 for (int i = 0; i < 8; i++) {
-                    OTFFT_Sixstep::fwdffts8<log_N-3,scale_1,1>()(ip, y+i*N1, x+i*N1, W, Ws);
+                    OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+i*N1, x+i*N1, W, Ws);
                 }
                 #pragma omp for schedule(static)
                 for (int p = 0; p < N1; p += 2) {
@@ -150,14 +150,14 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
                 for (int p = 0; p < N1; p += 2) {
                     fft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1>()(ip, y+N0, x+N0, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1>()(ip, y+N1, x+N1, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1>()(ip, y+N2, x+N2, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1>()(ip, y+N3, x+N3, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1>()(ip, y+N4, x+N4, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1>()(ip, y+N5, x+N5, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1>()(ip, y+N6, x+N6, W, Ws);
-                OTFFT_Sixstep::fwdffts8<log_N-3,scale_1>()(ip, y+N7, x+N7, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N0, x+N0, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N1, x+N1, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N2, x+N2, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N3, x+N3, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N4, x+N4, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N5, x+N5, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N6, x+N6, W, Ws);
+                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N7, x+N7, W, Ws);
                 #pragma omp parallel for schedule(static) firstprivate(x,y)
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);
@@ -239,14 +239,14 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
                 for (int p = 0; p < N1; p += 2) {
                     fft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1,1>()(ip, y+N0, x+N0, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1,1>()(ip, y+N1, x+N1, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1,1>()(ip, y+N2, x+N2, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1,1>()(ip, y+N3, x+N3, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1,1>()(ip, y+N4, x+N4, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1,1>()(ip, y+N5, x+N5, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1,1>()(ip, y+N6, x+N6, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1,1>()(ip, y+N7, x+N7, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N0, x+N0, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N1, x+N1, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N2, x+N2, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N3, x+N3, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N4, x+N4, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N5, x+N5, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N6, x+N6, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N7, x+N7, W, Ws);
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);
                 }
@@ -260,7 +260,7 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
                 }
                 #pragma omp for schedule(static)
                 for (int i = 0; i < 8; i++) {
-                    OTFFT_Sixstep::invffts8<log_N-3,scale_1,1>()(ip, y+i*N1, x+i*N1, W, Ws);
+                    OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+i*N1, x+i*N1, W, Ws);
                 }
                 #pragma omp for schedule(static)
                 for (int p = 0; p < N1; p += 2) {
@@ -272,14 +272,14 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
                 for (int p = 0; p < N1; p += 2) {
                     fft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1>()(ip, y+N0, x+N0, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1>()(ip, y+N1, x+N1, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1>()(ip, y+N2, x+N2, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1>()(ip, y+N3, x+N3, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1>()(ip, y+N4, x+N4, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1>()(ip, y+N5, x+N5, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1>()(ip, y+N6, x+N6, W, Ws);
-                OTFFT_Sixstep::invffts8<log_N-3,scale_1>()(ip, y+N7, x+N7, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N0, x+N0, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N1, x+N1, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N2, x+N2, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N3, x+N3, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N4, x+N4, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N5, x+N5, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N6, x+N6, W, Ws);
+                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N7, x+N7, W, Ws);
                 #pragma omp parallel for schedule(static) firstprivate(x,y)
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);

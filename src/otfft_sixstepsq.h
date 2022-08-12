@@ -12,7 +12,7 @@
 
 namespace OTFFT_NAMESPACE {
 
-namespace OTFFT_Sixstep { /////////////////////////////////////////////////////
+namespace OTFFT_SixStep { /////////////////////////////////////////////////////
 
     static const int OMP_THRESHOLD1 = 1<<13;
     static const int OMP_THRESHOLD2 = 1<<17;

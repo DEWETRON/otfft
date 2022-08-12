@@ -12,7 +12,7 @@
 
 namespace OTFFT_NAMESPACE {
 
-namespace OTFFT_Sixstep { /////////////////////////////////////////////////////
+namespace OTFFT_SixStep { /////////////////////////////////////////////////////
 
     using namespace OTFFT;
     using namespace OTFFT_MISC;

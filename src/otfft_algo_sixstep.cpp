@@ -24,9 +24,9 @@
 
 namespace OTFFT_NAMESPACE
 {
-    namespace OTFFT_Sixstep
+    namespace OTFFT_SixStep
     {
-        using namespace OTFFT_Eightstep;
+        using namespace OTFFT_EightStep;
 
         struct FFT0 : FFT_IF
         {
