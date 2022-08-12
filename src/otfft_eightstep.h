@@ -82,6 +82,7 @@ namespace OTFFT_Eightstep { ////////////////////////////////////////////////////
             const ymm x5 = scalepz2<N,mode>(getpz2(x+p+N5));
             const ymm x6 = scalepz2<N,mode>(getpz2(x+p+N6));
             const ymm x7 = scalepz2<N,mode>(getpz2(x+p+N7));
+
             const ymm  a04 =       addpz2(x0, x4);
             const ymm  s04 =       subpz2(x0, x4);
             const ymm  a26 =       addpz2(x2, x6);

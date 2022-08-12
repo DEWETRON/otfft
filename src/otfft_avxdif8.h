@@ -26,16 +26,16 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
 
     template <int n, int s> struct fwdcore
     {
-        static const int m  = n/8;
-        static const int N  = n*s;
-        static const int N0 = 0;
-        static const int N1 = N/8;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
+        static constexpr int m  = n/8;
+        static constexpr int N  = n*s;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/8;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -92,14 +92,14 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
 
     template <int N> struct fwdcore<N,1>
     {
-        static const int N0 = 0;
-        static const int N1 = N/8;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/8;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -174,7 +174,7 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
 
     template <int s, bool eo, int mode> struct fwdend<8,s,eo,mode>
     {
-        static const int N = 8*s;
+        static constexpr int N = 8*s;
 
         void operator()(complex_vector x, complex_vector y) const noexcept
         {
@@ -306,16 +306,16 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
 
     template <int n, int s> struct invcore
     {
-        static const int m  = n/8;
-        static const int N  = n*s;
-        static const int N0 = 0;
-        static const int N1 = N/8;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
+        static constexpr int m  = n/8;
+        static constexpr int N  = n*s;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/8;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -372,14 +372,14 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
 
     template <int N> struct invcore<N,1>
     {
-        static const int N0 = 0;
-        static const int N1 = N/8;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/8;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -454,7 +454,7 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
 
     template <int s, bool eo, int mode> struct invend<8,s,eo,mode>
     {
-        static const int N  = 8*s;
+        static constexpr int N  = 8*s;
 
         void operator()(complex_vector x, complex_vector y) const noexcept
         {
