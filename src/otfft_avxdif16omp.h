@@ -192,20 +192,6 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 complex_vector y_16p = y + 16*p;
 
                 const ymm w1p = getpz2(W+p);
-                const ymm w2p = mulpz2(w1p, w1p);
-                const ymm w3p = mulpz2(w1p, w2p);
-                const ymm w4p = mulpz2(w2p, w2p);
-                const ymm w5p = mulpz2(w2p, w3p);
-                const ymm w6p = mulpz2(w3p, w3p);
-                const ymm w7p = mulpz2(w3p, w4p);
-                const ymm w8p = mulpz2(w4p, w4p);
-                const ymm w9p = mulpz2(w4p, w5p);
-                const ymm wap = mulpz2(w5p, w5p);
-                const ymm wbp = mulpz2(w5p, w6p);
-                const ymm wcp = mulpz2(w6p, w6p);
-                const ymm wdp = mulpz2(w6p, w7p);
-                const ymm wep = mulpz2(w7p, w7p);
-                const ymm wfp = mulpz2(w7p, w8p);
 
                 const ymm x0 = getpz2(x_p+N0);
                 const ymm x1 = getpz2(x_p+N1);
@@ -281,6 +267,20 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const ymm v8_a19m1a5d_pj_a3bm1a7f = v8xpz2(a19m1a5d_pj_a3bm1a7f);
                 const ymm hf_s19pjs5d_pv_s3bpjs7f = hfxpz2(s19pjs5d_pv_s3bpjs7f);
 
+                const ymm w2p = mulpz2(w1p,w1p);
+                const ymm w3p = mulpz2(w1p,w2p);
+                const ymm w4p = mulpz2(w2p,w2p);
+                const ymm w5p = mulpz2(w2p,w3p);
+                const ymm w6p = mulpz2(w3p,w3p);
+                const ymm w7p = mulpz2(w3p,w4p);
+                const ymm w8p = mulpz2(w4p,w4p);
+                const ymm w9p = mulpz2(w4p,w5p);
+                const ymm wap = mulpz2(w5p,w5p);
+                const ymm wbp = mulpz2(w5p,w6p);
+                const ymm wcp = mulpz2(w6p,w6p);
+                const ymm wdp = mulpz2(w6p,w7p);
+                const ymm wep = mulpz2(w7p,w7p);
+                const ymm wfp = mulpz2(w7p,w8p);
                 const ymm aA =             addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f);
                 const ymm bB = mulpz2(w1p, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
                 const ymm cC = mulpz2(w2p, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
@@ -778,20 +778,6 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 complex_vector y_16p = y + 16*p;
 
                 const ymm w1p = cnjpz2(getpz2(W+p));
-                const ymm w2p = mulpz2(w1p, w1p);
-                const ymm w3p = mulpz2(w1p, w2p);
-                const ymm w4p = mulpz2(w2p, w2p);
-                const ymm w5p = mulpz2(w2p, w3p);
-                const ymm w6p = mulpz2(w3p, w3p);
-                const ymm w7p = mulpz2(w3p, w4p);
-                const ymm w8p = mulpz2(w4p, w4p);
-                const ymm w9p = mulpz2(w4p, w5p);
-                const ymm wap = mulpz2(w5p, w5p);
-                const ymm wbp = mulpz2(w5p, w6p);
-                const ymm wcp = mulpz2(w6p, w6p);
-                const ymm wdp = mulpz2(w6p, w7p);
-                const ymm wep = mulpz2(w7p, w7p);
-                const ymm wfp = mulpz2(w7p, w8p);
 
                 const ymm x0 = getpz2(x_p+N0);
                 const ymm x1 = getpz2(x_p+N1);
@@ -867,6 +853,20 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const ymm v8_a19m1a5d_pj_a3bm1a7f = v8xpz2(a19m1a5d_pj_a3bm1a7f);
                 const ymm hf_s19pjs5d_pv_s3bpjs7f = hfxpz2(s19pjs5d_pv_s3bpjs7f);
 
+                const ymm w2p = mulpz2(w1p,w1p);
+                const ymm w3p = mulpz2(w1p,w2p);
+                const ymm w4p = mulpz2(w2p,w2p);
+                const ymm w5p = mulpz2(w2p,w3p);
+                const ymm w6p = mulpz2(w3p,w3p);
+                const ymm w7p = mulpz2(w3p,w4p);
+                const ymm w8p = mulpz2(w4p,w4p);
+                const ymm w9p = mulpz2(w4p,w5p);
+                const ymm wap = mulpz2(w5p,w5p);
+                const ymm wbp = mulpz2(w5p,w6p);
+                const ymm wcp = mulpz2(w6p,w6p);
+                const ymm wdp = mulpz2(w6p,w7p);
+                const ymm wep = mulpz2(w7p,w7p);
+                const ymm wfp = mulpz2(w7p,w8p);
                 const ymm aA =             addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f);
                 const ymm bB = mulpz2(w1p, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
                 const ymm cC = mulpz2(w2p, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));

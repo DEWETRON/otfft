@@ -637,10 +637,10 @@ namespace OTFFT_AVXDIF16 { ////////////////////////////////////////////////////
                 const int sp   = s*p;
                 const int s16p = 16*sp;
 
-                const ymm w1p = duppz3(W[N-1*sp]);
-                const ymm w2p = duppz3(W[N-2*sp]);
-                const ymm w3p = duppz3(W[N-3*sp]);
-                const ymm w4p = mulpz2(w2p, w2p);
+                const ymm w1p = cnjpz2(duppz3(W[1*sp]));
+                const ymm w2p = cnjpz2(duppz3(W[2*sp]));
+                const ymm w3p = cnjpz2(duppz3(W[3*sp]));
+                const ymm w4p = cnjpz2(duppz3(W[4*sp]));
                 const ymm w5p = mulpz2(w2p, w3p);
                 const ymm w6p = mulpz2(w3p, w3p);
                 const ymm w7p = mulpz2(w3p, w4p);
@@ -656,7 +656,7 @@ namespace OTFFT_AVXDIF16 { ////////////////////////////////////////////////////
                 for (int q = 0; q < s; q += 2) {
                     complex_vector xq_sp   = x + q + sp;
                     complex_vector yq_s16p = y + q + s16p;
-
+#if 0
                     const ymm x0 = getpz2(xq_sp+N0);
                     const ymm x1 = getpz2(xq_sp+N1);
                     const ymm x2 = getpz2(xq_sp+N2);
@@ -682,7 +682,31 @@ namespace OTFFT_AVXDIF16 { ////////////////////////////////////////////////////
                     const ymm a5d = addpz2(x5, xd); const ymm s5d = subpz2(x5, xd);
                     const ymm a3b = addpz2(x3, xb); const ymm s3b = subpz2(x3, xb);
                     const ymm a7f = addpz2(x7, xf); const ymm s7f = subpz2(x7, xf);
+#else
+                    const ymm x0 = getpz2(xq_sp+N0); const ymm x8 = getpz2(xq_sp+N8);
+                    const ymm a08 = addpz2(x0, x8); const ymm s08 = subpz2(x0, x8);
 
+                    const ymm x1 = getpz2(xq_sp+N1); const ymm x9 = getpz2(xq_sp+N9);
+                    const ymm a19 = addpz2(x1, x9); const ymm s19 = subpz2(x1, x9);
+
+                    const ymm x2 = getpz2(xq_sp+N2); const ymm xa = getpz2(xq_sp+Na);
+                    const ymm a2a = addpz2(x2, xa); const ymm s2a = subpz2(x2, xa);
+
+                    const ymm x3 = getpz2(xq_sp+N3); const ymm xb = getpz2(xq_sp+Nb);
+                    const ymm a3b = addpz2(x3, xb); const ymm s3b = subpz2(x3, xb);
+
+                    const ymm x4 = getpz2(xq_sp+N4); const ymm xc = getpz2(xq_sp+Nc);
+                    const ymm a4c = addpz2(x4, xc); const ymm s4c = subpz2(x4, xc);
+
+                    const ymm x5 = getpz2(xq_sp+N5); const ymm xd = getpz2(xq_sp+Nd);
+                    const ymm a5d = addpz2(x5, xd); const ymm s5d = subpz2(x5, xd);
+
+                    const ymm x6 = getpz2(xq_sp+N6); const ymm xe = getpz2(xq_sp+Ne);
+                    const ymm a6e = addpz2(x6, xe); const ymm s6e = subpz2(x6, xe);
+
+                    const ymm x7 = getpz2(xq_sp+N7); const ymm xf = getpz2(xq_sp+Nf);
+                    const ymm a7f = addpz2(x7, xf); const ymm s7f = subpz2(x7, xf);
+#endif
                     const ymm js4c = jxpz2(s4c);
                     const ymm js6e = jxpz2(s6e);
                     const ymm js5d = jxpz2(s5d);
@@ -778,7 +802,7 @@ namespace OTFFT_AVXDIF16 { ////////////////////////////////////////////////////
             for (int p = 0; p < N1; p += 2) {
                 complex_vector x_p   = x + p;
                 complex_vector y_16p = y + 16*p;
-
+#if 0
                 const ymm w1p = cnjpz2(getpz2(W+p));
                 const ymm w2p = mulpz2(w1p, w1p);
                 const ymm w3p = mulpz2(w1p, w2p);
@@ -811,7 +835,39 @@ namespace OTFFT_AVXDIF16 { ////////////////////////////////////////////////////
                 const ymm xd = getpz2(x_p+Nd);
                 const ymm xe = getpz2(x_p+Ne);
                 const ymm xf = getpz2(x_p+Nf);
-
+#else
+                const ymm w1p = cnjpz2(getpz2(W+p));
+                const ymm x0  = getpz2(x_p+N0);
+                const ymm x1  = getpz2(x_p+N1);
+                const ymm w2p = mulpz2(w1p,w1p);
+                const ymm x2  = getpz2(x_p+N2);
+                const ymm w3p = mulpz2(w1p,w2p);
+                const ymm x3  = getpz2(x_p+N3);
+                const ymm w4p = mulpz2(w2p,w2p);
+                const ymm x4  = getpz2(x_p+N4);
+                const ymm w5p = mulpz2(w2p,w3p);
+                const ymm x5  = getpz2(x_p+N5);
+                const ymm w6p = mulpz2(w3p,w3p);
+                const ymm x6  = getpz2(x_p+N6);
+                const ymm w7p = mulpz2(w3p,w4p);
+                const ymm x7  = getpz2(x_p+N7);
+                const ymm w8p = mulpz2(w4p,w4p);
+                const ymm x8  = getpz2(x_p+N8);
+                const ymm w9p = mulpz2(w4p,w5p);
+                const ymm x9  = getpz2(x_p+N9);
+                const ymm wap = mulpz2(w5p,w5p);
+                const ymm xa  = getpz2(x_p+Na);
+                const ymm wbp = mulpz2(w5p,w6p);
+                const ymm xb  = getpz2(x_p+Nb);
+                const ymm wcp = mulpz2(w6p,w6p);
+                const ymm xc  = getpz2(x_p+Nc);
+                const ymm wdp = mulpz2(w6p,w7p);
+                const ymm xd  = getpz2(x_p+Nd);
+                const ymm wep = mulpz2(w7p,w7p);
+                const ymm xe  = getpz2(x_p+Ne);
+                const ymm wfp = mulpz2(w7p,w8p);
+                const ymm xf  = getpz2(x_p+Nf);
+#endif
                 const ymm a08 = addpz2(x0, x8); const ymm s08 = subpz2(x0, x8);
                 const ymm a4c = addpz2(x4, xc); const ymm s4c = subpz2(x4, xc);
                 const ymm a2a = addpz2(x2, xa); const ymm s2a = subpz2(x2, xa);
