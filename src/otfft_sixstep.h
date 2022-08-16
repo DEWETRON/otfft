@@ -15,12 +15,12 @@ namespace OTFFT_NAMESPACE {
 
 namespace OTFFT_SixStep { /////////////////////////////////////////////////////
 
-    using namespace OTFFT;
-    using namespace OTFFT_MISC;
+using namespace OTFFT;
+using namespace OTFFT_MISC;
 
-    typedef const_complex_vector weight_t;
+typedef const_complex_vector weight_t;
 struct index_t { short col, row; };
-    typedef const index_t* __restrict const const_index_vector;
+typedef const index_t* __restrict const const_index_vector;
 
 } /////////////////////////////////////////////////////////////////////////////
 

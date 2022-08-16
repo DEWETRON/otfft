@@ -43,30 +43,41 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
         static inline void transpose_kernel(
                 const int p, complex_vector x, complex_vector y) noexcept
         {
+#if 0
             const ymm aA = getpz2(x+p+N0);
             const ymm bB = getpz2(x+p+N1);
             const ymm ab = catlo(aA, bB);
             const ymm AB = cathi(aA, bB);
+            setpz2(y+8*p+ 0, ab);
+            setpz2(y+8*p+ 8, AB);
             const ymm cC = getpz2(x+p+N2);
             const ymm dD = getpz2(x+p+N3);
             const ymm cd = catlo(cC, dD);
             const ymm CD = cathi(cC, dD);
+            setpz2(y+8*p+ 2, cd);
+            setpz2(y+8*p+10, CD);
             const ymm eE = getpz2(x+p+N4);
             const ymm fF = getpz2(x+p+N5);
             const ymm ef = catlo(eE, fF);
             const ymm EF = cathi(eE, fF);
+            setpz2(y+8*p+ 4, ef);
+            setpz2(y+8*p+12, EF);
             const ymm gG = getpz2(x+p+N6);
             const ymm hH = getpz2(x+p+N7);
             const ymm gh = catlo(gG, hH);
             const ymm GH = cathi(gG, hH);
-            setpz2(y+8*p+ 0, ab);
-            setpz2(y+8*p+ 2, cd);
-            setpz2(y+8*p+ 4, ef);
             setpz2(y+8*p+ 6, gh);
-            setpz2(y+8*p+ 8, AB);
-            setpz2(y+8*p+10, CD);
-            setpz2(y+8*p+12, EF);
             setpz2(y+8*p+14, GH);
+#else
+        for (int q = 0; q < 8; q += 2) {
+            const ymm aA = getpz2(x+p+q*N1+N0);
+            const ymm bB = getpz2(x+p+q*N1+N1);
+            const ymm ab = catlo(aA, bB);
+            const ymm AB = cathi(aA, bB);
+            setpz2(y+8*p+q+0, ab);
+            setpz2(y+8*p+q+8, AB);
+        }
+#endif
         }
 
         static inline void fft_and_mult_twiddle_factor_kernel(

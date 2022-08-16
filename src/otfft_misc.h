@@ -144,6 +144,61 @@ constexpr int OMP_THRESHOLD_W = 1<<15;
         }
     }
 
+    static void init_Wr1(const int r, const int N, complex_vector W) noexcept
+    {
+       if (N < r) return;
+       const int Nr = N/r;
+       const double theta = -2*M_PI/N;
+       if (N < OMP_THRESHOLD_W) {
+           for (int p = 0; p < Nr; p++) {
+               W[p] = expj(theta * p);
+           }
+       }
+       else {
+#pragma omp parallel for schedule(static)
+           for (int p = 0; p < Nr; p++) {
+               W[p] = expj(theta * p);
+           }
+       }
+    }
+
+    static void init_Wt(const int r, const int N, complex_vector W) noexcept
+    {
+       if (N < r) return;
+       const int Nr = N/r;
+       const double theta = -2*M_PI/N;
+       if (N < OMP_THRESHOLD_W) {
+           for (int p = 0; p < Nr; p++) {
+               for (int k = 1; k < r; k++) {
+                   W[p + (k-1)*Nr] = W[N + r*p + k] = expj(theta * k*p);
+               }
+           }
+       }
+       else {
+#pragma omp parallel for schedule(static)
+           for (int p = 0; p < Nr; p++) {
+               for (int k = 1; k < r; k++) {
+                   W[p + (k-1)*Nr] = W[N + r*p + k] = expj(theta * k*p);
+               }
+           }
+       }
+    }
+
+    template <int r, int N, int k>
+    const complex_t* twid(const_complex_vector W, int p)
+    {
+        constexpr int Nr = N/r;
+        constexpr int d = (k-1)*Nr;
+        return W + p + d;
+    }
+    
+    template <int r, int N, int k>
+    const complex_t* twidT(const_complex_vector W, int p)
+    {
+        constexpr int d = N + k;
+        return W + r*p + d;
+    }
+
     static void speedup_magic(const int N = 1 << 18) noexcept
     {
         const double theta0 = 2*M_PI/N;
@@ -1104,6 +1159,702 @@ namespace OTFFT_MISC {
 } // namespace OTFFT_MISC
 
 #endif // __AVX__
+
+#if defined(__AVX512F__) && defined(__AVX512DQ__) && defined(USE_INTRINSIC)
+//=============================================================================
+// AVX-512
+//=============================================================================
+
+#include <immintrin.h>
+
+namespace OTFFT_MISC {
+
+typedef __m512d zmm;
+
+static inline zmm getpz4(const_complex_vector z) noexcept force_inline;
+static inline zmm getpz4(const_complex_vector z) noexcept
+{
+#ifdef USE_UNALIGNED_MEMORY
+    return _mm512_loadu_pd(&z->Re);
+#else
+    return _mm512_load_pd(&z->Re);
+#endif
+}
+
+static inline void setpz4(complex_vector a, const zmm z) noexcept force_inline3;
+static inline void setpz4(complex_vector a, const zmm z) noexcept
+{
+#ifdef USE_UNALIGNED_MEMORY
+    _mm512_storeu_pd(&a->Re, z);
+#else
+    _mm512_store_pd(&a->Re, z);
+#endif
+}
+
+static inline zmm cnjpz4(const zmm xy) noexcept force_inline;
+static inline zmm cnjpz4(const zmm xy) noexcept
+{
+    constexpr zmm zm = { 0.0, -0.0, 0.0, -0.0, 0.0, -0.0, 0.0, -0.0 };
+    return _mm512_xor_pd(zm, xy);
+}
+static inline zmm jxpz4(const zmm xy) noexcept force_inline;
+static inline zmm jxpz4(const zmm xy) noexcept
+{
+    const zmm xmy = cnjpz4(xy);
+    return _mm512_shuffle_pd(xmy, xmy, 0x55);
+}
+
+static inline zmm addpz4(const zmm a, const zmm b) noexcept force_inline;
+static inline zmm addpz4(const zmm a, const zmm b) noexcept
+{
+    return _mm512_add_pd(a, b);
+}
+static inline zmm subpz4(const zmm a, const zmm b) noexcept force_inline;
+static inline zmm subpz4(const zmm a, const zmm b) noexcept
+{
+    return _mm512_sub_pd(a, b);
+}
+static inline zmm mulpd4(const zmm a, const zmm b) noexcept force_inline;
+static inline zmm mulpd4(const zmm a, const zmm b) noexcept
+{
+    return _mm512_mul_pd(a, b);
+}
+static inline zmm divpd4(const zmm a, const zmm b) noexcept force_inline;
+static inline zmm divpd4(const zmm a, const zmm b) noexcept
+{
+    return _mm512_div_pd(a, b);
+}
+
+static inline zmm mulpz4(const zmm ab, const zmm xy) noexcept force_inline;
+static inline zmm mulpz4(const zmm ab, const zmm xy) noexcept
+{
+    const zmm aa = _mm512_unpacklo_pd(ab, ab);
+    const zmm bb = _mm512_unpackhi_pd(ab, ab);
+    const zmm yx = _mm512_shuffle_pd(xy, xy, 0x55);
+    return _mm512_fmaddsub_pd(aa, xy, _mm512_mul_pd(bb, yx));
+}
+
+template <int N, int mode> static inline zmm scalepz4(const zmm z) noexcept force_inline;
+template <int N, int mode> static inline zmm scalepz4(const zmm z) noexcept
+{
+    constexpr double sc =
+        mode == scale_1       ? 1.0           :
+        mode == scale_unitary ? 1.0/mysqrt(N) :
+        mode == scale_length  ? 1.0/N         : 0.0;
+    constexpr zmm sv  = { sc, sc, sc, sc, sc, sc, sc, sc };
+    return mode == scale_1 ? z : mulpd4(sv, z);
+}
+
+static inline zmm v8xpz4(const zmm xy) noexcept force_inline;
+static inline zmm v8xpz4(const zmm xy) noexcept
+{
+    constexpr double r = M_SQRT1_2;
+    constexpr zmm rr = { r, r, r, r, r, r, r, r };
+    const zmm myx = jxpz4(xy);
+    return _mm512_mul_pd(rr, _mm512_add_pd(xy, myx));
+}
+
+static inline zmm w8xpz4(const zmm xy) noexcept force_inline;
+static inline zmm w8xpz4(const zmm xy) noexcept
+{
+    constexpr double r = M_SQRT1_2;
+    constexpr zmm rr = { r, r, r, r, r, r, r, r };
+    const zmm ymx = cnjpz4(_mm512_shuffle_pd(xy, xy, 0x55));
+    return _mm512_mul_pd(rr, _mm512_add_pd(xy, ymx));
+}
+
+static inline zmm h1xpz4(const zmm xy) noexcept force_inline;
+static inline zmm h1xpz4(const zmm xy) noexcept
+{
+    constexpr zmm h1 = { H1X, H1Y, H1X, H1Y, H1X, H1Y, H1X, H1Y };
+    return mulpz4(h1, xy);
+}
+
+static inline zmm h3xpz4(const zmm xy) noexcept force_inline;
+static inline zmm h3xpz4(const zmm xy) noexcept
+{
+    constexpr zmm h3 = { -H1Y, -H1X, -H1Y, -H1X, -H1Y, -H1X, -H1Y, -H1X };
+    return mulpz4(h3, xy);
+}
+
+static inline zmm hfxpz4(const zmm xy) noexcept force_inline;
+static inline zmm hfxpz4(const zmm xy) noexcept
+{
+    constexpr zmm hf = { H1X, -H1Y, H1X, -H1Y, H1X, -H1Y, H1X, -H1Y };
+    return mulpz4(hf, xy);
+}
+
+static inline zmm hdxpz4(const zmm xy) noexcept force_inline;
+static inline zmm hdxpz4(const zmm xy) noexcept
+{
+    constexpr zmm hd = { -H1Y, H1X, -H1Y, H1X, -H1Y, H1X, -H1Y, H1X };
+    return mulpz4(hd, xy);
+}
+
+static inline zmm duppz4(const xmm x) noexcept force_inline;
+static inline zmm duppz4(const xmm x) noexcept
+{
+    return _mm512_broadcast_f64x2(x);
+}
+
+static inline zmm duppz5(const complex_t& z) noexcept force_inline;
+static inline zmm duppz5(const complex_t& z) noexcept
+{
+    return duppz4(getpz(z));
+}
+
+} // namespace OTFFT_MISC
+
+#else
+//=============================================================================
+// AVX-512 Emulation
+//=============================================================================
+
+namespace OTFFT_MISC {
+
+struct zmm { ymm lo, hi; };
+
+static inline zmm getpz4(const_complex_vector a) noexcept force_inline;
+static inline zmm getpz4(const_complex_vector a) noexcept
+{
+    const zmm z = { getpz2(&a[0]), getpz2(&a[2]) };
+    return z;
+}
+
+static inline void setpz4(complex_vector a, const zmm& z) noexcept force_inline3;
+static inline void setpz4(complex_vector a, const zmm& z) noexcept
+{
+    setpz2(&a[0], z.lo);
+    setpz2(&a[2], z.hi);
+}
+
+static inline zmm cnjpz4(const zmm& xy) noexcept force_inline;
+static inline zmm cnjpz4(const zmm& xy) noexcept
+{
+    const zmm z = { cnjpz2(xy.lo), cnjpz2(xy.hi) };
+    return z;
+}
+static inline zmm jxpz4(const zmm& xy) noexcept force_inline;
+static inline zmm jxpz4(const zmm& xy) noexcept
+{
+    const zmm z = { jxpz2(xy.lo), jxpz2(xy.hi) };
+    return z;
+}
+
+static inline zmm addpz4(const zmm& a, const zmm& b) noexcept force_inline;
+static inline zmm addpz4(const zmm& a, const zmm& b) noexcept
+{
+    const zmm z = { addpz2(a.lo, b.lo), addpz2(a.hi, b.hi) };
+    return z;
+}
+static inline zmm subpz4(const zmm& a, const zmm& b) noexcept force_inline;
+static inline zmm subpz4(const zmm& a, const zmm& b) noexcept
+{
+    const zmm z = { subpz2(a.lo, b.lo), subpz2(a.hi, b.hi) };
+    return z;
+}
+static inline zmm mulpd4(const zmm& a, const zmm& b) noexcept force_inline;
+static inline zmm mulpd4(const zmm& a, const zmm& b) noexcept
+{
+    const zmm z = { mulpd2(a.lo, b.lo), mulpd2(a.hi, b.hi) };
+    return z;
+}
+static inline zmm divpd4(const zmm& a, const zmm& b) noexcept force_inline;
+static inline zmm divpd4(const zmm& a, const zmm& b) noexcept
+{
+    const zmm z = { divpd2(a.lo, b.lo), divpd2(a.hi, b.hi) };
+    return z;
+}
+
+static inline zmm mulpz4(const zmm& a, const zmm& b) noexcept force_inline;
+static inline zmm mulpz4(const zmm& a, const zmm& b) noexcept
+{
+    const zmm z = { mulpz2(a.lo, b.lo), mulpz2(a.hi, b.hi) };
+    return z;
+}
+
+template <int N, int mode> static inline zmm scalepz4(const zmm z) noexcept force_inline;
+template <int N, int mode> static inline zmm scalepz4(const zmm z) noexcept
+{
+    constexpr double scale =
+        mode == scale_1       ? 1.0           :
+        mode == scale_unitary ? 1.0/mysqrt(N) :
+        mode == scale_length  ? 1.0/N         : 0.0;
+    constexpr ymm sv  = { scale, scale, scale, scale };
+    constexpr zmm sv4 = { sv, sv };
+    return mode == scale_1 ? z : mulpd4(sv4, z);
+}
+
+static inline zmm v8xpz4(const zmm& xy) noexcept force_inline;
+static inline zmm v8xpz4(const zmm& xy) noexcept
+{
+    const zmm z = { v8xpz2(xy.lo), v8xpz2(xy.hi) };
+    return z;
+}
+
+static inline zmm w8xpz4(const zmm& xy) noexcept force_inline;
+static inline zmm w8xpz4(const zmm& xy) noexcept
+{
+    const zmm z = { w8xpz2(xy.lo), w8xpz2(xy.hi) };
+    return z;
+}
+
+static inline zmm h1xpz4(const zmm& xy) noexcept force_inline;
+static inline zmm h1xpz4(const zmm& xy) noexcept
+{
+    const zmm z = { h1xpz2(xy.lo), h1xpz2(xy.hi) };
+    return z;
+}
+
+static inline zmm h3xpz4(const zmm& xy) noexcept force_inline;
+static inline zmm h3xpz4(const zmm& xy) noexcept
+{
+    const zmm z = { h3xpz2(xy.lo), h3xpz2(xy.hi) };
+    return z;
+}
+
+static inline zmm hfxpz4(const zmm& xy) noexcept force_inline;
+static inline zmm hfxpz4(const zmm& xy) noexcept
+{
+    const zmm z = { hfxpz2(xy.lo), hfxpz2(xy.hi) };
+    return z;
+}
+
+static inline zmm hdxpz4(const zmm& xy) noexcept force_inline;
+static inline zmm hdxpz4(const zmm& xy) noexcept
+{
+    const zmm z = { hdxpz2(xy.lo), hdxpz2(xy.hi) };
+    return z;
+}
+
+static inline zmm duppz4(const xmm x) noexcept force_inline;
+static inline zmm duppz4(const xmm x) noexcept
+{
+    const ymm y = duppz2(x);
+    const zmm z = { y, y };
+    return z;
+}
+
+static inline zmm duppz5(const complex_t& z) noexcept force_inline;
+static inline zmm duppz5(const complex_t& z) noexcept
+{
+    return duppz4(getpz(z));
+}
+
+} // namespace OTFFT_MISC
+
+#endif // __AVX512F__ && __AVX512DQ__
+
+//=============================================================================
+// 512 bit Vector Emulation
+//=============================================================================
+
+namespace OTFFT_MISC {
+
+struct emm { ymm lo, hi; };
+
+static inline emm getez4(const_complex_vector a) noexcept force_inline;
+static inline emm getez4(const_complex_vector a) noexcept
+{
+    const emm z = { getpz2(&a[0]), getpz2(&a[2]) };
+    return z;
+}
+
+static inline void setez4(complex_vector a, const emm& z) noexcept force_inline3;
+static inline void setez4(complex_vector a, const emm& z) noexcept
+{
+    setpz2(&a[0], z.lo);
+    setpz2(&a[2], z.hi);
+}
+
+static inline emm cnjez4(const emm& xy) noexcept force_inline;
+static inline emm cnjez4(const emm& xy) noexcept
+{
+    const emm z = { cnjpz2(xy.lo), cnjpz2(xy.hi) };
+    return z;
+}
+static inline emm jxez4(const emm& xy) noexcept force_inline;
+static inline emm jxez4(const emm& xy) noexcept
+{
+    const emm z = { jxpz2(xy.lo), jxpz2(xy.hi) };
+    return z;
+}
+
+static inline emm addez4(const emm& a, const emm& b) noexcept force_inline;
+static inline emm addez4(const emm& a, const emm& b) noexcept
+{
+    const emm z = { addpz2(a.lo, b.lo), addpz2(a.hi, b.hi) };
+    return z;
+}
+static inline emm subez4(const emm& a, const emm& b) noexcept force_inline;
+static inline emm subez4(const emm& a, const emm& b) noexcept
+{
+    const emm z = { subpz2(a.lo, b.lo), subpz2(a.hi, b.hi) };
+    return z;
+}
+static inline emm muled4(const emm& a, const emm& b) noexcept force_inline;
+static inline emm muled4(const emm& a, const emm& b) noexcept
+{
+    const emm z = { mulpd2(a.lo, b.lo), mulpd2(a.hi, b.hi) };
+    return z;
+}
+static inline emm dived4(const emm& a, const emm& b) noexcept force_inline;
+static inline emm dived4(const emm& a, const emm& b) noexcept
+{
+    const emm z = { divpd2(a.lo, b.lo), divpd2(a.hi, b.hi) };
+    return z;
+}
+
+static inline emm mulez4(const emm& a, const emm& b) noexcept force_inline;
+static inline emm mulez4(const emm& a, const emm& b) noexcept
+{
+    const emm z = { mulpz2(a.lo, b.lo), mulpz2(a.hi, b.hi) };
+    return z;
+}
+
+template <int N, int mode> static inline emm scaleez4(const emm z) noexcept force_inline;
+template <int N, int mode> static inline emm scaleez4(const emm z) noexcept
+{
+    constexpr double scale =
+        mode == scale_1       ? 1.0           :
+        mode == scale_unitary ? 1.0/mysqrt(N) :
+        mode == scale_length  ? 1.0/N         : 0.0;
+    constexpr ymm sv  = { scale, scale, scale, scale };
+    constexpr emm sv4 = { sv, sv };
+    return mode == scale_1 ? z : muled4(sv4, z);
+}
+
+static inline emm v8xez4(const emm& xy) noexcept force_inline;
+static inline emm v8xez4(const emm& xy) noexcept
+{
+    const emm z = { v8xpz2(xy.lo), v8xpz2(xy.hi) };
+    return z;
+}
+
+static inline emm w8xez4(const emm& xy) noexcept force_inline;
+static inline emm w8xez4(const emm& xy) noexcept
+{
+    const emm z = { w8xpz2(xy.lo), w8xpz2(xy.hi) };
+    return z;
+}
+
+static inline emm h1xez4(const emm& xy) noexcept force_inline;
+static inline emm h1xez4(const emm& xy) noexcept
+{
+    const emm z = { h1xpz2(xy.lo), h1xpz2(xy.hi) };
+    return z;
+}
+
+static inline emm h3xez4(const emm& xy) noexcept force_inline;
+static inline emm h3xez4(const emm& xy) noexcept
+{
+    const emm z = { h3xpz2(xy.lo), h3xpz2(xy.hi) };
+    return z;
+}
+
+static inline emm hfxez4(const emm& xy) noexcept force_inline;
+static inline emm hfxez4(const emm& xy) noexcept
+{
+    const emm z = { hfxpz2(xy.lo), hfxpz2(xy.hi) };
+    return z;
+}
+
+static inline emm hdxez4(const emm& xy) noexcept force_inline;
+static inline emm hdxez4(const emm& xy) noexcept
+{
+    const emm z = { hdxpz2(xy.lo), hdxpz2(xy.hi) };
+    return z;
+}
+
+static inline emm dupez4(const xmm x) noexcept force_inline;
+static inline emm dupez4(const xmm x) noexcept
+{
+    const ymm y = duppz2(x);
+    const emm z = { y, y };
+    return z;
+}
+
+static inline emm dupez5(const complex_t& z) noexcept force_inline;
+static inline emm dupez5(const complex_t& z) noexcept
+{
+    return dupez4(getpz(z));
+}
+
+} // namespace OTFFT_MISC
+
+//=============================================================================
+// 1024 bit Vector Emulation
+//=============================================================================
+
+namespace OTFFT_MISC {
+
+struct amm { zmm lo, hi; };
+
+static inline amm getpz8(const_complex_vector a) noexcept force_inline;
+static inline amm getpz8(const_complex_vector a) noexcept
+{
+    const amm z = { getpz4(&a[0]), getpz4(&a[4]) };
+    return z;
+}
+
+static inline void setpz8(complex_vector a, const amm& z) noexcept force_inline3;
+static inline void setpz8(complex_vector a, const amm& z) noexcept
+{
+    setpz4(&a[0], z.lo);
+    setpz4(&a[4], z.hi);
+}
+
+static inline amm cnjpz8(const amm& xy) noexcept force_inline;
+static inline amm cnjpz8(const amm& xy) noexcept
+{
+    const amm z = { cnjpz4(xy.lo), cnjpz4(xy.hi) };
+    return z;
+}
+static inline amm jxpz8(const amm& xy) noexcept force_inline;
+static inline amm jxpz8(const amm& xy) noexcept
+{
+    const amm z = { jxpz4(xy.lo), jxpz4(xy.hi) };
+    return z;
+}
+
+static inline amm addpz8(const amm& a, const amm& b) noexcept force_inline;
+static inline amm addpz8(const amm& a, const amm& b) noexcept
+{
+    const amm z = { addpz4(a.lo, b.lo), addpz4(a.hi, b.hi) };
+    return z;
+}
+static inline amm subpz8(const amm& a, const amm& b) noexcept force_inline;
+static inline amm subpz8(const amm& a, const amm& b) noexcept
+{
+    const amm z = { subpz4(a.lo, b.lo), subpz4(a.hi, b.hi) };
+    return z;
+}
+static inline amm mulpd8(const amm& a, const amm& b) noexcept force_inline;
+static inline amm mulpd8(const amm& a, const amm& b) noexcept
+{
+    const amm z = { mulpd4(a.lo, b.lo), mulpd4(a.hi, b.hi) };
+    return z;
+}
+static inline amm divpd8(const amm& a, const amm& b) noexcept force_inline;
+static inline amm divpd8(const amm& a, const amm& b) noexcept
+{
+    const amm z = { divpd4(a.lo, b.lo), divpd4(a.hi, b.hi) };
+    return z;
+}
+
+static inline amm mulpz8(const amm& a, const amm& b) noexcept force_inline;
+static inline amm mulpz8(const amm& a, const amm& b) noexcept
+{
+    const amm z = { mulpz4(a.lo, b.lo), mulpz4(a.hi, b.hi) };
+    return z;
+}
+
+template <int N, int mode> static inline amm scalepz8(const amm z) noexcept force_inline;
+template <int N, int mode> static inline amm scalepz8(const amm z) noexcept
+{
+    constexpr double sc =
+        mode == scale_1       ? 1.0           :
+        mode == scale_unitary ? 1.0/mysqrt(N) :
+        mode == scale_length  ? 1.0/N         : 0.0;
+    constexpr zmm sv  = { sc, sc, sc, sc, sc, sc, sc, sc };
+    constexpr amm sv8 = { sv, sv };
+    return mode == scale_1 ? z : mulpd8(sv8, z);
+}
+
+static inline amm v8xpz8(const amm& xy) noexcept force_inline;
+static inline amm v8xpz8(const amm& xy) noexcept
+{
+    const amm z = { v8xpz4(xy.lo), v8xpz4(xy.hi) };
+    return z;
+}
+
+static inline amm w8xpz8(const amm& xy) noexcept force_inline;
+static inline amm w8xpz8(const amm& xy) noexcept
+{
+    const amm z = { w8xpz4(xy.lo), w8xpz4(xy.hi) };
+    return z;
+}
+
+static inline amm h1xpz8(const amm& xy) noexcept force_inline;
+static inline amm h1xpz8(const amm& xy) noexcept
+{
+    const amm z = { h1xpz4(xy.lo), h1xpz4(xy.hi) };
+    return z;
+}
+
+static inline amm h3xpz8(const amm& xy) noexcept force_inline;
+static inline amm h3xpz8(const amm& xy) noexcept
+{
+    const amm z = { h3xpz4(xy.lo), h3xpz4(xy.hi) };
+    return z;
+}
+
+static inline amm hfxpz8(const amm& xy) noexcept force_inline;
+static inline amm hfxpz8(const amm& xy) noexcept
+{
+    const amm z = { hfxpz4(xy.lo), hfxpz4(xy.hi) };
+    return z;
+}
+
+static inline amm hdxpz8(const amm& xy) noexcept force_inline;
+static inline amm hdxpz8(const amm& xy) noexcept
+{
+    const amm z = { hdxpz4(xy.lo), hdxpz4(xy.hi) };
+    return z;
+}
+
+static inline amm duppz8(const xmm x) noexcept force_inline;
+static inline amm duppz8(const xmm x) noexcept
+{
+    const zmm y = duppz4(x);
+    const amm z = { y, y };
+    return z;
+}
+
+static inline amm duppz9(const complex_t& z) noexcept force_inline;
+static inline amm duppz9(const complex_t& z) noexcept
+{
+    return duppz8(getpz(z));
+}
+
+} // namespace OTFFT_MISC
+
+//=============================================================================
+// 2048 bit Vector Emulation
+//=============================================================================
+
+namespace OTFFT_MISC {
+
+struct bmm { amm lo, hi; };
+
+static inline bmm getpz16(const_complex_vector a) noexcept force_inline;
+static inline bmm getpz16(const_complex_vector a) noexcept
+{
+    const bmm z = { getpz8(&a[0]), getpz8(&a[8]) };
+    return z;
+}
+
+static inline void setpz16(complex_vector a, const bmm& z) noexcept force_inline3;
+static inline void setpz16(complex_vector a, const bmm& z) noexcept
+{
+    setpz8(&a[0], z.lo);
+    setpz8(&a[8], z.hi);
+}
+
+static inline bmm cnjpz16(const bmm& xy) noexcept force_inline;
+static inline bmm cnjpz16(const bmm& xy) noexcept
+{
+    const bmm z = { cnjpz8(xy.lo), cnjpz8(xy.hi) };
+    return z;
+}
+static inline bmm jxpz16(const bmm& xy) noexcept force_inline;
+static inline bmm jxpz16(const bmm& xy) noexcept
+{
+    const bmm z = { jxpz8(xy.lo), jxpz8(xy.hi) };
+    return z;
+}
+
+static inline bmm addpz16(const bmm& a, const bmm& b) noexcept force_inline;
+static inline bmm addpz16(const bmm& a, const bmm& b) noexcept
+{
+    const bmm z = { addpz8(a.lo, b.lo), addpz8(a.hi, b.hi) };
+    return z;
+}
+static inline bmm subpz16(const bmm& a, const bmm& b) noexcept force_inline;
+static inline bmm subpz16(const bmm& a, const bmm& b) noexcept
+{
+    const bmm z = { subpz8(a.lo, b.lo), subpz8(a.hi, b.hi) };
+    return z;
+}
+static inline bmm mulpd16(const bmm& a, const bmm& b) noexcept force_inline;
+static inline bmm mulpd16(const bmm& a, const bmm& b) noexcept
+{
+    const bmm z = { mulpd8(a.lo, b.lo), mulpd8(a.hi, b.hi) };
+    return z;
+}
+static inline bmm divpd16(const bmm& a, const bmm& b) noexcept force_inline;
+static inline bmm divpd16(const bmm& a, const bmm& b) noexcept
+{
+    const bmm z = { divpd8(a.lo, b.lo), divpd8(a.hi, b.hi) };
+    return z;
+}
+
+static inline bmm mulpz16(const bmm& a, const bmm& b) noexcept force_inline;
+static inline bmm mulpz16(const bmm& a, const bmm& b) noexcept
+{
+    const bmm z = { mulpz8(a.lo, b.lo), mulpz8(a.hi, b.hi) };
+    return z;
+}
+
+template <int N, int mode> static inline bmm scalepz16(const bmm z) noexcept force_inline;
+template <int N, int mode> static inline bmm scalepz16(const bmm z) noexcept
+{
+    constexpr double sc =
+        mode == scale_1       ? 1.0           :
+        mode == scale_unitary ? 1.0/mysqrt(N) :
+        mode == scale_length  ? 1.0/N         : 0.0;
+    constexpr amm sv  = { sc, sc, sc, sc, sc, sc, sc, sc, sc, sc, sc, sc, sc, sc, sc, sc };
+    constexpr bmm sv16 = { sv, sv };
+    return mode == scale_1 ? z : mulpd16(sv16, z);
+}
+
+static inline bmm v8xpz16(const bmm& xy) noexcept force_inline;
+static inline bmm v8xpz16(const bmm& xy) noexcept
+{
+    const bmm z = { v8xpz8(xy.lo), v8xpz8(xy.hi) };
+    return z;
+}
+
+static inline bmm w8xpz16(const bmm& xy) noexcept force_inline;
+static inline bmm w8xpz16(const bmm& xy) noexcept
+{
+    const bmm z = { w8xpz8(xy.lo), w8xpz8(xy.hi) };
+    return z;
+}
+
+static inline bmm h1xpz16(const bmm& xy) noexcept force_inline;
+static inline bmm h1xpz16(const bmm& xy) noexcept
+{
+    const bmm z = { h1xpz8(xy.lo), h1xpz8(xy.hi) };
+    return z;
+}
+
+static inline bmm h3xpz16(const bmm& xy) noexcept force_inline;
+static inline bmm h3xpz16(const bmm& xy) noexcept
+{
+    const bmm z = { h3xpz8(xy.lo), h3xpz8(xy.hi) };
+    return z;
+}
+
+static inline bmm hfxpz16(const bmm& xy) noexcept force_inline;
+static inline bmm hfxpz16(const bmm& xy) noexcept
+{
+    const bmm z = { hfxpz8(xy.lo), hfxpz8(xy.hi) };
+    return z;
+}
+
+static inline bmm hdxpz16(const bmm& xy) noexcept force_inline;
+static inline bmm hdxpz16(const bmm& xy) noexcept
+{
+    const bmm z = { hdxpz8(xy.lo), hdxpz8(xy.hi) };
+    return z;
+}
+
+static inline bmm duppz16(const xmm x) noexcept force_inline;
+static inline bmm duppz16(const xmm x) noexcept
+{
+    const amm y = duppz8(x);
+    const bmm z = { y, y };
+    return z;
+}
+
+static inline bmm duppz17(const complex_t& z) noexcept force_inline;
+static inline bmm duppz17(const complex_t& z) noexcept
+{
+    return duppz16(getpz(z));
+}
+
+} // namespace OTFFT_MISC
 
 //=============================================================================
 // Aligned Memory Allocator
