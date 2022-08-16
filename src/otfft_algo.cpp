@@ -33,13 +33,13 @@ namespace OTFFT_NAMESPACE
 
     // see upstream otfft.cpp
     namespace FFT1 = OTFFT_AVXDIF4;
-	namespace FFT2 = OTFFT_AVXDIT4;
-	namespace FFT3 = OTFFT_AVXDIF8;
-	namespace FFT4 = OTFFT_AVXDIT8;
-	namespace FFT5 = OTFFT_AVXDIF16;
-	namespace FFT6 = OTFFT_AVXDIT16;
-	namespace FFT7 = OTFFT_SixStep;
-	namespace FFT8 = OTFFT_MixedRadix;
+    namespace FFT2 = OTFFT_AVXDIT4;
+    namespace FFT3 = OTFFT_AVXDIF8;
+    namespace FFT4 = OTFFT_AVXDIT8;
+    namespace FFT5 = OTFFT_AVXDIF16;
+    namespace FFT6 = OTFFT_AVXDIT16;
+    namespace FFT7 = OTFFT_SixStep;
+    namespace FFT8 = OTFFT_MixedRadix;
 
     /******************************************************************************
     *  Complex FFT
