@@ -127,6 +127,7 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
                 const ymm x5 = getpz2(x_p+N5);
                 const ymm x6 = getpz2(x_p+N6);
                 const ymm x7 = getpz2(x_p+N7);
+
                 const ymm  a04 =       addpz2(x0, x4);
                 const ymm  s04 =       subpz2(x0, x4);
                 const ymm  a26 =       addpz2(x2, x6);
@@ -408,6 +409,7 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
                 const ymm x5 = getpz2(x_p+N5);
                 const ymm x6 = getpz2(x_p+N6);
                 const ymm x7 = getpz2(x_p+N7);
+
                 const ymm  a04 =       addpz2(x0, x4);
                 const ymm  s04 =       subpz2(x0, x4);
                 const ymm  a26 =       addpz2(x2, x6);

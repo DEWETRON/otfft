@@ -31,6 +31,8 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
         static constexpr int N5 = N1*5;
         static constexpr int N6 = N1*6;
         static constexpr int N7 = N1*7;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -309,6 +311,8 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
         static constexpr int N5 = N1*5;
         static constexpr int N6 = N1*6;
         static constexpr int N7 = N1*7;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept

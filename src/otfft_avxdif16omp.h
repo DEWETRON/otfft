@@ -39,6 +39,8 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
         static constexpr int Nd = N1*13;
         static constexpr int Ne = N1*14;
         static constexpr int Nf = N1*15;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -622,6 +624,8 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
         static constexpr int Nd = N1*13;
         static constexpr int Ne = N1*14;
         static constexpr int Nf = N1*15;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept

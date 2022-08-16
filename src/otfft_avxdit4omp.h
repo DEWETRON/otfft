@@ -232,6 +232,8 @@ namespace OTFFT_AVXDIT4omp { //////////////////////////////////////////////////
         static constexpr int N1 = N/4;
         static constexpr int N2 = N1*2;
         static constexpr int N3 = N1*3;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept

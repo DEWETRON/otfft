@@ -31,6 +31,8 @@ namespace OTFFT_AVXDIF8omp { //////////////////////////////////////////////////
         static constexpr int N5 = N1*5;
         static constexpr int N6 = N1*6;
         static constexpr int N7 = N1*7;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -119,6 +121,7 @@ namespace OTFFT_AVXDIF8omp { //////////////////////////////////////////////////
                 const ymm x5 = getpz2(x_p+N5);
                 const ymm x6 = getpz2(x_p+N6);
                 const ymm x7 = getpz2(x_p+N7);
+
                 const ymm  a04 =       addpz2(x0, x4);
                 const ymm  s04 =       subpz2(x0, x4);
                 const ymm  a26 =       addpz2(x2, x6);
@@ -317,6 +320,8 @@ namespace OTFFT_AVXDIF8omp { //////////////////////////////////////////////////
         static constexpr int N5 = N1*5;
         static constexpr int N6 = N1*6;
         static constexpr int N7 = N1*7;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -405,6 +410,7 @@ namespace OTFFT_AVXDIF8omp { //////////////////////////////////////////////////
                 const ymm x5 = getpz2(x_p+N5);
                 const ymm x6 = getpz2(x_p+N6);
                 const ymm x7 = getpz2(x_p+N7);
+
                 const ymm  a04 =       addpz2(x0, x4);
                 const ymm  s04 =       subpz2(x0, x4);
                 const ymm  a26 =       addpz2(x2, x6);
