@@ -53,6 +53,28 @@ enum scaling_mode { scale_1 = 0, scale_unitary, scale_length };
 // for Visual C++
 //=============================================================================
 
+#if _M_IX86_FP >= 2
+#define __SSE2__ 1
+#endif
+#ifdef _M_X64
+#define __SSE2__ 1
+#define __SSE3__ 1
+#endif
+#ifdef __AVX__
+#define __SSE2__ 1
+#define __SSE3__ 1
+#endif
+#ifdef __AVX2__
+#define __SSE2__ 1
+#define __SSE3__ 1
+#define __FMA__ 1
+#endif
+#ifdef __AVX512F__
+#define __SSE2__ 1
+#define __SSE3__ 1
+#define __FMA__ 1
+#endif
+
 #if _MSC_VER >= 1900
 #define VC_CONSTEXPR 1
 #else
@@ -104,7 +126,7 @@ constexpr int OMP_THRESHOLD_W = 1<<15;
             W[Nd+p] = complex_t(-s,  c);
             W[N-p]  = complex_t( c, -s);
         }
-        else
+        else {
         #pragma omp parallel for schedule(static)
         for (int p = 0; p <= Ne; p++) {
             const double theta = p * theta0;
@@ -119,6 +141,7 @@ constexpr int OMP_THRESHOLD_W = 1<<15;
             W[Nd+p] = complex_t(-s,  c);
             W[N-p]  = complex_t( c, -s);
         }
+        }
     }
 
     static void speedup_magic(const int N = 1 << 18) noexcept
@@ -132,7 +155,7 @@ constexpr int OMP_THRESHOLD_W = 1<<15;
 
 } // namespace OTFFT_MISC
 
-#if defined(USE_SSE2) || defined(USE_AVX) || defined(USE_AVX2)
+#if defined(__SSE2__) && defined(USE_INTRINSIC)
 //=============================================================================
 // SSE2/SSE3
 //=============================================================================
@@ -252,14 +275,15 @@ namespace OTFFT_MISC {
 
 } // namespace OTFFT_MISC
 
-#if defined(USE_AVX) || defined(USE_AVX2)
+#if defined(__SSE3__)
 //-----------------------------------------------------------------------------
 // SSE3
 //-----------------------------------------------------------------------------
 
-#include <pmmintrin.h>
-#ifdef USE_AVX2
+#ifdef __FMA__
 #include <immintrin.h>
+#else
+#include <pmmintrin.h>
 #endif
 
 namespace OTFFT_MISC {
@@ -276,7 +300,7 @@ namespace OTFFT_MISC {
         const xmm aa = _mm_unpacklo_pd(ab, ab);
         const xmm bb = _mm_unpackhi_pd(ab, ab);
         const xmm yx = _mm_shuffle_pd(xy, xy, 1);
-#ifdef USE_AVX2
+#ifdef __FMA__
         return _mm_fmaddsub_pd(aa, xy, _mm_mul_pd(bb, yx));
 #else
         return _mm_addsub_pd(_mm_mul_pd(aa, xy), _mm_mul_pd(bb, yx));
@@ -345,7 +369,7 @@ namespace OTFFT_MISC {
 } // namespace OTFFT_MISC
 
 //-----------------------------------------------------------------------------
-#endif // USE_AVX
+#endif // __SSE3__
 
 namespace OTFFT_MISC {
 
@@ -569,11 +593,11 @@ namespace OTFFT_MISC {
 
 } // namespace OTFFT_MISC
 
-#endif // USE_SSE2
+#endif // __SSE2__
 
-#if defined(USE_AVX) || defined(USE_AVX2)
+#if defined(__AVX__) && defined(USE_INTRINSIC)
 //=============================================================================
-// AVX/AVX2
+// AVX
 //=============================================================================
 
 #include <immintrin.h>
@@ -593,24 +617,15 @@ namespace OTFFT_MISC {
     static inline ymm cmplx2(const complex_t& x, const complex_t& y) noexcept force_inline;
     static inline ymm cmplx2(const complex_t& x, const complex_t& y) noexcept
     {
+#if 0
         const xmm a = getpz(x);
         const xmm b = getpz(y);
         const ymm ax = _mm256_castpd128_pd256(a);
         const ymm bx = _mm256_castpd128_pd256(b);
         return _mm256_permute2f128_pd(ax, bx, 0x20);
-    }
-
-    static inline ymm cmplx3(const complex_t& x, const complex_t& y) noexcept force_inline;
-    static inline ymm cmplx3(const complex_t& x, const complex_t& y) noexcept
-    {
-#ifdef USE_UNALIGNED_MEMORY
-        const ymm ax = _mm256_loadu_pd(&x.Re);
-        const ymm bx = _mm256_loadu_pd(&y.Re);
 #else
-        const ymm ax = _mm256_load_pd(&x.Re);
-        const ymm bx = _mm256_load_pd(&y.Re);
+        return _mm256_setr_pd(x.Re, x.Im, y.Re, y.Im);
 #endif
-        return _mm256_permute2f128_pd(ax, bx, 0x20);
     }
 
     static inline ymm getpz2(const_complex_vector z) noexcept force_inline;
@@ -679,7 +694,7 @@ namespace OTFFT_MISC {
         const ymm aa = _mm256_unpacklo_pd(ab, ab);
         const ymm bb = _mm256_unpackhi_pd(ab, ab);
         const ymm yx = _mm256_shuffle_pd(xy, xy, 5);
-#ifdef USE_AVX2
+#ifdef __FMA__
         return _mm256_fmaddsub_pd(aa, xy, _mm256_mul_pd(bb, yx));
 #else
         return _mm256_addsub_pd(_mm256_mul_pd(aa, xy), _mm256_mul_pd(bb, yx));
@@ -758,16 +773,16 @@ namespace OTFFT_MISC {
     static inline ymm duppz3(const complex_t& z) noexcept force_inline;
     static inline ymm duppz3(const complex_t& z) noexcept
     {
-        const ymm x = getpz2(&z);
-        return _mm256_permute2f128_pd(x, x, 0);
+        return _mm256_broadcast_pd(reinterpret_cast<const xmm *>(&z));
     }
 
     static inline ymm cat(const xmm a, const xmm b) noexcept force_inline;
     static inline ymm cat(const xmm a, const xmm b) noexcept
     {
         const ymm ax = _mm256_castpd128_pd256(a);
-        const ymm bx = _mm256_castpd128_pd256(b);
-        return _mm256_permute2f128_pd(ax, bx, 0x20);
+        //const ymm bx = _mm256_castpd128_pd256(b);
+        //return _mm256_permute2f128_pd(ax, bx, 0x20);
+        return _mm256_insertf128_pd(ax, b, 1);
     }
 
     static inline ymm catlo(const ymm ax, const ymm by) noexcept force_inline;
@@ -1052,7 +1067,7 @@ namespace OTFFT_MISC {
 
 } // namespace OTFFT_MISC
 
-#endif // USE_AVX
+#endif // __AVX__
 
 //=============================================================================
 // Aligned Memory Allocator
