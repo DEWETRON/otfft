@@ -53,11 +53,11 @@ namespace OTFFT_NAMESPACE
                 }
             }
 
-            inline void setup2(const int n) { setup(1 << n); }
+            void setup2(const int n) { setup(1 << n); }
 
             ///////////////////////////////////////////////////////////////////////////
 
-            void fwd(complex_vector x, complex_vector y) const noexcept
+            inline void fwd(complex_vector x, complex_vector y) const noexcept
             {
                 const xmm rN = cmplx(1.0/N, 1.0/N);
                 if (N < OMP_THRESHOLD) {
@@ -72,7 +72,7 @@ namespace OTFFT_NAMESPACE
                 }
             }
 
-            void fwd0(complex_vector x, complex_vector y) const noexcept
+            inline void fwd0(complex_vector x, complex_vector y) const noexcept
             {
                 if (N < OMP_THRESHOLD) {
                     fwdfft(N, 1, 0, x, y, W);
@@ -83,7 +83,7 @@ namespace OTFFT_NAMESPACE
                 }
             }
 
-            void fwdu(complex_vector x, complex_vector y) const noexcept
+            inline void fwdu(complex_vector x, complex_vector y) const noexcept
             {
                 const double ssrN = sqrt(1.0/N);
                 const xmm srN = cmplx(ssrN, ssrN);
@@ -106,7 +106,7 @@ namespace OTFFT_NAMESPACE
 
             ///////////////////////////////////////////////////////////////////////////
 
-            void inv(complex_vector x, complex_vector y) const noexcept
+            inline void inv(complex_vector x, complex_vector y) const noexcept
             {
                 if (N < OMP_THRESHOLD) {
                     invfft(N, 1, 0, x, y, W);
@@ -122,7 +122,7 @@ namespace OTFFT_NAMESPACE
                 inv(x, y);
             }
 
-            void invu(complex_vector x, complex_vector y) const noexcept
+            inline void invu(complex_vector x, complex_vector y) const noexcept
             {
                 const double ssrN = sqrt(1.0/N);
                 const xmm srN = cmplx(ssrN, ssrN);
@@ -138,7 +138,7 @@ namespace OTFFT_NAMESPACE
                 }
             }
 
-            void invn(complex_vector x, complex_vector y) const noexcept
+            inline void invn(complex_vector x, complex_vector y) const noexcept
             {
                 const xmm rN = cmplx(1.0/N, 1.0/N);
                 if (N < OMP_THRESHOLD) {

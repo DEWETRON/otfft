@@ -41,10 +41,11 @@ namespace OTFFT_NAMESPACE
                 setup2(log_N);
             }
 
-            void setup2(const int n)
+            inline void setup2(const int n)
             {
                 log_N = n; N = 1 << n;
-                weight.setup(N+1); W = &weight;
+                weight.setup(N+1);
+                W = &weight;
                 init_W(N, W);
             }
 
@@ -135,11 +136,6 @@ namespace OTFFT_NAMESPACE
             else OTFFT_AVXDIF8omp::fwd0(log_N, x, y, W);
         }
 
-        void FFT0::fwdn(complex_vector x, complex_vector y) const noexcept
-        {
-            fwd(x, y);
-        }
-
         void FFT0::fwdu(complex_vector x, complex_vector y) const noexcept
         {
             constexpr int mode = scale_unitary;
@@ -174,6 +170,13 @@ namespace OTFFT_NAMESPACE
             }
             else OTFFT_AVXDIF8omp::fwdu(log_N, x, y, W);
         }
+
+        inline void FFT0::fwdn(complex_vector x, complex_vector y) const noexcept
+        {
+            fwd(x, y);
+        }
+
+        ///////////////////////////////////////////////////////////////////////////
 
         void FFT0::inv(complex_vector x, complex_vector y) const noexcept
         {
@@ -210,44 +213,9 @@ namespace OTFFT_NAMESPACE
             else OTFFT_AVXDIF8omp::inv(log_N, x, y, W);
         }
 
-        void FFT0::inv0(complex_vector x, complex_vector y) const noexcept
+        inline void FFT0::inv0(complex_vector x, complex_vector y) const noexcept
         {
             inv(x, y);
-        }
-
-        void FFT0::invn(complex_vector x, complex_vector y) const noexcept
-        {
-            constexpr int mode = scale_length;
-            if (N < OMP_THRESHOLD) {
-                switch (log_N) {
-                case  0: break;
-                case  1: invfft<(1<< 1),1,0,mode>()(x, y, W); break;
-                case  2: invfft<(1<< 2),1,0,mode>()(x, y, W); break;
-                case  3: invfft<(1<< 3),1,0,mode>()(x, y, W); break;
-                case  4: invfft<(1<< 4),1,0,mode>()(x, y, W); break;
-                case  5: invfft<(1<< 5),1,0,mode>()(x, y, W); break;
-                case  6: invfft<(1<< 6),1,0,mode>()(x, y, W); break;
-                case  7: invfft<(1<< 7),1,0,mode>()(x, y, W); break;
-                case  8: invfft<(1<< 8),1,0,mode>()(x, y, W); break;
-                case  9: invfft<(1<< 9),1,0,mode>()(x, y, W); break;
-                case 10: invfft<(1<<10),1,0,mode>()(x, y, W); break;
-                case 11: invfft<(1<<11),1,0,mode>()(x, y, W); break;
-                case 12: invfft<(1<<12),1,0,mode>()(x, y, W); break;
-                case 13: invfft<(1<<13),1,0,mode>()(x, y, W); break;
-                case 14: invfft<(1<<14),1,0,mode>()(x, y, W); break;
-                case 15: invfft<(1<<15),1,0,mode>()(x, y, W); break;
-                case 16: invfft<(1<<16),1,0,mode>()(x, y, W); break;
-                case 17: invfft<(1<<17),1,0,mode>()(x, y, W); break;
-                case 18: invfft<(1<<18),1,0,mode>()(x, y, W); break;
-                case 19: invfft<(1<<19),1,0,mode>()(x, y, W); break;
-                case 20: invfft<(1<<20),1,0,mode>()(x, y, W); break;
-                case 21: invfft<(1<<21),1,0,mode>()(x, y, W); break;
-                case 22: invfft<(1<<22),1,0,mode>()(x, y, W); break;
-                case 23: invfft<(1<<23),1,0,mode>()(x, y, W); break;
-                case 24: invfft<(1<<24),1,0,mode>()(x, y, W); break;
-                }
-            }
-            else OTFFT_AVXDIF8omp::invn(log_N, x, y, W);
         }
 
         void FFT0::invu(complex_vector x, complex_vector y) const noexcept
@@ -283,6 +251,41 @@ namespace OTFFT_NAMESPACE
                 }
             }
             else OTFFT_AVXDIF8omp::invu(log_N, x, y, W);
+        }
+
+        void FFT0::invn(complex_vector x, complex_vector y) const noexcept
+        {
+            constexpr int mode = scale_length;
+            if (N < OMP_THRESHOLD) {
+                switch (log_N) {
+                case  0: break;
+                case  1: invfft<(1<< 1),1,0,mode>()(x, y, W); break;
+                case  2: invfft<(1<< 2),1,0,mode>()(x, y, W); break;
+                case  3: invfft<(1<< 3),1,0,mode>()(x, y, W); break;
+                case  4: invfft<(1<< 4),1,0,mode>()(x, y, W); break;
+                case  5: invfft<(1<< 5),1,0,mode>()(x, y, W); break;
+                case  6: invfft<(1<< 6),1,0,mode>()(x, y, W); break;
+                case  7: invfft<(1<< 7),1,0,mode>()(x, y, W); break;
+                case  8: invfft<(1<< 8),1,0,mode>()(x, y, W); break;
+                case  9: invfft<(1<< 9),1,0,mode>()(x, y, W); break;
+                case 10: invfft<(1<<10),1,0,mode>()(x, y, W); break;
+                case 11: invfft<(1<<11),1,0,mode>()(x, y, W); break;
+                case 12: invfft<(1<<12),1,0,mode>()(x, y, W); break;
+                case 13: invfft<(1<<13),1,0,mode>()(x, y, W); break;
+                case 14: invfft<(1<<14),1,0,mode>()(x, y, W); break;
+                case 15: invfft<(1<<15),1,0,mode>()(x, y, W); break;
+                case 16: invfft<(1<<16),1,0,mode>()(x, y, W); break;
+                case 17: invfft<(1<<17),1,0,mode>()(x, y, W); break;
+                case 18: invfft<(1<<18),1,0,mode>()(x, y, W); break;
+                case 19: invfft<(1<<19),1,0,mode>()(x, y, W); break;
+                case 20: invfft<(1<<20),1,0,mode>()(x, y, W); break;
+                case 21: invfft<(1<<21),1,0,mode>()(x, y, W); break;
+                case 22: invfft<(1<<22),1,0,mode>()(x, y, W); break;
+                case 23: invfft<(1<<23),1,0,mode>()(x, y, W); break;
+                case 24: invfft<(1<<24),1,0,mode>()(x, y, W); break;
+                }
+            }
+            else OTFFT_AVXDIF8omp::invn(log_N, x, y, W);
         }
     }
 }
