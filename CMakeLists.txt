@@ -69,9 +69,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.7)
     message(STATUS "OpenMP disabled")
   else()
+    find_package(OpenMP REQUIRED)
   endif()
-  find_package(OpenMP REQUIRED)
-
 
   find_package(Boost COMPONENTS unit_test_framework)
 endif()
@@ -85,7 +84,7 @@ endif(OPENMP_FOUND)
 
 #
 # compile options
-if (CMAKE_CL_64)
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(OTFFT_WITH_SSE2 TRUE)
   set(OTFFT_WITH_AVX  TRUE)
   set(OTFFT_WITH_AVX2 TRUE)
