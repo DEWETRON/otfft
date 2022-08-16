@@ -222,7 +222,6 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 const ymm kl = getpz2(y_16p+0x0a);
                 const ymm mn = getpz2(y_16p+0x0c);
                 const ymm op = getpz2(y_16p+0x0e);
-
                 const ymm AB = getpz2(y_16p+0x10);
                 const ymm CD = getpz2(y_16p+0x12);
                 const ymm EF = getpz2(y_16p+0x14);
@@ -786,7 +785,6 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 const ymm kl = getpz2(y_16p+0x0a);
                 const ymm mn = getpz2(y_16p+0x0c);
                 const ymm op = getpz2(y_16p+0x0e);
-
                 const ymm AB = getpz2(y_16p+0x10);
                 const ymm CD = getpz2(y_16p+0x12);
                 const ymm EF = getpz2(y_16p+0x14);

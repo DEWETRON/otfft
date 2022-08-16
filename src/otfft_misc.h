@@ -273,6 +273,24 @@ namespace OTFFT_MISC {
         return mode == scale_1 ? z : mulpd(sv, z);
     }
 
+template <int N, int s>
+static xmm modqpz(const_complex_vector W, const int p) noexcept
+{
+    constexpr int Nq = N/4;
+    constexpr int log_Nq = mylog2(Nq);
+    const int sp = s*p;
+    const int q = sp >> log_Nq;
+    const int r = sp & (Nq-1);
+    const xmm x = getpz(W[r]);
+    switch (q & 3) {
+        case 0: return x;
+        case 1: return mjxpz(x);
+        case 2: return negpz(x);
+        case 3: return jxpz(x);
+    }
+    return xmm();
+}
+
 } // namespace OTFFT_MISC
 
 #if defined(__SSE3__)
@@ -522,6 +540,24 @@ namespace OTFFT_MISC {
         constexpr xmm sv = { scale, scale };
         return mode == scale_1 ? z : mulpd(sv, z);
     }
+
+template <int N, int s>
+static xmm modqpz(const_complex_vector W, const int p) noexcept
+{
+    constexpr int Nq = N/4;
+    constexpr int log_Nq = mylog2(Nq);
+    const int sp = s*p;
+    const int q = sp >> log_Nq;
+    const int r = sp & (Nq-1);
+    const xmm x = getpz(W[r]);
+    switch (q & 3) {
+        case 0: return x;
+        case 1: return mjxpz(x);
+        case 2: return negpz(x);
+        case 3: return jxpz(x);
+    }
+    return xmm();
+}
 
     static inline xmm mulpz(const xmm& a, const xmm& b) noexcept force_inline;
     static inline xmm mulpz(const xmm& a, const xmm& b) noexcept

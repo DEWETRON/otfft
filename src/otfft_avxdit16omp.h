@@ -39,6 +39,8 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
         static constexpr int Nd = N1*13;
         static constexpr int Ne = N1*14;
         static constexpr int Nf = N1*15;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -49,7 +51,6 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
                 const int q = i % (s/2) * 2;
                 const int sp   = s*p;
                 const int s16p = 16*sp;
-
                 complex_vector xq_sp   = x + q + sp;
                 complex_vector yq_s16p = y + q + s16p;
 
@@ -607,6 +608,8 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
         static constexpr int Nd = N1*13;
         static constexpr int Ne = N1*14;
         static constexpr int Nf = N1*15;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept

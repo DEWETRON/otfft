@@ -127,6 +127,7 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
                 const ymm x5 = getpz2(x_p+N5);
                 const ymm x6 = getpz2(x_p+N6);
                 const ymm x7 = getpz2(x_p+N7);
+
                 const ymm  a04 =       addpz2(x0, x4);
                 const ymm  s04 =       subpz2(x0, x4);
                 const ymm  a26 =       addpz2(x2, x6);
@@ -151,21 +152,22 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
                 const ymm fF = mulpz2(w5p, subpz2(s04_mj_s26, w8_s15_mj_s37));
                 const ymm gG = mulpz2(w6p, addpz2(a04_m1_a26,  j_a15_m1_a37));
                 const ymm hH = mulpz2(w7p, addpz2(s04_pj_s26, v8_s15_pj_s37));
+
                 const ymm ab = catlo(aA, bB);
-                const ymm AB = cathi(aA, bB);
-                const ymm cd = catlo(cC, dD);
-                const ymm CD = cathi(cC, dD);
-                const ymm ef = catlo(eE, fF);
-                const ymm EF = cathi(eE, fF);
-                const ymm gh = catlo(gG, hH);
-                const ymm GH = cathi(gG, hH);
                 setpz2(y_8p+ 0, ab);
+                const ymm cd = catlo(cC, dD);
                 setpz2(y_8p+ 2, cd);
+                const ymm ef = catlo(eE, fF);
                 setpz2(y_8p+ 4, ef);
+                const ymm gh = catlo(gG, hH);
                 setpz2(y_8p+ 6, gh);
+                const ymm AB = cathi(aA, bB);
                 setpz2(y_8p+ 8, AB);
+                const ymm CD = cathi(cC, dD);
                 setpz2(y_8p+10, CD);
+                const ymm EF = cathi(eE, fF);
                 setpz2(y_8p+12, EF);
+                const ymm GH = cathi(gG, hH);
                 setpz2(y_8p+14, GH);
             }
         }
@@ -407,6 +409,7 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
                 const ymm x5 = getpz2(x_p+N5);
                 const ymm x6 = getpz2(x_p+N6);
                 const ymm x7 = getpz2(x_p+N7);
+
                 const ymm  a04 =       addpz2(x0, x4);
                 const ymm  s04 =       subpz2(x0, x4);
                 const ymm  a26 =       addpz2(x2, x6);
@@ -431,21 +434,22 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
                 const ymm fF = mulpz2(w5p, subpz2(s04_pj_s26, v8_s15_pj_s37));
                 const ymm gG = mulpz2(w6p, subpz2(a04_m1_a26,  j_a15_m1_a37));
                 const ymm hH = mulpz2(w7p, addpz2(s04_mj_s26, w8_s15_mj_s37));
+
                 const ymm ab = catlo(aA, bB);
-                const ymm AB = cathi(aA, bB);
-                const ymm cd = catlo(cC, dD);
-                const ymm CD = cathi(cC, dD);
-                const ymm ef = catlo(eE, fF);
-                const ymm EF = cathi(eE, fF);
-                const ymm gh = catlo(gG, hH);
-                const ymm GH = cathi(gG, hH);
                 setpz2(y_8p+ 0, ab);
+                const ymm cd = catlo(cC, dD);
                 setpz2(y_8p+ 2, cd);
+                const ymm ef = catlo(eE, fF);
                 setpz2(y_8p+ 4, ef);
+                const ymm gh = catlo(gG, hH);
                 setpz2(y_8p+ 6, gh);
+                const ymm AB = cathi(aA, bB);
                 setpz2(y_8p+ 8, AB);
+                const ymm CD = cathi(cC, dD);
                 setpz2(y_8p+10, CD);
+                const ymm EF = cathi(eE, fF);
                 setpz2(y_8p+12, EF);
+                const ymm GH = cathi(gG, hH);
                 setpz2(y_8p+14, GH);
             }
         }

@@ -31,6 +31,16 @@ namespace OTFFT_NAMESPACE
     namespace OTFFT_AVXDIT16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_MixedRadix { extern std::unique_ptr<FFT_IF> instance(); }
 
+    // see upstream otfft.cpp
+    namespace FFT1 = OTFFT_AVXDIF4;
+    namespace FFT2 = OTFFT_AVXDIT4;
+    namespace FFT3 = OTFFT_AVXDIF8;
+    namespace FFT4 = OTFFT_AVXDIT8;
+    namespace FFT5 = OTFFT_AVXDIF16;
+    namespace FFT6 = OTFFT_AVXDIT16;
+    namespace FFT7 = OTFFT_SixStep;
+    namespace FFT8 = OTFFT_MixedRadix;
+
     /******************************************************************************
     *  Complex FFT
     ******************************************************************************/
@@ -54,34 +64,35 @@ namespace OTFFT_NAMESPACE
         if (N != (1 << log_N)) log_N = -1;
         try
         {
+            // see upstream otfft_gen_setup.h
             switch (log_N)
             {
             case  0: break;
-            case  1: obj = OTFFT_AVXDIF16::instance(); obj->setup2(log_N); break;
-            case  2: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
-            case  3: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
-            case  4: obj = OTFFT_AVXDIF4::instance(); obj->setup2(log_N); break;
-            case  5: obj = OTFFT_AVXDIT8::instance(); obj->setup2(log_N); break;
-            case  6: obj = OTFFT_AVXDIF4::instance(); obj->setup2(log_N); break;
-            case  7: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
-            case  8: obj = OTFFT_AVXDIF4::instance(); obj->setup2(log_N); break;
-            case  9: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 10: obj = OTFFT_AVXDIF4::instance(); obj->setup2(log_N); break;
-            case 11: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
-            case 12: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 13: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 14: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 15: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 16: obj = OTFFT_AVXDIT8::instance(); obj->setup2(log_N); break;
-            case 17: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
-            case 18: obj = OTFFT_AVXDIF16::instance(); obj->setup2(log_N); break;
-            case 19: obj = OTFFT_AVXDIF16::instance(); obj->setup2(log_N); break;
-            case 20: obj = OTFFT_SixStep::instance(); obj->setup2(log_N); break;
-            case 21: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 22: obj = OTFFT_SixStep::instance(); obj->setup2(log_N); break;
-            case 23: obj = OTFFT_SixStep::instance(); obj->setup2(log_N); break;
-            case 24: obj = OTFFT_SixStep::instance(); obj->setup2(log_N); break;
-            default: obj = OTFFT_MixedRadix::instance(); obj->setup(N); break;
+            case  1: obj = FFT2::instance(); obj->setup2(log_N); break;
+            case  2: obj = FFT1::instance(); obj->setup2(log_N); break;
+            case  3: obj = FFT4::instance(); obj->setup2(log_N); break;
+            case  4: obj = FFT1::instance(); obj->setup2(log_N); break;
+            case  5: obj = FFT4::instance(); obj->setup2(log_N); break;
+            case  6: obj = FFT3::instance(); obj->setup2(log_N); break;
+            case  7: obj = FFT5::instance(); obj->setup2(log_N); break;
+            case  8: obj = FFT3::instance(); obj->setup2(log_N); break;
+            case  9: obj = FFT3::instance(); obj->setup2(log_N); break;
+            case 10: obj = FFT1::instance(); obj->setup2(log_N); break;
+            case 11: obj = FFT5::instance(); obj->setup2(log_N); break;
+            case 12: obj = FFT4::instance(); obj->setup2(log_N); break;
+            case 13: obj = FFT3::instance(); obj->setup2(log_N); break;
+            case 14: obj = FFT4::instance(); obj->setup2(log_N); break;
+            case 15: obj = FFT4::instance(); obj->setup2(log_N); break;
+            case 16: obj = FFT7::instance(); obj->setup2(log_N); break;
+            case 17: obj = FFT4::instance(); obj->setup2(log_N); break;
+            case 18: obj = FFT7::instance(); obj->setup2(log_N); break;
+            case 19: obj = FFT7::instance(); obj->setup2(log_N); break;
+            case 20: obj = FFT7::instance(); obj->setup2(log_N); break;
+            case 21: obj = FFT7::instance(); obj->setup2(log_N); break;
+            case 22: obj = FFT7::instance(); obj->setup2(log_N); break;
+            case 23: obj = FFT7::instance(); obj->setup2(log_N); break;
+            case 24: obj = FFT7::instance(); obj->setup2(log_N); break;
+            default: obj = FFT8::instance(); obj->setup(N); break;
             }
         }
         catch (...)

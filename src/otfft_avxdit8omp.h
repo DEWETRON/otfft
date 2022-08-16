@@ -31,6 +31,8 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
         static constexpr int N5 = N1*5;
         static constexpr int N6 = N1*6;
         static constexpr int N7 = N1*7;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -41,7 +43,8 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
                 const int q = i % (s/2) * 2;
                 const int sp = s*p;
                 const int s8p = 8*sp;
-                //const ymm w1p = duppz2(getpz(W[sp]));
+                complex_vector xq_sp  = x + q + sp;
+                complex_vector yq_s8p = y + q + s8p;
                 const ymm w1p = duppz3(W[1*sp]);
                 const ymm w2p = duppz3(W[2*sp]);
                 const ymm w3p = duppz3(W[3*sp]);
@@ -49,8 +52,6 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
                 const ymm w5p = mulpz2(w2p, w3p);
                 const ymm w6p = mulpz2(w3p, w3p);
                 const ymm w7p = mulpz2(w3p, w4p);
-                complex_vector xq_sp  = x + q + sp;
-                complex_vector yq_s8p = y + q + s8p;
                 const ymm y0 =             getpz2(yq_s8p+s*0);
                 const ymm y1 = mulpz2(w1p, getpz2(yq_s8p+s*1));
                 const ymm y2 = mulpz2(w2p, getpz2(yq_s8p+s*2));
@@ -310,6 +311,8 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
         static constexpr int N5 = N1*5;
         static constexpr int N6 = N1*6;
         static constexpr int N7 = N1*7;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -320,6 +323,8 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
                 const int q = i % (s/2) * 2;
                 const int sp = s*p;
                 const int s8p = 8*sp;
+                complex_vector xq_sp  = x + q + sp;
+                complex_vector yq_s8p = y + q + s8p;
                 //const ymm w1p = duppz2(getpz(W[N-sp]));
                 const ymm w1p = duppz3(W[N-1*sp]);
                 const ymm w2p = duppz3(W[N-2*sp]);
@@ -328,8 +333,6 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
                 const ymm w5p = mulpz2(w2p, w3p);
                 const ymm w6p = mulpz2(w3p, w3p);
                 const ymm w7p = mulpz2(w3p, w4p);
-                complex_vector xq_sp  = x + q + sp;
-                complex_vector yq_s8p = y + q + s8p;
                 const ymm y0 =             getpz2(yq_s8p+s*0);
                 const ymm y1 = mulpz2(w1p, getpz2(yq_s8p+s*1));
                 const ymm y2 = mulpz2(w2p, getpz2(yq_s8p+s*2));
@@ -382,7 +385,7 @@ namespace OTFFT_AVXDIT8omp { //////////////////////////////////////////////////
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
         {
 #pragma omp for schedule(static) nowait
-            for (int p = 0; p < N/8; p += 2) {
+            for (int p = 0; p < N1; p += 2) {
                 complex_vector x_p  = x + p;
                 complex_vector y_8p = y + 8*p;
                 //const ymm w1p = getwp2<-1>(WN,p);

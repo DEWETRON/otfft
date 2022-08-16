@@ -12,6 +12,7 @@
 #include "otfft_avxdif16.h"
 
 namespace OTFFT_NAMESPACE {
+namespace OTFFT_FourStep = OTFFT_AVXDIF16;
 
 namespace OTFFT_SixStep { /////////////////////////////////////////////////////
 
@@ -33,67 +34,73 @@ namespace OTFFT_SixStep { /////////////////////////////////////////////////////
 
         static void transpose_kernel(const int k, const int p, complex_vector x) noexcept
         {
-            if (k == p) {
+            if (k != p) {
+                const int p_kn = p + k*n;
+                const int k_pn = k + p*n;
+                const ymm aA = getpz2(x+p_kn+0);
+                const ymm bB = getpz2(x+p_kn+n);
+                const ymm ab = catlo(aA, bB);
+                const ymm AB = cathi(aA, bB);
+                const ymm cC = getpz2(x+k_pn+0);
+                const ymm dD = getpz2(x+k_pn+n);
+                const ymm cd = catlo(cC, dD);
+                const ymm CD = cathi(cC, dD);
+                setpz2(x+k_pn+n, AB);
+                setpz2(x+k_pn+0, ab);
+                setpz2(x+p_kn+n, CD);
+                setpz2(x+p_kn+0, cd);
+            }
+            else {
                 const int k_kn = k + k*n;
                 const ymm aA = getpz2(x+k_kn+0);
                 const ymm bB = getpz2(x+k_kn+n);
                 const ymm ab = catlo(aA, bB);
                 const ymm AB = cathi(aA, bB);
-                setpz2(x+k_kn+0, ab);
                 setpz2(x+k_kn+n, AB);
-            }
-            else {
-                const int p_kn = p + k*n;
-                const int k_pn = k + p*n;
-                const ymm aA = getpz2(x+p_kn+0);
-                const ymm bB = getpz2(x+p_kn+n);
-                const ymm cC = getpz2(x+k_pn+0);
-                const ymm dD = getpz2(x+k_pn+n);
-                const ymm ab = catlo(aA, bB);
-                const ymm AB = cathi(aA, bB);
-                const ymm cd = catlo(cC, dD);
-                const ymm CD = cathi(cC, dD);
-                setpz2(x+k_pn+0, ab);
-                setpz2(x+k_pn+n, AB);
-                setpz2(x+p_kn+0, cd);
-                setpz2(x+p_kn+n, CD);
+                setpz2(x+k_kn+0, ab);
             }
         }
 
         static void mult_twiddle_factor_kernel(
                 const int p, const int k, complex_vector x, weight_t W) noexcept
         {
-            if (p == k) {
-                const int pp = p*p;
-                complex_vector x_p_pn = x + p + p*n;
-                const complex_t& w = W[s*(pp+p)];
-                const ymm w1 = scalepz2<N,mode>(cmplx2(W[s*(pp)], w));
-                const ymm w2 = scalepz2<N,mode>(cmplx2(w, W[s*(pp+2*p+1)]));
-                const ymm aA = mulpz2(w1, getpz2(x_p_pn+0));
-                const ymm bB = mulpz2(w2, getpz2(x_p_pn+n));
-                const ymm ab = catlo(aA, bB);
-                const ymm AB = cathi(aA, bB);
-                setpz2(x_p_pn+0, ab);
-                setpz2(x_p_pn+n, AB);
-            }
-            else {
+            if (k != p) {
                 const int kp = k*p;
-                complex_vector x_k_pn = x + k + p*n;
-                complex_vector x_p_kn = x + p + k*n;
-                const ymm w1 = scalepz2<N,mode>(cmplx2(W[s*(kp)],   W[s*(kp+p)]));
-                const ymm w2 = scalepz2<N,mode>(cmplx2(W[s*(kp+k)], W[s*(kp+k+p+1)]));
-                const ymm aA = mulpz2(w1, getpz2(x_k_pn+0));
-                const ymm bB = mulpz2(w2, getpz2(x_k_pn+n));
-                const ymm cC = getpz2(x_p_kn+0);
-                const ymm dD = getpz2(x_p_kn+n);
+                const int k_pn = k + p*n;
+                const int p_kn = p + k*n;
+                const xmm w11 = modqpz<Ns,s>(W,kp);
+                const xmm w12 = modqpz<Ns,s>(W,kp+p);
+                const ymm w1 = scalepz2<N,mode>(cat(w11, w12));
+                const xmm w21 = modqpz<Ns,s>(W,kp+k);
+                const xmm w22 = modqpz<Ns,s>(W,kp+k+p+1);
+                const ymm w2 = scalepz2<N,mode>(cat(w21, w22));
+                const ymm aA = mulpz2(w1, getpz2(x+k_pn+0));
+                const ymm bB = mulpz2(w2, getpz2(x+k_pn+n));
                 const ymm ab = catlo(aA, bB);
                 const ymm AB = cathi(aA, bB);
+                const ymm cC = getpz2(x+p_kn+0);
+                const ymm dD = getpz2(x+p_kn+n);
                 const ymm cd = mulpz2(w1, catlo(cC, dD));
                 const ymm CD = mulpz2(w2, cathi(cC, dD));
-                setpz2(x_p_kn+0, ab);
-                setpz2(x_p_kn+n, AB);
-                setpz2(x_k_pn+0, cd);
-                setpz2(x_k_pn+n, CD);
+                setpz2(x+p_kn+n, AB);
+                setpz2(x+p_kn+0, ab);
+                setpz2(x+k_pn+n, CD);
+                setpz2(x+k_pn+0, cd);
+            }
+            else {
+                const int pp = p*p;
+                const int p_pn = p + p*n;
+                const xmm w11 = modqpz<Ns,s>(W,pp);
+                const xmm w12 = modqpz<Ns,s>(W,pp+p);
+                const xmm w22 = modqpz<Ns,s>(W,pp+2*p+1);
+                const ymm w1 = scalepz2<N,mode>(cat(w11, w12));
+                const ymm aA = mulpz2(w1, getpz2(x+p_pn+0));
+                const ymm w2 = scalepz2<N,mode>(cat(w12, w22));
+                const ymm bB = mulpz2(w2, getpz2(x+p_pn+n));
+                const ymm ab = catlo(aA, bB);
+                const ymm AB = cathi(aA, bB);
+                setpz2(x+p_pn+n, AB);
+                setpz2(x+p_pn+0, ab);
             }
         }
 
@@ -108,16 +115,16 @@ namespace OTFFT_SixStep { /////////////////////////////////////////////////////
                 }
                 for (int p = 0; p < n; p++) {
                     const int pn = p*n;
-                    OTFFT_AVXDIF16::fwdfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
+                    OTFFT_FourStep::fwdfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
                 }
                 for (int i = 0; i < m; i++) {
-                    const int p = ip[i].row;
                     const int k = ip[i].col;
+                    const int p = ip[i].row;
                     mult_twiddle_factor_kernel(p, k, x, W);
                 }
                 for (int k = 0; k < n; k++) {
                     const int kn = k*n;
-                    OTFFT_AVXDIF16::fwdfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
+                    OTFFT_FourStep::fwdfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
                 }
                 for (int i = 0; i < m; i++) {
                     const int k = ip[i].row;
@@ -137,18 +144,18 @@ namespace OTFFT_SixStep { /////////////////////////////////////////////////////
                 #pragma omp for schedule(static)
                 for (int p = 0; p < n; p++) {
                     const int pn = p*n;
-                    OTFFT_AVXDIF16::fwdfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
+                    OTFFT_FourStep::fwdfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
                 }
                 #pragma omp for schedule(static)
                 for (int i = 0; i < m; i++) {
-                    const int p = ip[i].row;
                     const int k = ip[i].col;
+                    const int p = ip[i].row;
                     mult_twiddle_factor_kernel(p, k, x, W);
                 }
                 #pragma omp for schedule(static)
                 for (int k = 0; k < n; k++) {
                     const int kn = k*n;
-                    OTFFT_AVXDIF16::fwdfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
+                    OTFFT_FourStep::fwdfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
                 }
                 #pragma omp for schedule(static) nowait
                 for (int i = 0; i < m; i++) {
@@ -169,18 +176,18 @@ namespace OTFFT_SixStep { /////////////////////////////////////////////////////
                 #pragma omp for schedule(guided)
                 for (int p = 0; p < n; p++) {
                     const int pn = p*n;
-                    OTFFT_AVXDIF16::fwdfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
+                    OTFFT_FourStep::fwdfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
                 }
                 #pragma omp for schedule(guided)
                 for (int i = 0; i < m; i++) {
-                    const int p = ip[i].row;
                     const int k = ip[i].col;
+                    const int p = ip[i].row;
                     mult_twiddle_factor_kernel(p, k, x, W);
                 }
                 #pragma omp for schedule(guided)
                 for (int k = 0; k < n; k++) {
                     const int kn = k*n;
-                    OTFFT_AVXDIF16::fwdfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
+                    OTFFT_FourStep::fwdfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
                 }
                 #pragma omp for schedule(guided) nowait
                 for (int i = 0; i < m; i++) {
@@ -238,37 +245,43 @@ namespace OTFFT_SixStep { /////////////////////////////////////////////////////
         static void mult_twiddle_factor_kernel(
                 const int p, const int k, complex_vector x, weight_t W) noexcept
         {
-            if (p == k) {
-                const int M = N-p*p;
-                complex_vector x_p_pn = x + p + p*n;
-                const complex_t& w = W[s*(M-p)];
-                const ymm w1 = scalepz2<N,mode>(cmplx2(W[s*(M)], w));
-                const ymm w2 = scalepz2<N,mode>(cmplx2(w, W[s*(M-2*p-1)]));
-                const ymm aA = mulpz2(w1, getpz2(x_p_pn+0));
-                const ymm bB = mulpz2(w2, getpz2(x_p_pn+n));
+            if (k != p) {
+                const int kp = k*p;
+                const int k_pn = k + p*n;
+                const int p_kn = p + k*n;
+                const xmm w11 = modqpz<Ns,s>(W,kp);
+                const xmm w12 = modqpz<Ns,s>(W,kp+p);
+                const ymm w1 = scalepz2<N,mode>(cnjpz2(cat(w11, w12)));
+                const xmm w21 = modqpz<Ns,s>(W,kp+k);
+                const xmm w22 = modqpz<Ns,s>(W,kp+k+p+1);
+                const ymm w2 = scalepz2<N,mode>(cnjpz2(cat(w21, w22)));
+                const ymm aA = mulpz2(w1, getpz2(x+k_pn+0));
+                const ymm bB = mulpz2(w2, getpz2(x+k_pn+n));
                 const ymm ab = catlo(aA, bB);
                 const ymm AB = cathi(aA, bB);
-                setpz2(x_p_pn+0, ab);
-                setpz2(x_p_pn+n, AB);
-            }
-            else {
-                const int M = N-k*p;
-                complex_vector x_k_pn = x + k + p*n;
-                complex_vector x_p_kn = x + p + k*n;
-                const ymm w1 = scalepz2<N,mode>(cmplx2(W[s*(M)],   W[s*(M-p)]));
-                const ymm w2 = scalepz2<N,mode>(cmplx2(W[s*(M-k)], W[s*(M-k-p-1)]));
-                const ymm aA = mulpz2(w1, getpz2(x_k_pn+0));
-                const ymm bB = mulpz2(w2, getpz2(x_k_pn+n));
-                const ymm cC = getpz2(x_p_kn+0);
-                const ymm dD = getpz2(x_p_kn+n);
-                const ymm ab = catlo(aA, bB);
-                const ymm AB = cathi(aA, bB);
+                const ymm cC = getpz2(x+p_kn+0);
+                const ymm dD = getpz2(x+p_kn+n);
                 const ymm cd = mulpz2(w1, catlo(cC, dD));
                 const ymm CD = mulpz2(w2, cathi(cC, dD));
-                setpz2(x_p_kn+0, ab);
-                setpz2(x_p_kn+n, AB);
-                setpz2(x_k_pn+0, cd);
-                setpz2(x_k_pn+n, CD);
+                setpz2(x+p_kn+n, AB);
+                setpz2(x+p_kn+0, ab);
+                setpz2(x+k_pn+n, CD);
+                setpz2(x+k_pn+0, cd);
+            }
+            else {
+                const int pp = p*p;
+                const int p_pn = p + p*n;
+                const xmm w11 = modqpz<Ns,s>(W,pp);
+                const xmm w12 = modqpz<Ns,s>(W,pp+p);
+                const xmm w22 = modqpz<Ns,s>(W,pp+2*p+1);
+                const ymm w1 = scalepz2<N,mode>(cnjpz2(cat(w11, w12)));
+                const ymm aA = mulpz2(w1, getpz2(x+p_pn+0));
+                const ymm w2 = scalepz2<N,mode>(cnjpz2(cat(w12, w22)));
+                const ymm bB = mulpz2(w2, getpz2(x+p_pn+n));
+                const ymm ab = catlo(aA, bB);
+                const ymm AB = cathi(aA, bB);
+                setpz2(x+p_pn+n, AB);
+                setpz2(x+p_pn+0, ab);
             }
         }
 
@@ -283,16 +296,16 @@ namespace OTFFT_SixStep { /////////////////////////////////////////////////////
                 }
                 for (int p = 0; p < n; p++) {
                     const int pn = p*n;
-                    OTFFT_AVXDIF16::invfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
+                    OTFFT_FourStep::invfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
                 }
                 for (int i = 0; i < m; i++) {
-                    const int p = ip[i].row;
                     const int k = ip[i].col;
+                    const int p = ip[i].row;
                     mult_twiddle_factor_kernel(p, k, x, W);
                 }
                 for (int k = 0; k < n; k++) {
                     const int kn = k*n;
-                    OTFFT_AVXDIF16::invfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
+                    OTFFT_FourStep::invfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
                 }
                 for (int i = 0; i < m; i++) {
                     const int k = ip[i].row;
@@ -312,18 +325,18 @@ namespace OTFFT_SixStep { /////////////////////////////////////////////////////
                 #pragma omp for schedule(static)
                 for (int p = 0; p < n; p++) {
                     const int pn = p*n;
-                    OTFFT_AVXDIF16::invfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
+                    OTFFT_FourStep::invfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
                 }
                 #pragma omp for schedule(static)
                 for (int i = 0; i < m; i++) {
-                    const int p = ip[i].row;
                     const int k = ip[i].col;
+                    const int p = ip[i].row;
                     mult_twiddle_factor_kernel(p, k, x, W);
                 }
                 #pragma omp for schedule(static)
                 for (int k = 0; k < n; k++) {
                     const int kn = k*n;
-                    OTFFT_AVXDIF16::invfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
+                    OTFFT_FourStep::invfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
                 }
                 #pragma omp for schedule(static) nowait
                 for (int i = 0; i < m; i++) {
@@ -344,18 +357,18 @@ namespace OTFFT_SixStep { /////////////////////////////////////////////////////
                 #pragma omp for schedule(guided)
                 for (int p = 0; p < n; p++) {
                     const int pn = p*n;
-                    OTFFT_AVXDIF16::invfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
+                    OTFFT_FourStep::invfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
                 }
                 #pragma omp for schedule(guided)
                 for (int i = 0; i < m; i++) {
-                    const int p = ip[i].row;
                     const int k = ip[i].col;
+                    const int p = ip[i].row;
                     mult_twiddle_factor_kernel(p, k, x, W);
                 }
                 #pragma omp for schedule(guided)
                 for (int k = 0; k < n; k++) {
                     const int kn = k*n;
-                    OTFFT_AVXDIF16::invfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
+                    OTFFT_FourStep::invfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
                 }
                 #pragma omp for schedule(guided) nowait
                 for (int i = 0; i < m; i++) {

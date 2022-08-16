@@ -39,6 +39,8 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
         static constexpr int Nd = N1*13;
         static constexpr int Ne = N1*14;
         static constexpr int Nf = N1*15;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -49,7 +51,8 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const int q = i % (s/2) * 2;
                 const int sp   = s*p;
                 const int s16p = 16*sp;
-
+                complex_vector xq_sp   = x + q + sp;
+                complex_vector yq_s16p = y + q + s16p;
                 const ymm w1p = duppz3(W[1*sp]);
                 const ymm w2p = duppz3(W[2*sp]);
                 const ymm w3p = duppz3(W[3*sp]);
@@ -65,9 +68,6 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const ymm wdp = mulpz2(w6p, w7p);
                 const ymm wep = mulpz2(w7p, w7p);
                 const ymm wfp = mulpz2(w7p, w8p);
-
-                complex_vector xq_sp   = x + q + sp;
-                complex_vector yq_s16p = y + q + s16p;
 
                 const ymm x0 = getpz2(xq_sp+N0);
                 const ymm x1 = getpz2(xq_sp+N1);
@@ -192,20 +192,6 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 complex_vector y_16p = y + 16*p;
 
                 const ymm w1p = getpz2(W+p);
-                const ymm w2p = mulpz2(w1p, w1p);
-                const ymm w3p = mulpz2(w1p, w2p);
-                const ymm w4p = mulpz2(w2p, w2p);
-                const ymm w5p = mulpz2(w2p, w3p);
-                const ymm w6p = mulpz2(w3p, w3p);
-                const ymm w7p = mulpz2(w3p, w4p);
-                const ymm w8p = mulpz2(w4p, w4p);
-                const ymm w9p = mulpz2(w4p, w5p);
-                const ymm wap = mulpz2(w5p, w5p);
-                const ymm wbp = mulpz2(w5p, w6p);
-                const ymm wcp = mulpz2(w6p, w6p);
-                const ymm wdp = mulpz2(w6p, w7p);
-                const ymm wep = mulpz2(w7p, w7p);
-                const ymm wfp = mulpz2(w7p, w8p);
 
                 const ymm x0 = getpz2(x_p+N0);
                 const ymm x1 = getpz2(x_p+N1);
@@ -281,6 +267,20 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const ymm v8_a19m1a5d_pj_a3bm1a7f = v8xpz2(a19m1a5d_pj_a3bm1a7f);
                 const ymm hf_s19pjs5d_pv_s3bpjs7f = hfxpz2(s19pjs5d_pv_s3bpjs7f);
 
+                const ymm w2p = mulpz2(w1p,w1p);
+                const ymm w3p = mulpz2(w1p,w2p);
+                const ymm w4p = mulpz2(w2p,w2p);
+                const ymm w5p = mulpz2(w2p,w3p);
+                const ymm w6p = mulpz2(w3p,w3p);
+                const ymm w7p = mulpz2(w3p,w4p);
+                const ymm w8p = mulpz2(w4p,w4p);
+                const ymm w9p = mulpz2(w4p,w5p);
+                const ymm wap = mulpz2(w5p,w5p);
+                const ymm wbp = mulpz2(w5p,w6p);
+                const ymm wcp = mulpz2(w6p,w6p);
+                const ymm wdp = mulpz2(w6p,w7p);
+                const ymm wep = mulpz2(w7p,w7p);
+                const ymm wfp = mulpz2(w7p,w8p);
                 const ymm aA =             addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f);
                 const ymm bB = mulpz2(w1p, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
                 const ymm cC = mulpz2(w2p, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
@@ -300,39 +300,36 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const ymm pP = mulpz2(wfp, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
 
                 const ymm ab = catlo(aA, bB);
-                const ymm AB = cathi(aA, bB);
-                const ymm cd = catlo(cC, dD);
-                const ymm CD = cathi(cC, dD);
-                const ymm ef = catlo(eE, fF);
-                const ymm EF = cathi(eE, fF);
-                const ymm gh = catlo(gG, hH);
-                const ymm GH = cathi(gG, hH);
-
-                const ymm ij = catlo(iI, jJ);
-                const ymm IJ = cathi(iI, jJ);
-                const ymm kl = catlo(kK, lL);
-                const ymm KL = cathi(kK, lL);
-                const ymm mn = catlo(mM, nN);
-                const ymm MN = cathi(mM, nN);
-                const ymm op = catlo(oO, pP);
-                const ymm OP = cathi(oO, pP);
-
                 setpz2(y_16p+0x00, ab);
+                const ymm cd = catlo(cC, dD);
                 setpz2(y_16p+0x02, cd);
+                const ymm ef = catlo(eE, fF);
                 setpz2(y_16p+0x04, ef);
+                const ymm gh = catlo(gG, hH);
                 setpz2(y_16p+0x06, gh);
+                const ymm ij = catlo(iI, jJ);
                 setpz2(y_16p+0x08, ij);
+                const ymm kl = catlo(kK, lL);
                 setpz2(y_16p+0x0a, kl);
+                const ymm mn = catlo(mM, nN);
                 setpz2(y_16p+0x0c, mn);
+                const ymm op = catlo(oO, pP);
                 setpz2(y_16p+0x0e, op);
-
+                const ymm AB = cathi(aA, bB);
                 setpz2(y_16p+0x10, AB);
+                const ymm CD = cathi(cC, dD);
                 setpz2(y_16p+0x12, CD);
+                const ymm EF = cathi(eE, fF);
                 setpz2(y_16p+0x14, EF);
+                const ymm GH = cathi(gG, hH);
                 setpz2(y_16p+0x16, GH);
+                const ymm IJ = cathi(iI, jJ);
                 setpz2(y_16p+0x18, IJ);
+                const ymm KL = cathi(kK, lL);
                 setpz2(y_16p+0x1a, KL);
+                const ymm MN = cathi(mM, nN);
                 setpz2(y_16p+0x1c, MN);
+                const ymm OP = cathi(oO, pP);
                 setpz2(y_16p+0x1e, OP);
             }
         }
@@ -627,6 +624,8 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
         static constexpr int Nd = N1*13;
         static constexpr int Ne = N1*14;
         static constexpr int Nf = N1*15;
+        static constexpr int Ni = N1/4;
+        static constexpr int h  = s/4;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -637,6 +636,8 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const int q = i % (s/2) * 2;
                 const int sp   = s*p;
                 const int s16p = 16*sp;
+                complex_vector xq_sp   = x + q + sp;
+                complex_vector yq_s16p = y + q + s16p;
 
                 const ymm w1p = duppz3(W[N-1*sp]);
                 const ymm w2p = duppz3(W[N-2*sp]);
@@ -653,9 +654,6 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const ymm wdp = mulpz2(w6p, w7p);
                 const ymm wep = mulpz2(w7p, w7p);
                 const ymm wfp = mulpz2(w7p, w8p);
-
-                complex_vector xq_sp   = x + q + sp;
-                complex_vector yq_s16p = y + q + s16p;
 
                 const ymm x0 = getpz2(xq_sp+N0);
                 const ymm x1 = getpz2(xq_sp+N1);
@@ -780,20 +778,6 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 complex_vector y_16p = y + 16*p;
 
                 const ymm w1p = cnjpz2(getpz2(W+p));
-                const ymm w2p = mulpz2(w1p, w1p);
-                const ymm w3p = mulpz2(w1p, w2p);
-                const ymm w4p = mulpz2(w2p, w2p);
-                const ymm w5p = mulpz2(w2p, w3p);
-                const ymm w6p = mulpz2(w3p, w3p);
-                const ymm w7p = mulpz2(w3p, w4p);
-                const ymm w8p = mulpz2(w4p, w4p);
-                const ymm w9p = mulpz2(w4p, w5p);
-                const ymm wap = mulpz2(w5p, w5p);
-                const ymm wbp = mulpz2(w5p, w6p);
-                const ymm wcp = mulpz2(w6p, w6p);
-                const ymm wdp = mulpz2(w6p, w7p);
-                const ymm wep = mulpz2(w7p, w7p);
-                const ymm wfp = mulpz2(w7p, w8p);
 
                 const ymm x0 = getpz2(x_p+N0);
                 const ymm x1 = getpz2(x_p+N1);
@@ -869,6 +853,20 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const ymm v8_a19m1a5d_pj_a3bm1a7f = v8xpz2(a19m1a5d_pj_a3bm1a7f);
                 const ymm hf_s19pjs5d_pv_s3bpjs7f = hfxpz2(s19pjs5d_pv_s3bpjs7f);
 
+                const ymm w2p = mulpz2(w1p,w1p);
+                const ymm w3p = mulpz2(w1p,w2p);
+                const ymm w4p = mulpz2(w2p,w2p);
+                const ymm w5p = mulpz2(w2p,w3p);
+                const ymm w6p = mulpz2(w3p,w3p);
+                const ymm w7p = mulpz2(w3p,w4p);
+                const ymm w8p = mulpz2(w4p,w4p);
+                const ymm w9p = mulpz2(w4p,w5p);
+                const ymm wap = mulpz2(w5p,w5p);
+                const ymm wbp = mulpz2(w5p,w6p);
+                const ymm wcp = mulpz2(w6p,w6p);
+                const ymm wdp = mulpz2(w6p,w7p);
+                const ymm wep = mulpz2(w7p,w7p);
+                const ymm wfp = mulpz2(w7p,w8p);
                 const ymm aA =             addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f);
                 const ymm bB = mulpz2(w1p, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
                 const ymm cC = mulpz2(w2p, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
@@ -888,39 +886,36 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const ymm pP = mulpz2(wfp, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
 
                 const ymm ab = catlo(aA, bB);
-                const ymm AB = cathi(aA, bB);
-                const ymm cd = catlo(cC, dD);
-                const ymm CD = cathi(cC, dD);
-                const ymm ef = catlo(eE, fF);
-                const ymm EF = cathi(eE, fF);
-                const ymm gh = catlo(gG, hH);
-                const ymm GH = cathi(gG, hH);
-
-                const ymm ij = catlo(iI, jJ);
-                const ymm IJ = cathi(iI, jJ);
-                const ymm kl = catlo(kK, lL);
-                const ymm KL = cathi(kK, lL);
-                const ymm mn = catlo(mM, nN);
-                const ymm MN = cathi(mM, nN);
-                const ymm op = catlo(oO, pP);
-                const ymm OP = cathi(oO, pP);
-
                 setpz2(y_16p+0x00, ab);
+                const ymm cd = catlo(cC, dD);
                 setpz2(y_16p+0x02, cd);
+                const ymm ef = catlo(eE, fF);
                 setpz2(y_16p+0x04, ef);
+                const ymm gh = catlo(gG, hH);
                 setpz2(y_16p+0x06, gh);
+                const ymm ij = catlo(iI, jJ);
                 setpz2(y_16p+0x08, ij);
+                const ymm kl = catlo(kK, lL);
                 setpz2(y_16p+0x0a, kl);
+                const ymm mn = catlo(mM, nN);
                 setpz2(y_16p+0x0c, mn);
+                const ymm op = catlo(oO, pP);
                 setpz2(y_16p+0x0e, op);
-
+                const ymm AB = cathi(aA, bB);
                 setpz2(y_16p+0x10, AB);
+                const ymm CD = cathi(cC, dD);
                 setpz2(y_16p+0x12, CD);
+                const ymm EF = cathi(eE, fF);
                 setpz2(y_16p+0x14, EF);
+                const ymm GH = cathi(gG, hH);
                 setpz2(y_16p+0x16, GH);
+                const ymm IJ = cathi(iI, jJ);
                 setpz2(y_16p+0x18, IJ);
+                const ymm KL = cathi(kK, lL);
                 setpz2(y_16p+0x1a, KL);
+                const ymm MN = cathi(mM, nN);
                 setpz2(y_16p+0x1c, MN);
+                const ymm OP = cathi(oO, pP);
                 setpz2(y_16p+0x1e, OP);
             }
         }
