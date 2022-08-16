@@ -1,28 +1,35 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/******************************************************************************
+*  OTFFT SixStep of Square Version 11.4xv
+*
+*  Copyright (c) 2019 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
-#pragma once
+#ifndef otfft_sixstepsq_h
+#define otfft_sixstepsq_h
 
-#include "otfft_types.h"
 #include "otfft_avxdif16.h"
 
 namespace OTFFT_NAMESPACE {
 
-namespace OTFFT_Sixstep { /////////////////////////////////////////////////////
+namespace OTFFT_SixStep { /////////////////////////////////////////////////////
 
-    static const int OMP_THRESHOLD1 = 1<<13;
-    static const int OMP_THRESHOLD2 = 1<<17;
+#ifdef DO_SINGLE_THREAD
+    constexpr int OMP_THRESHOLD1 = 1<<30;
+    constexpr int OMP_THRESHOLD2 = 1<<30;
+#else
+    constexpr int OMP_THRESHOLD1 = 1<<13;
+    constexpr int OMP_THRESHOLD2 = 1<<17;
+#endif
 
     template <int log_N, int s, int mode, bool sng> struct fwdffts_body
     {
-        static const int log_n = log_N/2;
-        static const int N = 1 << log_N;
-        static const int n = 1 << log_n;
-        static const int m = n/2*(n/2+1)/2;
+        static constexpr int log_n = log_N/2;
+        static constexpr int N = 1 << log_N;
+        static constexpr int n = 1 << log_n;
+        static constexpr int m = n/2*(n/2+1)/2;
+        static constexpr int Ns = N*s;
 
         static void transpose_kernel(const int k, const int p, complex_vector x) noexcept
         {
@@ -216,10 +223,11 @@ namespace OTFFT_Sixstep { /////////////////////////////////////////////////////
 
     template <int log_N, int s, int mode, bool sng> struct invffts_body
     {
-        static const int log_n = log_N/2;
-        static const int N = 1 << log_N;
-        static const int n = 1 << log_n;
-        static const int m = n/2*(n/2+1)/2;
+        static constexpr int log_n = log_N/2;
+        static constexpr int N = 1 << log_N;
+        static constexpr int n = 1 << log_n;
+        static constexpr int m = n/2*(n/2+1)/2;
+        static constexpr int Ns = N*s;
 
         static inline void transpose_kernel(
                 const int k, const int p, complex_vector x) noexcept
@@ -389,3 +397,5 @@ namespace OTFFT_Sixstep { /////////////////////////////////////////////////////
 } /////////////////////////////////////////////////////////////////////////////
 
 }
+
+#endif // otfft_sixstepsq_h

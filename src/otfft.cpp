@@ -1,15 +1,15 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/******************************************************************************
+*  OTFFT Implementation Version 11.4xv
+*
+*  Copyright (c) 2015 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
 #include "otfft_config.h"
-#include "otfft_platform.h"
 #include "otfft.h"
 #include "otfft_misc.h"
-
+#include "otfft_platform.h"
 
 #include <thread>
 #include <array>
@@ -208,16 +208,6 @@ namespace
 
 namespace OTFFT
 {
-    namespace CONSTANT
-    {
-        const double SQRT2 = 1.41421356237309504876378807303183294;
-        const double PI = 3.14159265358979323846264338327950288;
-        const double SQRT1_2 = 0.707106781186547524400844362104849039;
-        const double RSQRT2PSQRT2 = 0.541196100146196984405268931572763336;
-        const double H1X = 0.923879532511286762010323247995557949;
-        const double H1Y = -0.382683432365089757574419179753100195;
-    }
-
     void unique_ptr_delete::operator()(ComplexFFT *raw_pointer)
     {
 #ifdef OTFFT_WITH_AVX2

@@ -1,16 +1,15 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/******************************************************************************
+*  OTFFT Mixed Radix Version 11.4xv
+*
+*  Copyright (c) 2016 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
-#pragma once
+#ifndef otfft_mixedradix_h
+#define otfft_mixedradix_h
 
 #include "otfft_misc.h"
-
-#define _USE_MATH_DEFINES
-#include <math.h>
 
 namespace OTFFT_NAMESPACE {
 
@@ -19,7 +18,11 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
     using namespace OTFFT;
     using namespace OTFFT_MISC;
 
-    static const int OMP_THRESHOLD = 1<<15;
+#ifdef DO_SINGLE_THREAD
+constexpr int OMP_THRESHOLD = 1<<30;
+#else
+constexpr int OMP_THRESHOLD = 1<<15;
+#endif
 
     struct cpx {
         xmm z;
@@ -27,11 +30,11 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
         operator xmm() const noexcept { return z; }
     };
 
-    static inline cpx operator+(const cpx &a, const cpx &b) noexcept
+    static inline cpx operator+(const cpx a, const cpx b) noexcept
     {
         return addpz(a, b);
     }
-    static inline cpx operator*(const cpx &a, const cpx &b) noexcept
+    static inline cpx operator*(const cpx a, const cpx b) noexcept
     {
         return mulpz(a, b);
     }
@@ -496,7 +499,7 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
     void fwdfftany(const int r, const int n, const int s, const bool eo,
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const xmm zero = { 0, 0 };
+        constexpr xmm zero = { 0, 0 };
         const int N = n*s;
         int k = r;
         while (n%k != 0) {
@@ -1053,7 +1056,7 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
     void invfftany(const int r, const int n, const int s, const bool eo,
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const xmm zero = { 0, 0 };
+        constexpr xmm zero = { 0, 0 };
         const int N = n*s;
         int k = r;
         while (n%k != 0) {
@@ -1632,7 +1635,7 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
     void fwdfftanyp(const int r, const int n, const int s, const bool eo,
                     complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const xmm zero = { 0, 0 };
+        constexpr xmm zero = { 0, 0 };
         const int N = n*s;
         int k = r;
         while (n%k != 0) {
@@ -2216,7 +2219,7 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
     void invfftanyp(const int r, const int n, const int s, const bool eo,
                     complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const xmm zero = { 0, 0 };
+        constexpr xmm zero = { 0, 0 };
         const int N = n*s;
         int k = r;
         while (n%k != 0) {
@@ -2321,3 +2324,5 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
 } /////////////////////////////////////////////////////////////////////////////
 
 }
+
+#endif // otfft_mixedradix_h

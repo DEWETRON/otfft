@@ -31,7 +31,7 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --parallel
 
     - name: Test
       working-directory: ${{github.workspace}}/build
@@ -39,6 +39,6 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}}
 
-    - name: Memory Checks
-      working-directory: ${{github.workspace}}/build
-      run: ctest -T memcheck
+    #- name: Memory Checks
+    #  working-directory: ${{github.workspace}}/build
+    #  run: ctest -T memcheck

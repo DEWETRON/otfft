@@ -1,18 +1,19 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/******************************************************************************
+*  OTFFT SixStep Version 11.4xv
+*
+*  Copyright (c) 2019 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
-#pragma once
+#ifndef otfft_sixstep_h
+#define otfft_sixstep_h
 
-#include "otfft_misc.h"
 #include "otfft_avxdif16.h"
 
 namespace OTFFT_NAMESPACE {
 
-namespace OTFFT_Sixstep { /////////////////////////////////////////////////////
+namespace OTFFT_SixStep { /////////////////////////////////////////////////////
 
     using namespace OTFFT;
     using namespace OTFFT_MISC;
@@ -27,3 +28,5 @@ namespace OTFFT_Sixstep { /////////////////////////////////////////////////////
 
 #include "otfft_sixstepsq.h"
 #include "otfft_eightstep.h"
+
+#endif // otfft_sixstep_h

@@ -1,9 +1,10 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/******************************************************************************
+*  OTFFT Header Version 11.4xv
+*
+*  Copyright (c) 2015 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
 #pragma once
 
@@ -19,6 +20,14 @@
 #include <cmath>
 #include <complex>
 #include <new>
+
+#ifdef _MSC_VER
+#if _MSC_VER >= 1900
+#define VC_CONSTEXPR 1
+#else
+#error "This compiler is not supported."
+#endif
+#endif
 
 #if __GNUC__ >= 3
 #define force_inline  __attribute__((const,always_inline))
@@ -54,25 +63,6 @@
 #endif
 
 //=============================================================================
-// User Defined Constants
-//=============================================================================
-
-namespace OTFFT
-{
-    namespace CONSTANT
-    {
-        extern const double SQRT2;
-        extern const double PI;
-        extern const double SQRT1_2;
-        extern const double RSQRT2PSQRT2;
-        extern const double H1X;
-        extern const double H1Y;
-    }
-
-    enum scaling_mode { scale_1 = 0, scale_unitary, scale_length };
-} // namespace OTFFT
-
-//=============================================================================
 // User Defined Complex Class
 //=============================================================================
 
@@ -83,11 +73,10 @@ namespace OTFFT
         double Re, Im;
 
         complex_t() noexcept : Re(0), Im(0) {}
-        complex_t(const double& x) noexcept : Re(x), Im(0) {}
-        complex_t(const double& x, const double& y) noexcept : Re(x), Im(y) {}
-        complex_t(const complex_t& z) noexcept : Re(z.Re), Im(z.Im) {}
-        complex_t(const std::complex<double>& z) : Re(z.real()), Im(z.imag()) {}
-        operator std::complex<double>() { return std::complex<double>(Re, Im); }
+        complex_t(double x) noexcept : Re(x), Im(0) {}
+        complex_t(double x, double y) noexcept : Re(x), Im(y) {}
+        complex_t(const std::complex<double>& z) noexcept : Re(z.real()), Im(z.imag()) {}
+        operator std::complex<double>() const { return std::complex<double>(Re, Im); }
 
         complex_t& operator+=(const complex_t& z) noexcept
         {
@@ -177,16 +166,23 @@ namespace OTFFT
     {
         return complex_t(-z.Im, -z.Re);
     }
+    static inline complex_t mjx(const complex_t& z) noexcept force_inline;
+    static inline complex_t mjx(const complex_t& z) noexcept
+    {
+        return complex_t(z.Im, -z.Re);
+    }
+#if 0
     static inline complex_t v8x(const complex_t& z) noexcept force_inline;
     static inline complex_t v8x(const complex_t& z) noexcept
     {
-        return complex_t(CONSTANT::SQRT1_2*(z.Re-z.Im), CONSTANT::SQRT1_2*(z.Re+z.Im));
+        return complex_t(M_SQRT1_2*(z.Re-z.Im), M_SQRT1_2*(z.Re+z.Im));
     }
     static inline complex_t w8x(const complex_t& z) noexcept force_inline;
     static inline complex_t w8x(const complex_t& z) noexcept
     {
-        return complex_t(CONSTANT::SQRT1_2*(z.Re+z.Im), CONSTANT::SQRT1_2*(z.Im-z.Re));
+        return complex_t(M_SQRT1_2*(z.Re+z.Im), M_SQRT1_2*(z.Im-z.Re));
     }
+#endif
 
     static inline complex_t operator+(const complex_t& a, const complex_t& b) noexcept force_inline;
     static inline complex_t operator+(const complex_t& a, const complex_t& b) noexcept
@@ -233,10 +229,33 @@ namespace OTFFT
 
 namespace OTFFT
 {
-    static inline double sqrt_aux(double a, double x, double y)
+    constexpr double sqrt_aux(double a, double x, double y)
     {
         return x == y ? x : sqrt_aux(a, (x + a/x)/2, x);
     }
 
-    static inline double mysqrt(double x) { return sqrt_aux(x, x/2, x); }
+    constexpr double mysqrt(double x) { return sqrt_aux(x, x/2, x); }
+
+    constexpr int mylog2(int N)
+    {
+        return N <= 1 ? 0 : 1 + mylog2(N / 2);
+    }
+
+    template <int N, int s>
+    static complex_t modq(const_complex_vector W, const int p) noexcept
+    {
+        constexpr int Nq = N / 4;
+        constexpr int log_Nq = mylog2(Nq);
+        const int sp = s * p;
+        const int q = sp >> log_Nq;
+        const int r = sp & (Nq - 1);
+        const complex_t z = W[r];
+        switch (q & 3) {
+            case 0: return z;
+            case 1: return mjx(z);
+            case 2: return neg(z);
+            case 3: return jx(z);
+        }
+        return complex_t();
+    }
 } // namespace OTFFT

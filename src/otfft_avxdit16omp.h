@@ -1,13 +1,13 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/****************************************************************************
+*  OTFFT AVXDIT(Radix-16) of OpenMP Version 11.4xv
+*
+*  Copyright (c) 2019 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
-#pragma once
-
-#include "otfft_misc.h"
+#ifndef otfft_avxdit16omp_h
+#define otfft_avxdit16omp_h
 
 namespace OTFFT_NAMESPACE {
 
@@ -22,23 +22,23 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
 
     template <int n, int s> struct fwdcore
     {
-        static const int N  = n*s;
-        static const int N0 = 0;
-        static const int N1 = N/16;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
-        static const int N8 = N1*8;
-        static const int N9 = N1*9;
-        static const int Na = N1*10;
-        static const int Nb = N1*11;
-        static const int Nc = N1*12;
-        static const int Nd = N1*13;
-        static const int Ne = N1*14;
-        static const int Nf = N1*15;
+        static constexpr int N  = n*s;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/16;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
+        static constexpr int N8 = N1*8;
+        static constexpr int N9 = N1*9;
+        static constexpr int Na = N1*10;
+        static constexpr int Nb = N1*11;
+        static constexpr int Nc = N1*12;
+        static constexpr int Nd = N1*13;
+        static constexpr int Ne = N1*14;
+        static constexpr int Nf = N1*15;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -165,22 +165,22 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
 
     template <int N> struct fwdcore<N,1>
     {
-        static const int N0 = 0;
-        static const int N1 = N/16;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
-        static const int N8 = N1*8;
-        static const int N9 = N1*9;
-        static const int Na = N1*10;
-        static const int Nb = N1*11;
-        static const int Nc = N1*12;
-        static const int Nd = N1*13;
-        static const int Ne = N1*14;
-        static const int Nf = N1*15;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/16;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
+        static constexpr int N8 = N1*8;
+        static constexpr int N9 = N1*9;
+        static constexpr int Na = N1*10;
+        static constexpr int Nb = N1*11;
+        static constexpr int Nc = N1*12;
+        static constexpr int Nd = N1*13;
+        static constexpr int Ne = N1*14;
+        static constexpr int Nf = N1*15;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -326,7 +326,7 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
 
     template <int s, bool eo, int mode> struct fwdend<16,s,eo,mode>
     {
-        static const int N = 16*s;
+        static constexpr int N = 16*s;
 
         void operator()(complex_vector x, complex_vector y) const noexcept
         {
@@ -590,23 +590,23 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
 
     template <int n, int s> struct invcore
     {
-        static const int N  = n*s;
-        static const int N0 = 0;
-        static const int N1 = N/16;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
-        static const int N8 = N1*8;
-        static const int N9 = N1*9;
-        static const int Na = N1*10;
-        static const int Nb = N1*11;
-        static const int Nc = N1*12;
-        static const int Nd = N1*13;
-        static const int Ne = N1*14;
-        static const int Nf = N1*15;
+        static constexpr int N  = n*s;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/16;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
+        static constexpr int N8 = N1*8;
+        static constexpr int N9 = N1*9;
+        static constexpr int Na = N1*10;
+        static constexpr int Nb = N1*11;
+        static constexpr int Nc = N1*12;
+        static constexpr int Nd = N1*13;
+        static constexpr int Ne = N1*14;
+        static constexpr int Nf = N1*15;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -733,22 +733,22 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
 
     template <int N> struct invcore<N,1>
     {
-        static const int N0 = 0;
-        static const int N1 = N/16;
-        static const int N2 = N1*2;
-        static const int N3 = N1*3;
-        static const int N4 = N1*4;
-        static const int N5 = N1*5;
-        static const int N6 = N1*6;
-        static const int N7 = N1*7;
-        static const int N8 = N1*8;
-        static const int N9 = N1*9;
-        static const int Na = N1*10;
-        static const int Nb = N1*11;
-        static const int Nc = N1*12;
-        static const int Nd = N1*13;
-        static const int Ne = N1*14;
-        static const int Nf = N1*15;
+        static constexpr int N0 = 0;
+        static constexpr int N1 = N/16;
+        static constexpr int N2 = N1*2;
+        static constexpr int N3 = N1*3;
+        static constexpr int N4 = N1*4;
+        static constexpr int N5 = N1*5;
+        static constexpr int N6 = N1*6;
+        static constexpr int N7 = N1*7;
+        static constexpr int N8 = N1*8;
+        static constexpr int N9 = N1*9;
+        static constexpr int Na = N1*10;
+        static constexpr int Nb = N1*11;
+        static constexpr int Nc = N1*12;
+        static constexpr int Nd = N1*13;
+        static constexpr int Ne = N1*14;
+        static constexpr int Nf = N1*15;
 
         void operator()(
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
@@ -894,7 +894,7 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
 
     template <int s, bool eo, int mode> struct invend<16,s,eo,mode>
     {
-        static const int N = 16*s;
+        static constexpr int N = 16*s;
 
         void operator()(complex_vector x, complex_vector y) const noexcept
         {
@@ -1159,7 +1159,7 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
     inline void fwd(const int log_N,
                     complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_length;
+        constexpr int mode = scale_length;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -1193,7 +1193,7 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
     inline void fwd0(const int log_N,
                      complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_1;
+        constexpr int mode = scale_1;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -1227,7 +1227,7 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
     inline void fwdu(const int log_N,
                      complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_unitary;
+        constexpr int mode = scale_unitary;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -1269,7 +1269,7 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
     inline void inv(const int log_N,
                     complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_1;
+        constexpr int mode = scale_1;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -1309,7 +1309,7 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
     inline void invu(const int log_N,
                      complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_unitary;
+        constexpr int mode = scale_unitary;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -1343,7 +1343,7 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
     inline void invn(const int log_N,
                      complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
-        static const int mode = scale_length;
+        constexpr int mode = scale_length;
 #pragma omp parallel firstprivate(x,y,W)
         switch (log_N) {
         case  0: break;
@@ -1377,3 +1377,5 @@ namespace OTFFT_AVXDIT16omp { /////////////////////////////////////////////////
 } /////////////////////////////////////////////////////////////////////////////
 
 }
+
+#endif // otfft_avxdit16omp_h

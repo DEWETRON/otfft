@@ -67,7 +67,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::fwd(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_length;
+            constexpr int mode = scale_length;
             if (N < OMP_THRESHOLD) {
                 switch (log_N) {
                 case  0: break;
@@ -102,7 +102,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::fwd0(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_1;
+            constexpr int mode = scale_1;
             if (N < OMP_THRESHOLD) {
                 switch (log_N) {
                 case  0: break;
@@ -142,7 +142,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::fwdu(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_unitary;
+            constexpr int mode = scale_unitary;
             if (N < OMP_THRESHOLD) {
                 switch (log_N) {
                 case  0: break;
@@ -177,7 +177,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::inv(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_1;
+            constexpr int mode = scale_1;
             if (N < OMP_THRESHOLD) {
                 switch (log_N) {
                 case  0: break;
@@ -217,7 +217,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::invn(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_length;
+            constexpr int mode = scale_length;
             if (N < OMP_THRESHOLD) {
                 switch (log_N) {
                 case  0: break;
@@ -252,7 +252,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::invu(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_unitary;
+            constexpr int mode = scale_unitary;
             if (N < OMP_THRESHOLD) {
                 switch (log_N) {
                 case  0: break;

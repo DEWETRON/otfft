@@ -26,7 +26,7 @@ namespace OTFFT_NAMESPACE
     namespace OTFFT_AVXDIT4 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIF8 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIT8 { extern std::unique_ptr<FFT_IF> instance(); }
-    namespace OTFFT_Sixstep { extern std::unique_ptr<FFT_IF> instance(); }
+    namespace OTFFT_SixStep { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIF16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIT16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_MixedRadix { extern std::unique_ptr<FFT_IF> instance(); }
@@ -35,59 +35,21 @@ namespace OTFFT_NAMESPACE
     *  Complex FFT
     ******************************************************************************/
 
-    FFT0::FFT0() noexcept : obj(nullptr), N(0), log_N(0) {}
+    FFT0::FFT0() noexcept : obj(), N(0), log_N(0) {}
 
-    FFT0::FFT0(int n) : obj(nullptr), N(n), log_N(0)
+    FFT0::FFT0(int n) : obj(), N(n), log_N(0)
     {
-        for (; n > 1; n >>= 1) log_N++;
-        if (N != (1 << log_N)) log_N = -1;
-        try
-        {
-            switch (log_N)
-            {
-            case  0: break;
-            case  1: obj = OTFFT_AVXDIF16::instance(); obj->setup2(log_N); break;
-            case  2: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
-            case  3: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
-            case  4: obj = OTFFT_AVXDIF4::instance(); obj->setup2(log_N); break;
-            case  5: obj = OTFFT_AVXDIT8::instance(); obj->setup2(log_N); break;
-            case  6: obj = OTFFT_AVXDIF4::instance(); obj->setup2(log_N); break;
-            case  7: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
-            case  8: obj = OTFFT_AVXDIF4::instance(); obj->setup2(log_N); break;
-            case  9: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 10: obj = OTFFT_AVXDIF4::instance(); obj->setup2(log_N); break;
-            case 11: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
-            case 12: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 13: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 14: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 15: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 16: obj = OTFFT_AVXDIT8::instance(); obj->setup2(log_N); break;
-            case 17: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
-            case 18: obj = OTFFT_AVXDIF16::instance(); obj->setup2(log_N); break;
-            case 19: obj = OTFFT_AVXDIF16::instance(); obj->setup2(log_N); break;
-            case 20: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
-            case 21: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 22: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
-            case 23: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
-            case 24: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
-            default: obj = OTFFT_MixedRadix::instance(); obj->setup(log_N); break;
-            }
-        }
-        catch (...)
-        {
-            obj.reset(nullptr);
-            throw;
-        }
+        setup(n);
     }
 
     FFT0::~FFT0() noexcept
     {
-        obj.reset(nullptr);
+        obj.reset();
     }
 
     void FFT0::setup(int n)
     {
-        obj.reset(nullptr);
+        obj.reset();
         for (N = n, log_N = 0; n > 1; n >>= 1) log_N++;
         if (N != (1 << log_N)) log_N = -1;
         try
@@ -114,17 +76,17 @@ namespace OTFFT_NAMESPACE
             case 17: obj = OTFFT_AVXDIT16::instance(); obj->setup2(log_N); break;
             case 18: obj = OTFFT_AVXDIF16::instance(); obj->setup2(log_N); break;
             case 19: obj = OTFFT_AVXDIF16::instance(); obj->setup2(log_N); break;
-            case 20: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
+            case 20: obj = OTFFT_SixStep::instance(); obj->setup2(log_N); break;
             case 21: obj = OTFFT_AVXDIF8::instance(); obj->setup2(log_N); break;
-            case 22: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
-            case 23: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
-            case 24: obj = OTFFT_Sixstep::instance(); obj->setup2(log_N); break;
-            default: obj = OTFFT_MixedRadix::instance(); obj->setup(log_N); break;
+            case 22: obj = OTFFT_SixStep::instance(); obj->setup2(log_N); break;
+            case 23: obj = OTFFT_SixStep::instance(); obj->setup2(log_N); break;
+            case 24: obj = OTFFT_SixStep::instance(); obj->setup2(log_N); break;
+            default: obj = OTFFT_MixedRadix::instance(); obj->setup(N); break;
             }
         }
         catch (...)
         {
-            obj.reset(nullptr);
+            obj.reset();
             throw;
         }
     }
@@ -249,7 +211,7 @@ namespace OTFFT_NAMESPACE
         for (log_N = 0; n > 1; n >>= 1) log_N++;
         fft.setup(N/2);
         weight.setup(N+1); U = &weight;
-        const double theta0 = 2*CONSTANT::PI/N;
+        const double theta0 = 2*M_PI/N;
         const int Nh = N/2;
         const int Nq = N/4;
         const int Ne = N/8;
@@ -543,7 +505,7 @@ namespace OTFFT_NAMESPACE
         N = n;
         rfft.setup(N);
         weight.setup(N+1); V = &weight;
-        const double theta0 = CONSTANT::PI/(2*N);
+        const double theta0 = M_PI/(2*N);
         const int Nh = N/2;
         if (N < 2) {}
         else if (N < OMP_THRESHOLD_W) for (int p = 0; p <= Nh; p++) {
@@ -781,7 +743,7 @@ namespace OTFFT_NAMESPACE
         work1.setup(L); a = &work1;
         work2.setup(L); b = &work2;
         weight.setup(N2+1); W = &weight;
-        const double theta0 = CONSTANT::PI/N;
+        const double theta0 = M_PI/N;
         W[0] = W[N2] = 1; W[N] = -1;
         if (N < OMP_THRESHOLD_W) for (int p = 1; p < N; p++) {
             const double theta = p * theta0;

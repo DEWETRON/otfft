@@ -24,18 +24,19 @@
 
 namespace OTFFT_NAMESPACE
 {
-    namespace OTFFT_Sixstep
+    namespace OTFFT_SixStep
     {
-        using namespace OTFFT_Eightstep;
+        using namespace OTFFT_EightStep;
 
         struct FFT0 : FFT_IF
         {
+            typedef complex_t* __restrict complex_ptr;
             int N, log_N;
             simd_array<complex_t> weight;
-            complex_t* __restrict W;
             simd_array<complex_t> weight_sub;
-            complex_t* __restrict Ws;
             simd_array<index_t> index;
+            complex_ptr W;
+            complex_ptr Ws;
             index_t* __restrict ip;
 
             FFT0() noexcept;
@@ -110,7 +111,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::fwd(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_length;
+            constexpr int mode = scale_length;
             switch (log_N) {
             case  0: break;
             case  1: OTFFT_AVXDIF16::fwdfft<(1<<1),1,0,mode>()(x, y, W); break;
@@ -142,7 +143,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::fwd0(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_1;
+            constexpr int mode = scale_1;
             switch (log_N) {
             case  0: break;
             case  1: OTFFT_AVXDIF16::fwdfft<(1<<1),1,0,mode>()(x, y, W); break;
@@ -179,7 +180,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::fwdu(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_unitary;
+            constexpr int mode = scale_unitary;
             switch (log_N) {
             case  0: break;
             case  1: OTFFT_AVXDIF16::fwdfft<(1<<1),1,0,mode>()(x, y, W); break;
@@ -211,7 +212,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::inv(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_1;
+            constexpr int mode = scale_1;
             switch (log_N) {
             case  0: break;
             case  1: OTFFT_AVXDIF16::invfft<(1<<1),1,0,mode>()(x, y, W); break;
@@ -248,7 +249,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::invn(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_length;
+            constexpr int mode = scale_length;
             switch (log_N) {
             case  0: break;
             case  1: OTFFT_AVXDIF16::invfft<(1<<1),1,0,mode>()(x, y, W); break;
@@ -280,7 +281,7 @@ namespace OTFFT_NAMESPACE
 
         void FFT0::invu(complex_vector x, complex_vector y) const noexcept
         {
-            static const int mode = scale_unitary;
+            constexpr int mode = scale_unitary;
             switch (log_N) {
             case  0: break;
             case  1: OTFFT_AVXDIF16::invfft<(1<<1),1,0,mode>()(x, y, W); break;
