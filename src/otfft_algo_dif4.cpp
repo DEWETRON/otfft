@@ -44,8 +44,21 @@ namespace OTFFT_NAMESPACE
             void setup2(const int n)
             {
                 log_N = n; N = 1 << n;
+#if 0
                 weight.setup(N+1); W = &weight;
                 init_W(N, W);
+#else
+                if (N < AVX_THRESHOLD) {
+                    weight.setup(N+1);
+                    W = &weight;
+                    init_W(N, W);
+                }
+                else {
+                    weight.setup(N/4);
+                    W = &weight;
+                    init_Wq(N, W);
+                }
+#endif
             }
 
             ///////////////////////////////////////////////////////////////////////////

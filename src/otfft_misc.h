@@ -144,6 +144,38 @@ constexpr int OMP_THRESHOLD_W = 1<<15;
         }
     }
 
+    static void init_Wq(const int N, complex_vector W) noexcept
+    {
+        const double theta0 = 2*M_PI/N;
+        const int Nq = N/4;
+        const int Ne = N/8;
+        if (N <= 0) return;
+        W[0] = 1;
+        if (N == 1) {}
+        else if (N == 2) { W[1] = -1; }
+        else if (N == 4) {
+            W[1] = complex_t( 0, -1);
+            W[2] = complex_t(-1,  0);
+            W[3] = complex_t( 0,  1);
+        }
+        else if (N < OMP_THRESHOLD_W) for (int p = 1; p <= Ne; p++) {
+            const double theta = p * theta0;
+            const double c =  cos(theta);
+            const double s = -sin(theta);
+            W[p]    = complex_t( c,  s);
+            W[Nq-p] = complex_t(-s, -c);
+        }
+        else
+        #pragma omp parallel for schedule(static)
+        for (int p = 1; p <= Ne; p++) {
+            const double theta = p * theta0;
+            const double c =  cos(theta);
+            const double s = -sin(theta);
+            W[p]    = complex_t( c,  s);
+            W[Nq-p] = complex_t(-s, -c);
+        }
+    }
+
     static void speedup_magic(const int N = 1 << 18) noexcept
     {
         const double theta0 = 2*M_PI/N;
@@ -271,6 +303,24 @@ namespace OTFFT_MISC {
             mode == scale_length  ? 1.0/N         : 0.0;
         constexpr xmm sv = { scale, scale };
         return mode == scale_1 ? z : mulpd(sv, z);
+    }
+
+    template <int N, int s>
+    static xmm modqpz(const_complex_vector W, const int p) noexcept
+    {
+        constexpr int Nq = N/4;
+        constexpr int log_Nq = mylog2(Nq);
+        const int sp = s*p;
+        const int q = sp >> log_Nq;
+        const int r = sp & (Nq-1);
+        const xmm x = getpz(W[r]);
+        switch (q & 3) {
+            case 0: return x;
+            case 1: return mjxpz(x);
+            case 2: return negpz(x);
+            case 3: return jxpz(x);
+        }
+        return xmm();
     }
 
 } // namespace OTFFT_MISC
@@ -522,6 +572,24 @@ namespace OTFFT_MISC {
         constexpr xmm sv = { scale, scale };
         return mode == scale_1 ? z : mulpd(sv, z);
     }
+
+   template <int N, int s>
+   static xmm modqpz(const_complex_vector W, const int p) noexcept
+   {
+       constexpr int Nq = N/4;
+       constexpr int log_Nq = mylog2(Nq);
+       const int sp = s*p;
+       const int q = sp >> log_Nq;
+       const int r = sp & (Nq-1);
+       const xmm x = getpz(W[r]);
+       switch (q & 3) {
+           case 0: return x;
+           case 1: return mjxpz(x);
+           case 2: return negpz(x);
+           case 3: return jxpz(x);
+       }
+       return xmm();
+   }
 
     static inline xmm mulpz(const xmm& a, const xmm& b) noexcept force_inline;
     static inline xmm mulpz(const xmm& a, const xmm& b) noexcept

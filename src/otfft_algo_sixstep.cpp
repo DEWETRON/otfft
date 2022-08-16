@@ -46,6 +46,8 @@ namespace OTFFT_NAMESPACE
 
             void setup2(const int n);
 
+            static void init_weight(const int n, complex_ptr& w, simd_array<complex_t>& a);
+
             ///////////////////////////////////////////////////////////////////////////
 
             void fwd(complex_vector x, complex_vector y) const noexcept;
@@ -76,14 +78,31 @@ namespace OTFFT_NAMESPACE
             setup2(log_N);
         }
 
+        void FFT0::init_weight(const int n, complex_ptr& w, simd_array<complex_t>& a)
+        {
+            if (n <= 4) w = 0;
+#ifdef AVXDIF4
+            else if (n <= 1024) {
+                a.setup(n+1);
+                w = &a;
+                init_W(n, w);
+            }
+#endif
+            else {
+                a.setup(n/4);
+                w = &a;
+                init_Wq(n, w);
+            }
+        }
+
         void FFT0::setup2(const int n)
         {
             log_N = n; N = 1 << n;
-            weight.setup(N+1); W = &weight; init_W(N, W);
+            init_weight(N, W, weight);
             if (n < 4) {}
             else if ((n & 1) == 1) {
                 const int m = 1 << (n/2-1);
-                weight_sub.setup(m+1); Ws = &weight_sub; init_W(m, Ws);
+                init_weight(m, Ws, weight_sub);
                 index.setup(m/2*(m/2+1)/2); ip = &index;
                 int i = 0;
                 for (int k = 0; k < m; k += 2) {
@@ -96,7 +115,7 @@ namespace OTFFT_NAMESPACE
             }
             else {
                 const int m = 1 << n/2;
-                weight_sub.setup(m+1); Ws = &weight_sub; init_W(m, Ws);
+                init_weight(m, Ws, weight_sub);
                 index.setup(m/2*(m/2+1)/2); ip = &index;
                 int i = 0;
                 for (int k = 0; k < m; k += 2) {
