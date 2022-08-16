@@ -1,11 +1,13 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/******************************************************************************
+*  OTFFT AVXDIT(Radix-8) Version 11.4xv
+*
+*  Copyright (c) 2019 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
-#pragma once
+#ifndef otfft_avxdit8_h
+#define otfft_avxdit8_h
 
 #include "otfft_avxdit4.h"
 #include "otfft_avxdit8omp.h"
@@ -571,3 +573,5 @@ constexpr int OMP_THRESHOLD = 1<<13;
 } /////////////////////////////////////////////////////////////////////////////
 
 }
+
+#endif // otfft_avxdit8_h

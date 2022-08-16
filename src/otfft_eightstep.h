@@ -1,11 +1,13 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/******************************************************************************
+*  OTFFT EightStep Version 11.4xv
+*
+*  Copyright (c) 2019 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
-#pragma once
+#ifndef otfft_eightstep_h
+#define otfft_eightstep_h
 
 namespace OTFFT_NAMESPACE {
 
@@ -294,3 +296,5 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
 } /////////////////////////////////////////////////////////////////////////////
 
 }
+
+#endif // otfft_eightstep_h

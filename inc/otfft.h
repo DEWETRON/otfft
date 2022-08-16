@@ -1,11 +1,13 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/******************************************************************************
+*  OTFFT Header Version 11.4xv
+*
+*  Copyright (c) 2015 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
-#pragma once
+#ifndef otfft_h
+#define otfft_h
 
 #include "otfft_config.h"
 #include "otfft_fwd.h"
@@ -205,3 +207,5 @@ namespace OTFFT
         ComplexFFTPtr createBluesteinFFT(int n = 0, OptimizationType t = OptimizationType::OPTIMIZED_FFT_AUTO);
     }
 }
+
+#endif // otfft_h

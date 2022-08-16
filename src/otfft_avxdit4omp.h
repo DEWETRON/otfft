@@ -1,11 +1,13 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/******************************************************************************
+*  OTFFT AVXDIT(Radix-4) of OpenMP Version 11.4xv
+*
+*  Copyright (c) 2019 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
-#pragma once
+#ifndef otfft_avxdit4omp_h
+#define otfft_avxdit4omp_h
 
 namespace OTFFT_NAMESPACE {
 
@@ -13,8 +15,6 @@ namespace OTFFT_AVXDIT4omp { //////////////////////////////////////////////////
 
     using namespace OTFFT;
     using namespace OTFFT_MISC;
-
-    static const int AVX_THRESHOLD = 1<<10;
 
     ///////////////////////////////////////////////////////////////////////////////
     // Forward Butterfly Operation
@@ -651,3 +651,5 @@ namespace OTFFT_AVXDIT4omp { //////////////////////////////////////////////////
 } /////////////////////////////////////////////////////////////////////////////
 
 }
+
+#endif // otfft_avxdit4omp_h

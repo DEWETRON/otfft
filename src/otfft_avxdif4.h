@@ -1,11 +1,13 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
-// Copyright (c) 2017 to the present, DEWETRON GmbH
-// OTFFT Implementation Version 9.5
-// based on Stockham FFT algorithm
-// from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
+/******************************************************************************
+*  OTFFT AVXDIF(Radix-4) Version 11.4xv
+*
+*  Copyright (c) 2019 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 
-#pragma once
+#ifndef otfft_avxdif4_h
+#define otfft_avxdif4_h
 
 #include "otfft_avxdif4omp.h"
 
@@ -16,7 +18,12 @@ namespace OTFFT_AVXDIF4 { /////////////////////////////////////////////////////
     using namespace OTFFT;
     using namespace OTFFT_MISC;
 
-    constexpr int OMP_THRESHOLD = 1<<15;
+#ifdef DO_SINGLE_THREAD
+    constexpr int OMP_THRESHOLD = 1<<30;
+#else
+//constexpr int OMP_THRESHOLD = 1<<15;
+    constexpr int OMP_THRESHOLD = 1<<13;
+#endif
     constexpr int AVX_THRESHOLD = 1<<10;
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -518,3 +525,5 @@ namespace OTFFT_AVXDIF4 { /////////////////////////////////////////////////////
 } /////////////////////////////////////////////////////////////////////////////
 
 }
+
+#endif // otfft_avxdif4_h

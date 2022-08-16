@@ -1,5 +1,10 @@
-// Copyright (c) 2015, OK おじさん(岡久卓也)
-// Copyright (c) 2015, OK Ojisan(Takuya OKAHISA)
+/******************************************************************************
+*  FFT Miscellaneous Routines Version 11.4xv
+*
+*  Copyright (c) 2019 OK Ojisan(Takuya OKAHISA)
+*  Released under the MIT license
+*  http://opensource.org/licenses/mit-license.php
+******************************************************************************/
 // Copyright (c) 2017 to the present, DEWETRON GmbH
 
 #ifndef otfft_misc_h
