@@ -43,30 +43,41 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
         static inline void transpose_kernel(
                 const int p, complex_vector x, complex_vector y) noexcept
         {
+#if 0
             const ymm aA = getpz2(x+p+N0);
             const ymm bB = getpz2(x+p+N1);
             const ymm ab = catlo(aA, bB);
             const ymm AB = cathi(aA, bB);
+            setpz2(y+8*p+ 0, ab);
+            setpz2(y+8*p+ 8, AB);
             const ymm cC = getpz2(x+p+N2);
             const ymm dD = getpz2(x+p+N3);
             const ymm cd = catlo(cC, dD);
             const ymm CD = cathi(cC, dD);
+            setpz2(y+8*p+ 2, cd);
+            setpz2(y+8*p+10, CD);
             const ymm eE = getpz2(x+p+N4);
             const ymm fF = getpz2(x+p+N5);
             const ymm ef = catlo(eE, fF);
             const ymm EF = cathi(eE, fF);
+            setpz2(y+8*p+ 4, ef);
+            setpz2(y+8*p+12, EF);
             const ymm gG = getpz2(x+p+N6);
             const ymm hH = getpz2(x+p+N7);
             const ymm gh = catlo(gG, hH);
             const ymm GH = cathi(gG, hH);
-            setpz2(y+8*p+ 0, ab);
-            setpz2(y+8*p+ 2, cd);
-            setpz2(y+8*p+ 4, ef);
             setpz2(y+8*p+ 6, gh);
-            setpz2(y+8*p+ 8, AB);
-            setpz2(y+8*p+10, CD);
-            setpz2(y+8*p+12, EF);
             setpz2(y+8*p+14, GH);
+#else
+        for (int q = 0; q < 8; q += 2) {
+            const ymm aA = getpz2(x+p+q*N1+N0);
+            const ymm bB = getpz2(x+p+q*N1+N1);
+            const ymm ab = catlo(aA, bB);
+            const ymm AB = cathi(aA, bB);
+            setpz2(y+8*p+q+0, ab);
+            setpz2(y+8*p+q+8, AB);
+        }
+#endif
         }
 
         static inline void fft_and_mult_twiddle_factor_kernel(
@@ -98,7 +109,7 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
             const ymm w8_s15_mj_s37 = w8xpz2(subpz2(s15, js37));
             const ymm  j_a15_m1_a37 =  jxpz2(subpz2(a15,  a37));
             const ymm v8_s15_pj_s37 = v8xpz2(addpz2(s15, js37));
-
+#if 0
             const ymm w1p = getpz2(W+p);
             const ymm w2p = mulpz2(w1p, w1p);
             const ymm w3p = mulpz2(w1p, w2p);
@@ -115,29 +126,46 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
             setpz2(y+p+N5, mulpz2(w5p, subpz2(s04_mj_s26, w8_s15_mj_s37)));
             setpz2(y+p+N6, mulpz2(w6p, addpz2(a04_m1_a26,  j_a15_m1_a37)));
             setpz2(y+p+N7, mulpz2(w7p, addpz2(s04_pj_s26, v8_s15_pj_s37)));
+#else
+        setpz2(y+p+N0,             addpz2(a04_p1_a26,    a15_p1_a37));
+        const ymm w1p = getpz2(W+p);
+        setpz2(y+p+N1, mulpz2(w1p, addpz2(s04_mj_s26, w8_s15_mj_s37)));
+        const ymm w2p = mulpz2(w1p,w1p);
+        setpz2(y+p+N2, mulpz2(w2p, subpz2(a04_m1_a26,  j_a15_m1_a37)));
+        const ymm w3p = mulpz2(w1p,w2p);
+        setpz2(y+p+N3, mulpz2(w3p, subpz2(s04_pj_s26, v8_s15_pj_s37)));
+        const ymm w4p = mulpz2(w2p,w2p);
+        setpz2(y+p+N4, mulpz2(w4p, subpz2(a04_p1_a26,    a15_p1_a37)));
+        const ymm w5p = mulpz2(w2p,w3p);
+        setpz2(y+p+N5, mulpz2(w5p, subpz2(s04_mj_s26, w8_s15_mj_s37)));
+        const ymm w6p = mulpz2(w3p,w3p);
+        setpz2(y+p+N6, mulpz2(w6p, addpz2(a04_m1_a26,  j_a15_m1_a37)));
+        const ymm w7p = mulpz2(w3p,w4p);
+        setpz2(y+p+N7, mulpz2(w7p, addpz2(s04_pj_s26, v8_s15_pj_s37)));
+#endif
         }
 
-        void operator()(const_index_vector ip,
-                complex_vector x, complex_vector y, weight_t W, weight_t Ws) const noexcept
+        void operator()(const_index_vector iv,
+                complex_vector x, complex_vector y, weight_t W, weight_t Wm, weight_t Ws) const noexcept
         {
             if (N < OMP_THRESHOLD1) {
                 for (int p = 0; p < N1; p += 2) {
                     fft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N0, x+N0, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N1, x+N1, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N2, x+N2, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N3, x+N3, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N4, x+N4, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N5, x+N5, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N6, x+N6, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+N7, x+N7, W, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N0, x+N0, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N1, x+N1, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N2, x+N2, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N3, x+N3, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N4, x+N4, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N5, x+N5, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N6, x+N6, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N7, x+N7, Wm, Ws);
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);
                 }
             }
             else if (N < OMP_THRESHOLD2)
-            #pragma omp parallel firstprivate(ip,x,y,W,Ws)
+            #pragma omp parallel firstprivate(iv,x,y,W,Ws)
             {
                 #pragma omp for schedule(static)
                 for (int p = 0; p < N1; p += 2) {
@@ -146,26 +174,27 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
                 #pragma omp for schedule(static)
                 for (int i = 0; i < 8; i++) {
                     const int iN1 = i*N1;
-                    OTFFT_SixStep::fwdffts8<log_N-3,scale_1,1>()(ip, y+iN1, x+iN1, W, Ws);
+                    OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+iN1, x+iN1, Wm, Ws);
                 }
                 #pragma omp for schedule(static) nowait
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);
                 }
             }
-            else {
+            else
+            {
                 #pragma omp parallel for schedule(static) firstprivate(x,y,W)
                 for (int p = 0; p < N1; p += 2) {
                     fft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N0, x+N0, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N1, x+N1, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N2, x+N2, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N3, x+N3, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N4, x+N4, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N5, x+N5, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N6, x+N6, W, Ws);
-                OTFFT_SixStep::fwdffts8<log_N-3,scale_1>()(ip, y+N7, x+N7, W, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N0, x+N0, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N1, x+N1, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N2, x+N2, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N3, x+N3, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N4, x+N4, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N5, x+N5, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N6, x+N6, Wm, Ws);
+                OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N7, x+N7, Wm, Ws);
                 #pragma omp parallel for schedule(static) firstprivate(x,y)
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);
@@ -194,7 +223,7 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
             fwdfftr<log_N,mode>::transpose_kernel(p, x, y);
         }
 
-        static inline void fft_and_mult_twiddle_factor_kernel(
+        static inline void ifft_and_mult_twiddle_factor_kernel(
                 const int p, complex_vector x, complex_vector y, weight_t W) noexcept
         {
             const ymm x0 = scalepz2<N,mode>(getpz2(x+p+N0));
@@ -223,7 +252,7 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
             const ymm v8_s15_pj_s37 = v8xpz2(addpz2(s15, js37));
             const ymm  j_a15_m1_a37 =  jxpz2(subpz2(a15,  a37));
             const ymm w8_s15_mj_s37 = w8xpz2(subpz2(s15, js37));
-
+#if 0
             const ymm w1p = cnjpz2(getpz2(W+p));
             const ymm w2p = mulpz2(w1p,w1p);
             const ymm w3p = mulpz2(w1p,w2p);
@@ -240,38 +269,55 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
             setpz2(y+p+N5, mulpz2(w5p, subpz2(s04_pj_s26, v8_s15_pj_s37)));
             setpz2(y+p+N6, mulpz2(w6p, subpz2(a04_m1_a26,  j_a15_m1_a37)));
             setpz2(y+p+N7, mulpz2(w7p, addpz2(s04_mj_s26, w8_s15_mj_s37)));
+#else
+            setpz2(y+p+N0,             addpz2(a04_p1_a26,    a15_p1_a37));
+            const ymm w1p = cnjpz2(getpz2(W+p));
+            setpz2(y+p+N1, mulpz2(w1p, addpz2(s04_pj_s26, v8_s15_pj_s37)));
+            const ymm w2p = mulpz2(w1p,w1p);
+            setpz2(y+p+N2, mulpz2(w2p, addpz2(a04_m1_a26,  j_a15_m1_a37)));
+            const ymm w3p = mulpz2(w1p,w2p);
+            setpz2(y+p+N3, mulpz2(w3p, subpz2(s04_mj_s26, w8_s15_mj_s37)));
+            const ymm w4p = mulpz2(w2p,w2p);
+            setpz2(y+p+N4, mulpz2(w4p, subpz2(a04_p1_a26,    a15_p1_a37)));
+            const ymm w5p = mulpz2(w2p,w3p);
+            setpz2(y+p+N5, mulpz2(w5p, subpz2(s04_pj_s26, v8_s15_pj_s37)));
+            const ymm w6p = mulpz2(w3p,w3p);
+            setpz2(y+p+N6, mulpz2(w6p, subpz2(a04_m1_a26,  j_a15_m1_a37)));
+            const ymm w7p = mulpz2(w3p,w4p);
+            setpz2(y+p+N7, mulpz2(w7p, addpz2(s04_mj_s26, w8_s15_mj_s37)));
+#endif
         }
 
-        void operator()(const_index_vector ip,
-                complex_vector x, complex_vector y, weight_t W, weight_t Ws) const noexcept
+        void operator()(const_index_vector iv,
+                complex_vector x, complex_vector y, weight_t W, weight_t Wm, weight_t Ws) const noexcept
         {
             if (N < OMP_THRESHOLD1) {
                 for (int p = 0; p < N1; p += 2) {
-                    fft_and_mult_twiddle_factor_kernel(p, x, y, W);
+                    ifft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
-                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N0, x+N0, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N1, x+N1, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N2, x+N2, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N3, x+N3, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N4, x+N4, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N5, x+N5, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N6, x+N6, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+N7, x+N7, W, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N0, x+N0, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N1, x+N1, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N2, x+N2, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N3, x+N3, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N4, x+N4, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N5, x+N5, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N6, x+N6, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N7, x+N7, Wm, Ws);
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);
                 }
             }
             else if (N < OMP_THRESHOLD2)
-            #pragma omp parallel firstprivate(ip, x,y,W,Ws)
+            #pragma omp parallel firstprivate(iv, x,y,W,Ws)
             {
                 #pragma omp for schedule(static)
                 for (int p = 0; p < N1; p += 2) {
-                    fft_and_mult_twiddle_factor_kernel(p, x, y, W);
+                    ifft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
                 #pragma omp for schedule(static)
                 for (int i = 0; i < 8; i++) {
                     const int iN1 = i*N1;
-                    OTFFT_SixStep::invffts8<log_N-3,scale_1,1>()(ip, y+iN1, x+iN1, W, Ws);
+                    OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+iN1, x+iN1, Wm, Ws);
                 }
                 #pragma omp for schedule(static) nowait
                 for (int p = 0; p < N1; p += 2) {
@@ -281,16 +327,16 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
             else {
                 #pragma omp parallel for schedule(static) firstprivate(x,y,W)
                 for (int p = 0; p < N1; p += 2) {
-                    fft_and_mult_twiddle_factor_kernel(p, x, y, W);
+                    ifft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
-                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N0, x+N0, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N1, x+N1, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N2, x+N2, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N3, x+N3, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N4, x+N4, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N5, x+N5, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N6, x+N6, W, Ws);
-                OTFFT_SixStep::invffts8<log_N-3,scale_1>()(ip, y+N7, x+N7, W, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N0, x+N0, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N1, x+N1, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N2, x+N2, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N3, x+N3, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N4, x+N4, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N5, x+N5, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N6, x+N6, Wm, Ws);
+                OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N7, x+N7, Wm, Ws);
                 #pragma omp parallel for schedule(static) firstprivate(x,y)
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);

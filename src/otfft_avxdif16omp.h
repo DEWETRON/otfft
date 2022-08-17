@@ -46,120 +46,122 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
         {
 #pragma omp for schedule(static)
-            for (int i = 0; i < N/32; i++) {
-                const int p = i / (s/2);
-                const int q = i % (s/2) * 2;
+            for (int i = 0; i < Ni; i++) {
+                const int p = i / h;
+                const int q = i % h * 4;
                 const int sp   = s*p;
                 const int s16p = 16*sp;
                 complex_vector xq_sp   = x + q + sp;
                 complex_vector yq_s16p = y + q + s16p;
-                const ymm w1p = duppz3(W[1*sp]);
-                const ymm w2p = duppz3(W[2*sp]);
-                const ymm w3p = duppz3(W[3*sp]);
-                const ymm w4p = mulpz2(w2p, w2p);
-                const ymm w5p = mulpz2(w2p, w3p);
-                const ymm w6p = mulpz2(w3p, w3p);
-                const ymm w7p = mulpz2(w3p, w4p);
-                const ymm w8p = mulpz2(w4p, w4p);
-                const ymm w9p = mulpz2(w4p, w5p);
-                const ymm wap = mulpz2(w5p, w5p);
-                const ymm wbp = mulpz2(w5p, w6p);
-                const ymm wcp = mulpz2(w6p, w6p);
-                const ymm wdp = mulpz2(w6p, w7p);
-                const ymm wep = mulpz2(w7p, w7p);
-                const ymm wfp = mulpz2(w7p, w8p);
 
-                const ymm x0 = getpz2(xq_sp+N0);
-                const ymm x1 = getpz2(xq_sp+N1);
-                const ymm x2 = getpz2(xq_sp+N2);
-                const ymm x3 = getpz2(xq_sp+N3);
-                const ymm x4 = getpz2(xq_sp+N4);
-                const ymm x5 = getpz2(xq_sp+N5);
-                const ymm x6 = getpz2(xq_sp+N6);
-                const ymm x7 = getpz2(xq_sp+N7);
-                const ymm x8 = getpz2(xq_sp+N8);
-                const ymm x9 = getpz2(xq_sp+N9);
-                const ymm xa = getpz2(xq_sp+Na);
-                const ymm xb = getpz2(xq_sp+Nb);
-                const ymm xc = getpz2(xq_sp+Nc);
-                const ymm xd = getpz2(xq_sp+Nd);
-                const ymm xe = getpz2(xq_sp+Ne);
-                const ymm xf = getpz2(xq_sp+Nf);
+                const emm w1p = dupez5(W[sp]);
 
-                const ymm a08 = addpz2(x0, x8); const ymm s08 = subpz2(x0, x8);
-                const ymm a4c = addpz2(x4, xc); const ymm s4c = subpz2(x4, xc);
-                const ymm a2a = addpz2(x2, xa); const ymm s2a = subpz2(x2, xa);
-                const ymm a6e = addpz2(x6, xe); const ymm s6e = subpz2(x6, xe);
-                const ymm a19 = addpz2(x1, x9); const ymm s19 = subpz2(x1, x9);
-                const ymm a5d = addpz2(x5, xd); const ymm s5d = subpz2(x5, xd);
-                const ymm a3b = addpz2(x3, xb); const ymm s3b = subpz2(x3, xb);
-                const ymm a7f = addpz2(x7, xf); const ymm s7f = subpz2(x7, xf);
+                const emm x0 = getez4(xq_sp+N0);
+                const emm x1 = getez4(xq_sp+N1);
+                const emm x2 = getez4(xq_sp+N2);
+                const emm x3 = getez4(xq_sp+N3);
+                const emm x4 = getez4(xq_sp+N4);
+                const emm x5 = getez4(xq_sp+N5);
+                const emm x6 = getez4(xq_sp+N6);
+                const emm x7 = getez4(xq_sp+N7);
+                const emm x8 = getez4(xq_sp+N8);
+                const emm x9 = getez4(xq_sp+N9);
+                const emm xa = getez4(xq_sp+Na);
+                const emm xb = getez4(xq_sp+Nb);
+                const emm xc = getez4(xq_sp+Nc);
+                const emm xd = getez4(xq_sp+Nd);
+                const emm xe = getez4(xq_sp+Ne);
+                const emm xf = getez4(xq_sp+Nf);
 
-                const ymm js4c = jxpz2(s4c);
-                const ymm js6e = jxpz2(s6e);
-                const ymm js5d = jxpz2(s5d);
-                const ymm js7f = jxpz2(s7f);
+                const emm a08 = addez4(x0, x8); const emm s08 = subez4(x0, x8);
+                const emm a4c = addez4(x4, xc); const emm s4c = subez4(x4, xc);
+                const emm a2a = addez4(x2, xa); const emm s2a = subez4(x2, xa);
+                const emm a6e = addez4(x6, xe); const emm s6e = subez4(x6, xe);
+                const emm a19 = addez4(x1, x9); const emm s19 = subez4(x1, x9);
+                const emm a5d = addez4(x5, xd); const emm s5d = subez4(x5, xd);
+                const emm a3b = addez4(x3, xb); const emm s3b = subez4(x3, xb);
+                const emm a7f = addez4(x7, xf); const emm s7f = subez4(x7, xf);
 
-                const ymm a08p1a4c = addpz2(a08, a4c); const ymm s08mjs4c = subpz2(s08, js4c);
-                const ymm a08m1a4c = subpz2(a08, a4c); const ymm s08pjs4c = addpz2(s08, js4c);
-                const ymm a2ap1a6e = addpz2(a2a, a6e); const ymm s2amjs6e = subpz2(s2a, js6e);
-                const ymm a2am1a6e = subpz2(a2a, a6e); const ymm s2apjs6e = addpz2(s2a, js6e);
-                const ymm a19p1a5d = addpz2(a19, a5d); const ymm s19mjs5d = subpz2(s19, js5d);
-                const ymm a19m1a5d = subpz2(a19, a5d); const ymm s19pjs5d = addpz2(s19, js5d);
-                const ymm a3bp1a7f = addpz2(a3b, a7f); const ymm s3bmjs7f = subpz2(s3b, js7f);
-                const ymm a3bm1a7f = subpz2(a3b, a7f); const ymm s3bpjs7f = addpz2(s3b, js7f);
+                const emm js4c = jxez4(s4c);
+                const emm js6e = jxez4(s6e);
+                const emm js5d = jxez4(s5d);
+                const emm js7f = jxez4(s7f);
 
-                const ymm w8_s2amjs6e = w8xpz2(s2amjs6e);
-                const ymm  j_a2am1a6e =  jxpz2(a2am1a6e);
-                const ymm v8_s2apjs6e = v8xpz2(s2apjs6e);
+                const emm a08p1a4c = addez4(a08, a4c); const emm s08mjs4c = subez4(s08, js4c);
+                const emm a08m1a4c = subez4(a08, a4c); const emm s08pjs4c = addez4(s08, js4c);
+                const emm a2ap1a6e = addez4(a2a, a6e); const emm s2amjs6e = subez4(s2a, js6e);
+                const emm a2am1a6e = subez4(a2a, a6e); const emm s2apjs6e = addez4(s2a, js6e);
+                const emm a19p1a5d = addez4(a19, a5d); const emm s19mjs5d = subez4(s19, js5d);
+                const emm a19m1a5d = subez4(a19, a5d); const emm s19pjs5d = addez4(s19, js5d);
+                const emm a3bp1a7f = addez4(a3b, a7f); const emm s3bmjs7f = subez4(s3b, js7f);
+                const emm a3bm1a7f = subez4(a3b, a7f); const emm s3bpjs7f = addez4(s3b, js7f);
 
-                const ymm a08p1a4c_p1_a2ap1a6e = addpz2(a08p1a4c,    a2ap1a6e);
-                const ymm s08mjs4c_pw_s2amjs6e = addpz2(s08mjs4c, w8_s2amjs6e);
-                const ymm a08m1a4c_mj_a2am1a6e = subpz2(a08m1a4c,  j_a2am1a6e);
-                const ymm s08pjs4c_mv_s2apjs6e = subpz2(s08pjs4c, v8_s2apjs6e);
-                const ymm a08p1a4c_m1_a2ap1a6e = subpz2(a08p1a4c,    a2ap1a6e);
-                const ymm s08mjs4c_mw_s2amjs6e = subpz2(s08mjs4c, w8_s2amjs6e);
-                const ymm a08m1a4c_pj_a2am1a6e = addpz2(a08m1a4c,  j_a2am1a6e);
-                const ymm s08pjs4c_pv_s2apjs6e = addpz2(s08pjs4c, v8_s2apjs6e);
+                const emm w8_s2amjs6e = w8xez4(s2amjs6e);
+                const emm  j_a2am1a6e =  jxez4(a2am1a6e);
+                const emm v8_s2apjs6e = v8xez4(s2apjs6e);
 
-                const ymm w8_s3bmjs7f = w8xpz2(s3bmjs7f);
-                const ymm  j_a3bm1a7f =  jxpz2(a3bm1a7f);
-                const ymm v8_s3bpjs7f = v8xpz2(s3bpjs7f);
+                const emm a08p1a4c_p1_a2ap1a6e = addez4(a08p1a4c,    a2ap1a6e);
+                const emm s08mjs4c_pw_s2amjs6e = addez4(s08mjs4c, w8_s2amjs6e);
+                const emm a08m1a4c_mj_a2am1a6e = subez4(a08m1a4c,  j_a2am1a6e);
+                const emm s08pjs4c_mv_s2apjs6e = subez4(s08pjs4c, v8_s2apjs6e);
+                const emm a08p1a4c_m1_a2ap1a6e = subez4(a08p1a4c,    a2ap1a6e);
+                const emm s08mjs4c_mw_s2amjs6e = subez4(s08mjs4c, w8_s2amjs6e);
+                const emm a08m1a4c_pj_a2am1a6e = addez4(a08m1a4c,  j_a2am1a6e);
+                const emm s08pjs4c_pv_s2apjs6e = addez4(s08pjs4c, v8_s2apjs6e);
 
-                const ymm a19p1a5d_p1_a3bp1a7f = addpz2(a19p1a5d,    a3bp1a7f);
-                const ymm s19mjs5d_pw_s3bmjs7f = addpz2(s19mjs5d, w8_s3bmjs7f);
-                const ymm a19m1a5d_mj_a3bm1a7f = subpz2(a19m1a5d,  j_a3bm1a7f);
-                const ymm s19pjs5d_mv_s3bpjs7f = subpz2(s19pjs5d, v8_s3bpjs7f);
-                const ymm a19p1a5d_m1_a3bp1a7f = subpz2(a19p1a5d,    a3bp1a7f);
-                const ymm s19mjs5d_mw_s3bmjs7f = subpz2(s19mjs5d, w8_s3bmjs7f);
-                const ymm a19m1a5d_pj_a3bm1a7f = addpz2(a19m1a5d,  j_a3bm1a7f);
-                const ymm s19pjs5d_pv_s3bpjs7f = addpz2(s19pjs5d, v8_s3bpjs7f);
+                const emm w8_s3bmjs7f = w8xez4(s3bmjs7f);
+                const emm  j_a3bm1a7f =  jxez4(a3bm1a7f);
+                const emm v8_s3bpjs7f = v8xez4(s3bpjs7f);
 
-                const ymm h1_s19mjs5d_pw_s3bmjs7f = h1xpz2(s19mjs5d_pw_s3bmjs7f);
-                const ymm w8_a19m1a5d_mj_a3bm1a7f = w8xpz2(a19m1a5d_mj_a3bm1a7f);
-                const ymm h3_s19pjs5d_mv_s3bpjs7f = h3xpz2(s19pjs5d_mv_s3bpjs7f);
-                const ymm  j_a19p1a5d_m1_a3bp1a7f =  jxpz2(a19p1a5d_m1_a3bp1a7f);
-                const ymm hd_s19mjs5d_mw_s3bmjs7f = hdxpz2(s19mjs5d_mw_s3bmjs7f);
-                const ymm v8_a19m1a5d_pj_a3bm1a7f = v8xpz2(a19m1a5d_pj_a3bm1a7f);
-                const ymm hf_s19pjs5d_pv_s3bpjs7f = hfxpz2(s19pjs5d_pv_s3bpjs7f);
+                const emm a19p1a5d_p1_a3bp1a7f = addez4(a19p1a5d,    a3bp1a7f);
+                const emm s19mjs5d_pw_s3bmjs7f = addez4(s19mjs5d, w8_s3bmjs7f);
+                const emm a19m1a5d_mj_a3bm1a7f = subez4(a19m1a5d,  j_a3bm1a7f);
+                const emm s19pjs5d_mv_s3bpjs7f = subez4(s19pjs5d, v8_s3bpjs7f);
+                const emm a19p1a5d_m1_a3bp1a7f = subez4(a19p1a5d,    a3bp1a7f);
+                const emm s19mjs5d_mw_s3bmjs7f = subez4(s19mjs5d, w8_s3bmjs7f);
+                const emm a19m1a5d_pj_a3bm1a7f = addez4(a19m1a5d,  j_a3bm1a7f);
+                const emm s19pjs5d_pv_s3bpjs7f = addez4(s19pjs5d, v8_s3bpjs7f);
 
-                setpz2(yq_s16p+s*0x0,             addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
-                setpz2(yq_s16p+s*0x1, mulpz2(w1p, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
-                setpz2(yq_s16p+s*0x2, mulpz2(w2p, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
-                setpz2(yq_s16p+s*0x3, mulpz2(w3p, addpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
-                setpz2(yq_s16p+s*0x4, mulpz2(w4p, subpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
-                setpz2(yq_s16p+s*0x5, mulpz2(w5p, subpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
-                setpz2(yq_s16p+s*0x6, mulpz2(w6p, subpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
-                setpz2(yq_s16p+s*0x7, mulpz2(w7p, subpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
+                const emm h1_s19mjs5d_pw_s3bmjs7f = h1xez4(s19mjs5d_pw_s3bmjs7f);
+                const emm w8_a19m1a5d_mj_a3bm1a7f = w8xez4(a19m1a5d_mj_a3bm1a7f);
+                const emm h3_s19pjs5d_mv_s3bpjs7f = h3xez4(s19pjs5d_mv_s3bpjs7f);
+                const emm  j_a19p1a5d_m1_a3bp1a7f =  jxez4(a19p1a5d_m1_a3bp1a7f);
+                const emm hd_s19mjs5d_mw_s3bmjs7f = hdxez4(s19mjs5d_mw_s3bmjs7f);
+                const emm v8_a19m1a5d_pj_a3bm1a7f = v8xez4(a19m1a5d_pj_a3bm1a7f);
+                const emm hf_s19pjs5d_pv_s3bpjs7f = hfxez4(s19pjs5d_pv_s3bpjs7f);
 
-                setpz2(yq_s16p+s*0x8, mulpz2(w8p, subpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f)));
-                setpz2(yq_s16p+s*0x9, mulpz2(w9p, subpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
-                setpz2(yq_s16p+s*0xa, mulpz2(wap, subpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
-                setpz2(yq_s16p+s*0xb, mulpz2(wbp, subpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
-                setpz2(yq_s16p+s*0xc, mulpz2(wcp, addpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
-                setpz2(yq_s16p+s*0xd, mulpz2(wdp, addpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
-                setpz2(yq_s16p+s*0xe, mulpz2(wep, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
-                setpz2(yq_s16p+s*0xf, mulpz2(wfp, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
+                const emm w2p = mulez4(w1p,w1p);
+                const emm w3p = mulez4(w1p,w2p);
+                const emm w4p = mulez4(w2p,w2p);
+                const emm w5p = mulez4(w2p,w3p);
+                const emm w6p = mulez4(w3p,w3p);
+                const emm w7p = mulez4(w3p,w4p);
+                const emm w8p = mulez4(w4p,w4p);
+                const emm w9p = mulez4(w4p,w5p);
+                const emm wap = mulez4(w5p,w5p);
+                const emm wbp = mulez4(w5p,w6p);
+                const emm wcp = mulez4(w6p,w6p);
+                const emm wdp = mulez4(w6p,w7p);
+                const emm wep = mulez4(w7p,w7p);
+                const emm wfp = mulez4(w7p,w8p);
+
+                setez4(yq_s16p+s*0x0,             addez4(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+                setez4(yq_s16p+s*0x1, mulez4(w1p, addez4(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
+                setez4(yq_s16p+s*0x2, mulez4(w2p, addez4(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
+                setez4(yq_s16p+s*0x3, mulez4(w3p, addez4(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
+                setez4(yq_s16p+s*0x4, mulez4(w4p, subez4(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
+                setez4(yq_s16p+s*0x5, mulez4(w5p, subez4(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
+                setez4(yq_s16p+s*0x6, mulez4(w6p, subez4(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
+                setez4(yq_s16p+s*0x7, mulez4(w7p, subez4(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
+
+                setez4(yq_s16p+s*0x8, mulez4(w8p, subez4(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f)));
+                setez4(yq_s16p+s*0x9, mulez4(w9p, subez4(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
+                setez4(yq_s16p+s*0xa, mulez4(wap, subez4(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
+                setez4(yq_s16p+s*0xb, mulez4(wbp, subez4(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
+                setez4(yq_s16p+s*0xc, mulez4(wcp, addez4(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
+                setez4(yq_s16p+s*0xd, mulez4(wdp, addez4(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
+                setez4(yq_s16p+s*0xe, mulez4(wep, addez4(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
+                setez4(yq_s16p+s*0xf, mulez4(wfp, addez4(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
             }
         }
     };
@@ -281,6 +283,25 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const ymm wdp = mulpz2(w6p,w7p);
                 const ymm wep = mulpz2(w7p,w7p);
                 const ymm wfp = mulpz2(w7p,w8p);
+#if 0
+                setpz3<16>(y_16p+0x0,             addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+                setpz3<16>(y_16p+0x1, mulpz2(w1p, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
+                setpz3<16>(y_16p+0x2, mulpz2(w2p, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
+                setpz3<16>(y_16p+0x3, mulpz2(w3p, addpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
+                setpz3<16>(y_16p+0x4, mulpz2(w4p, subpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
+                setpz3<16>(y_16p+0x5, mulpz2(w5p, subpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
+                setpz3<16>(y_16p+0x6, mulpz2(w6p, subpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
+                setpz3<16>(y_16p+0x7, mulpz2(w7p, subpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
+    
+                setpz3<16>(y_16p+0x8, mulpz2(w8p, subpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f)));
+                setpz3<16>(y_16p+0x9, mulpz2(w9p, subpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
+                setpz3<16>(y_16p+0xa, mulpz2(wap, subpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
+                setpz3<16>(y_16p+0xb, mulpz2(wbp, subpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
+                setpz3<16>(y_16p+0xc, mulpz2(wcp, addpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
+                setpz3<16>(y_16p+0xd, mulpz2(wdp, addpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
+                setpz3<16>(y_16p+0xe, mulpz2(wep, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
+                setpz3<16>(y_16p+0xf, mulpz2(wfp, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
+#else
                 const ymm aA =             addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f);
                 const ymm bB = mulpz2(w1p, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
                 const ymm cC = mulpz2(w2p, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
@@ -331,6 +352,7 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 setpz2(y_16p+0x1c, MN);
                 const ymm OP = cathi(oO, pP);
                 setpz2(y_16p+0x1e, OP);
+#endif
             }
         }
     };
@@ -631,121 +653,122 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 complex_vector x, complex_vector y, const_complex_vector W) const noexcept
         {
 #pragma omp for schedule(static)
-            for (int i = 0; i < N/32; i++) {
-                const int p = i / (s/2);
-                const int q = i % (s/2) * 2;
+            for (int i = 0; i < Ni; i++) {
+                const int p = i / h;
+                const int q = i % h * 4;
                 const int sp   = s*p;
                 const int s16p = 16*sp;
                 complex_vector xq_sp   = x + q + sp;
                 complex_vector yq_s16p = y + q + s16p;
 
-                const ymm w1p = duppz3(W[N-1*sp]);
-                const ymm w2p = duppz3(W[N-2*sp]);
-                const ymm w3p = duppz3(W[N-3*sp]);
-                const ymm w4p = mulpz2(w2p, w2p);
-                const ymm w5p = mulpz2(w2p, w3p);
-                const ymm w6p = mulpz2(w3p, w3p);
-                const ymm w7p = mulpz2(w3p, w4p);
-                const ymm w8p = mulpz2(w4p, w4p);
-                const ymm w9p = mulpz2(w4p, w5p);
-                const ymm wap = mulpz2(w5p, w5p);
-                const ymm wbp = mulpz2(w5p, w6p);
-                const ymm wcp = mulpz2(w6p, w6p);
-                const ymm wdp = mulpz2(w6p, w7p);
-                const ymm wep = mulpz2(w7p, w7p);
-                const ymm wfp = mulpz2(w7p, w8p);
+                const emm w1p = dupez5(conj(W[sp]));
 
-                const ymm x0 = getpz2(xq_sp+N0);
-                const ymm x1 = getpz2(xq_sp+N1);
-                const ymm x2 = getpz2(xq_sp+N2);
-                const ymm x3 = getpz2(xq_sp+N3);
-                const ymm x4 = getpz2(xq_sp+N4);
-                const ymm x5 = getpz2(xq_sp+N5);
-                const ymm x6 = getpz2(xq_sp+N6);
-                const ymm x7 = getpz2(xq_sp+N7);
-                const ymm x8 = getpz2(xq_sp+N8);
-                const ymm x9 = getpz2(xq_sp+N9);
-                const ymm xa = getpz2(xq_sp+Na);
-                const ymm xb = getpz2(xq_sp+Nb);
-                const ymm xc = getpz2(xq_sp+Nc);
-                const ymm xd = getpz2(xq_sp+Nd);
-                const ymm xe = getpz2(xq_sp+Ne);
-                const ymm xf = getpz2(xq_sp+Nf);
+                const emm x0 = getez4(xq_sp+N0);
+                const emm x1 = getez4(xq_sp+N1);
+                const emm x2 = getez4(xq_sp+N2);
+                const emm x3 = getez4(xq_sp+N3);
+                const emm x4 = getez4(xq_sp+N4);
+                const emm x5 = getez4(xq_sp+N5);
+                const emm x6 = getez4(xq_sp+N6);
+                const emm x7 = getez4(xq_sp+N7);
+                const emm x8 = getez4(xq_sp+N8);
+                const emm x9 = getez4(xq_sp+N9);
+                const emm xa = getez4(xq_sp+Na);
+                const emm xb = getez4(xq_sp+Nb);
+                const emm xc = getez4(xq_sp+Nc);
+                const emm xd = getez4(xq_sp+Nd);
+                const emm xe = getez4(xq_sp+Ne);
+                const emm xf = getez4(xq_sp+Nf);
 
-                const ymm a08 = addpz2(x0, x8); const ymm s08 = subpz2(x0, x8);
-                const ymm a4c = addpz2(x4, xc); const ymm s4c = subpz2(x4, xc);
-                const ymm a2a = addpz2(x2, xa); const ymm s2a = subpz2(x2, xa);
-                const ymm a6e = addpz2(x6, xe); const ymm s6e = subpz2(x6, xe);
-                const ymm a19 = addpz2(x1, x9); const ymm s19 = subpz2(x1, x9);
-                const ymm a5d = addpz2(x5, xd); const ymm s5d = subpz2(x5, xd);
-                const ymm a3b = addpz2(x3, xb); const ymm s3b = subpz2(x3, xb);
-                const ymm a7f = addpz2(x7, xf); const ymm s7f = subpz2(x7, xf);
+                const emm a08 = addez4(x0, x8); const emm s08 = subez4(x0, x8);
+                const emm a4c = addez4(x4, xc); const emm s4c = subez4(x4, xc);
+                const emm a2a = addez4(x2, xa); const emm s2a = subez4(x2, xa);
+                const emm a6e = addez4(x6, xe); const emm s6e = subez4(x6, xe);
+                const emm a19 = addez4(x1, x9); const emm s19 = subez4(x1, x9);
+                const emm a5d = addez4(x5, xd); const emm s5d = subez4(x5, xd);
+                const emm a3b = addez4(x3, xb); const emm s3b = subez4(x3, xb);
+                const emm a7f = addez4(x7, xf); const emm s7f = subez4(x7, xf);
 
-                const ymm js4c = jxpz2(s4c);
-                const ymm js6e = jxpz2(s6e);
-                const ymm js5d = jxpz2(s5d);
-                const ymm js7f = jxpz2(s7f);
+                const emm js4c = jxez4(s4c);
+                const emm js6e = jxez4(s6e);
+                const emm js5d = jxez4(s5d);
+                const emm js7f = jxez4(s7f);
 
-                const ymm a08p1a4c = addpz2(a08, a4c); const ymm s08mjs4c = subpz2(s08, js4c);
-                const ymm a08m1a4c = subpz2(a08, a4c); const ymm s08pjs4c = addpz2(s08, js4c);
-                const ymm a2ap1a6e = addpz2(a2a, a6e); const ymm s2amjs6e = subpz2(s2a, js6e);
-                const ymm a2am1a6e = subpz2(a2a, a6e); const ymm s2apjs6e = addpz2(s2a, js6e);
-                const ymm a19p1a5d = addpz2(a19, a5d); const ymm s19mjs5d = subpz2(s19, js5d);
-                const ymm a19m1a5d = subpz2(a19, a5d); const ymm s19pjs5d = addpz2(s19, js5d);
-                const ymm a3bp1a7f = addpz2(a3b, a7f); const ymm s3bmjs7f = subpz2(s3b, js7f);
-                const ymm a3bm1a7f = subpz2(a3b, a7f); const ymm s3bpjs7f = addpz2(s3b, js7f);
+                const emm a08p1a4c = addez4(a08, a4c); const emm s08mjs4c = subez4(s08, js4c);
+                const emm a08m1a4c = subez4(a08, a4c); const emm s08pjs4c = addez4(s08, js4c);
+                const emm a2ap1a6e = addez4(a2a, a6e); const emm s2amjs6e = subez4(s2a, js6e);
+                const emm a2am1a6e = subez4(a2a, a6e); const emm s2apjs6e = addez4(s2a, js6e);
+                const emm a19p1a5d = addez4(a19, a5d); const emm s19mjs5d = subez4(s19, js5d);
+                const emm a19m1a5d = subez4(a19, a5d); const emm s19pjs5d = addez4(s19, js5d);
+                const emm a3bp1a7f = addez4(a3b, a7f); const emm s3bmjs7f = subez4(s3b, js7f);
+                const emm a3bm1a7f = subez4(a3b, a7f); const emm s3bpjs7f = addez4(s3b, js7f);
 
-                const ymm w8_s2amjs6e = w8xpz2(s2amjs6e);
-                const ymm  j_a2am1a6e =  jxpz2(a2am1a6e);
-                const ymm v8_s2apjs6e = v8xpz2(s2apjs6e);
+                const emm w8_s2amjs6e = w8xez4(s2amjs6e);
+                const emm  j_a2am1a6e =  jxez4(a2am1a6e);
+                const emm v8_s2apjs6e = v8xez4(s2apjs6e);
 
-                const ymm a08p1a4c_p1_a2ap1a6e = addpz2(a08p1a4c,    a2ap1a6e);
-                const ymm s08mjs4c_pw_s2amjs6e = addpz2(s08mjs4c, w8_s2amjs6e);
-                const ymm a08m1a4c_mj_a2am1a6e = subpz2(a08m1a4c,  j_a2am1a6e);
-                const ymm s08pjs4c_mv_s2apjs6e = subpz2(s08pjs4c, v8_s2apjs6e);
-                const ymm a08p1a4c_m1_a2ap1a6e = subpz2(a08p1a4c,    a2ap1a6e);
-                const ymm s08mjs4c_mw_s2amjs6e = subpz2(s08mjs4c, w8_s2amjs6e);
-                const ymm a08m1a4c_pj_a2am1a6e = addpz2(a08m1a4c,  j_a2am1a6e);
-                const ymm s08pjs4c_pv_s2apjs6e = addpz2(s08pjs4c, v8_s2apjs6e);
+                const emm a08p1a4c_p1_a2ap1a6e = addez4(a08p1a4c,    a2ap1a6e);
+                const emm s08mjs4c_pw_s2amjs6e = addez4(s08mjs4c, w8_s2amjs6e);
+                const emm a08m1a4c_mj_a2am1a6e = subez4(a08m1a4c,  j_a2am1a6e);
+                const emm s08pjs4c_mv_s2apjs6e = subez4(s08pjs4c, v8_s2apjs6e);
+                const emm a08p1a4c_m1_a2ap1a6e = subez4(a08p1a4c,    a2ap1a6e);
+                const emm s08mjs4c_mw_s2amjs6e = subez4(s08mjs4c, w8_s2amjs6e);
+                const emm a08m1a4c_pj_a2am1a6e = addez4(a08m1a4c,  j_a2am1a6e);
+                const emm s08pjs4c_pv_s2apjs6e = addez4(s08pjs4c, v8_s2apjs6e);
 
-                const ymm w8_s3bmjs7f = w8xpz2(s3bmjs7f);
-                const ymm  j_a3bm1a7f =  jxpz2(a3bm1a7f);
-                const ymm v8_s3bpjs7f = v8xpz2(s3bpjs7f);
+                const emm w8_s3bmjs7f = w8xez4(s3bmjs7f);
+                const emm  j_a3bm1a7f =  jxez4(a3bm1a7f);
+                const emm v8_s3bpjs7f = v8xez4(s3bpjs7f);
 
-                const ymm a19p1a5d_p1_a3bp1a7f = addpz2(a19p1a5d,    a3bp1a7f);
-                const ymm s19mjs5d_pw_s3bmjs7f = addpz2(s19mjs5d, w8_s3bmjs7f);
-                const ymm a19m1a5d_mj_a3bm1a7f = subpz2(a19m1a5d,  j_a3bm1a7f);
-                const ymm s19pjs5d_mv_s3bpjs7f = subpz2(s19pjs5d, v8_s3bpjs7f);
-                const ymm a19p1a5d_m1_a3bp1a7f = subpz2(a19p1a5d,    a3bp1a7f);
-                const ymm s19mjs5d_mw_s3bmjs7f = subpz2(s19mjs5d, w8_s3bmjs7f);
-                const ymm a19m1a5d_pj_a3bm1a7f = addpz2(a19m1a5d,  j_a3bm1a7f);
-                const ymm s19pjs5d_pv_s3bpjs7f = addpz2(s19pjs5d, v8_s3bpjs7f);
+                const emm a19p1a5d_p1_a3bp1a7f = addez4(a19p1a5d,    a3bp1a7f);
+                const emm s19mjs5d_pw_s3bmjs7f = addez4(s19mjs5d, w8_s3bmjs7f);
+                const emm a19m1a5d_mj_a3bm1a7f = subez4(a19m1a5d,  j_a3bm1a7f);
+                const emm s19pjs5d_mv_s3bpjs7f = subez4(s19pjs5d, v8_s3bpjs7f);
+                const emm a19p1a5d_m1_a3bp1a7f = subez4(a19p1a5d,    a3bp1a7f);
+                const emm s19mjs5d_mw_s3bmjs7f = subez4(s19mjs5d, w8_s3bmjs7f);
+                const emm a19m1a5d_pj_a3bm1a7f = addez4(a19m1a5d,  j_a3bm1a7f);
+                const emm s19pjs5d_pv_s3bpjs7f = addez4(s19pjs5d, v8_s3bpjs7f);
 
-                const ymm h1_s19mjs5d_pw_s3bmjs7f = h1xpz2(s19mjs5d_pw_s3bmjs7f);
-                const ymm w8_a19m1a5d_mj_a3bm1a7f = w8xpz2(a19m1a5d_mj_a3bm1a7f);
-                const ymm h3_s19pjs5d_mv_s3bpjs7f = h3xpz2(s19pjs5d_mv_s3bpjs7f);
-                const ymm  j_a19p1a5d_m1_a3bp1a7f =  jxpz2(a19p1a5d_m1_a3bp1a7f);
-                const ymm hd_s19mjs5d_mw_s3bmjs7f = hdxpz2(s19mjs5d_mw_s3bmjs7f);
-                const ymm v8_a19m1a5d_pj_a3bm1a7f = v8xpz2(a19m1a5d_pj_a3bm1a7f);
-                const ymm hf_s19pjs5d_pv_s3bpjs7f = hfxpz2(s19pjs5d_pv_s3bpjs7f);
+                const emm h1_s19mjs5d_pw_s3bmjs7f = h1xez4(s19mjs5d_pw_s3bmjs7f);
+                const emm w8_a19m1a5d_mj_a3bm1a7f = w8xez4(a19m1a5d_mj_a3bm1a7f);
+                const emm h3_s19pjs5d_mv_s3bpjs7f = h3xez4(s19pjs5d_mv_s3bpjs7f);
+                const emm  j_a19p1a5d_m1_a3bp1a7f =  jxez4(a19p1a5d_m1_a3bp1a7f);
+                const emm hd_s19mjs5d_mw_s3bmjs7f = hdxez4(s19mjs5d_mw_s3bmjs7f);
+                const emm v8_a19m1a5d_pj_a3bm1a7f = v8xez4(a19m1a5d_pj_a3bm1a7f);
+                const emm hf_s19pjs5d_pv_s3bpjs7f = hfxez4(s19pjs5d_pv_s3bpjs7f);
 
-                setpz2(yq_s16p+s*0x0,             addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
-                setpz2(yq_s16p+s*0x1, mulpz2(w1p, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
-                setpz2(yq_s16p+s*0x2, mulpz2(w2p, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
-                setpz2(yq_s16p+s*0x3, mulpz2(w3p, addpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
-                setpz2(yq_s16p+s*0x4, mulpz2(w4p, addpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
-                setpz2(yq_s16p+s*0x5, mulpz2(w5p, subpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
-                setpz2(yq_s16p+s*0x6, mulpz2(w6p, subpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
-                setpz2(yq_s16p+s*0x7, mulpz2(w7p, subpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
+                const emm w2p = mulez4(w1p,w1p);
+                const emm w3p = mulez4(w1p,w2p);
+                const emm w4p = mulez4(w2p,w2p);
+                const emm w5p = mulez4(w2p,w3p);
+                const emm w6p = mulez4(w3p,w3p);
+                const emm w7p = mulez4(w3p,w4p);
+                const emm w8p = mulez4(w4p,w4p);
+                const emm w9p = mulez4(w4p,w5p);
+                const emm wap = mulez4(w5p,w5p);
+                const emm wbp = mulez4(w5p,w6p);
+                const emm wcp = mulez4(w6p,w6p);
+                const emm wdp = mulez4(w6p,w7p);
+                const emm wep = mulez4(w7p,w7p);
+                const emm wfp = mulez4(w7p,w8p);
 
-                setpz2(yq_s16p+s*0x8, mulpz2(w8p, subpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f)));
-                setpz2(yq_s16p+s*0x9, mulpz2(w9p, subpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
-                setpz2(yq_s16p+s*0xa, mulpz2(wap, subpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
-                setpz2(yq_s16p+s*0xb, mulpz2(wbp, subpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
-                setpz2(yq_s16p+s*0xc, mulpz2(wcp, subpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
-                setpz2(yq_s16p+s*0xd, mulpz2(wdp, addpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
-                setpz2(yq_s16p+s*0xe, mulpz2(wep, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
-                setpz2(yq_s16p+s*0xf, mulpz2(wfp, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
+                setez4(yq_s16p+s*0x0,             addez4(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+                setez4(yq_s16p+s*0x1, mulez4(w1p, addez4(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
+                setez4(yq_s16p+s*0x2, mulez4(w2p, addez4(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
+                setez4(yq_s16p+s*0x3, mulez4(w3p, addez4(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
+                setez4(yq_s16p+s*0x4, mulez4(w4p, addez4(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
+                setez4(yq_s16p+s*0x5, mulez4(w5p, subez4(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
+                setez4(yq_s16p+s*0x6, mulez4(w6p, subez4(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
+                setez4(yq_s16p+s*0x7, mulez4(w7p, subez4(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
+
+                setez4(yq_s16p+s*0x8, mulez4(w8p, subez4(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f)));
+                setez4(yq_s16p+s*0x9, mulez4(w9p, subez4(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
+                setez4(yq_s16p+s*0xa, mulez4(wap, subez4(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
+                setez4(yq_s16p+s*0xb, mulez4(wbp, subez4(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
+                setez4(yq_s16p+s*0xc, mulez4(wcp, subez4(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
+                setez4(yq_s16p+s*0xd, mulez4(wdp, addez4(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
+                setez4(yq_s16p+s*0xe, mulez4(wep, addez4(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
+                setez4(yq_s16p+s*0xf, mulez4(wfp, addez4(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
             }
         }
     };
@@ -867,6 +890,25 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 const ymm wdp = mulpz2(w6p,w7p);
                 const ymm wep = mulpz2(w7p,w7p);
                 const ymm wfp = mulpz2(w7p,w8p);
+#if 0
+                setpz3<16>(y_16p+0x0,             addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+                setpz3<16>(y_16p+0x1, mulpz2(w1p, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
+                setpz3<16>(y_16p+0x2, mulpz2(w2p, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
+                setpz3<16>(y_16p+0x3, mulpz2(w3p, addpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
+                setpz3<16>(y_16p+0x4, mulpz2(w4p, addpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
+                setpz3<16>(y_16p+0x5, mulpz2(w5p, subpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
+                setpz3<16>(y_16p+0x6, mulpz2(w6p, subpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
+                setpz3<16>(y_16p+0x7, mulpz2(w7p, subpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
+    
+                setpz3<16>(y_16p+0x8, mulpz2(w8p, subpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f)));
+                setpz3<16>(y_16p+0x9, mulpz2(w9p, subpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f)));
+                setpz3<16>(y_16p+0xa, mulpz2(wap, subpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f)));
+                setpz3<16>(y_16p+0xb, mulpz2(wbp, subpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f)));
+                setpz3<16>(y_16p+0xc, mulpz2(wcp, subpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f)));
+                setpz3<16>(y_16p+0xd, mulpz2(wdp, addpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f)));
+                setpz3<16>(y_16p+0xe, mulpz2(wep, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f)));
+                setpz3<16>(y_16p+0xf, mulpz2(wfp, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f)));
+#else
                 const ymm aA =             addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f);
                 const ymm bB = mulpz2(w1p, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
                 const ymm cC = mulpz2(w2p, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
@@ -917,6 +959,7 @@ namespace OTFFT_AVXDIF16omp { /////////////////////////////////////////////////
                 setpz2(y_16p+0x1c, MN);
                 const ymm OP = cathi(oO, pP);
                 setpz2(y_16p+0x1e, OP);
+#endif
             }
         }
     };

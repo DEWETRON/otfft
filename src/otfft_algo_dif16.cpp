@@ -44,8 +44,17 @@ namespace OTFFT_NAMESPACE
             inline void setup2(const int n)
             {
                 log_N = n; N = 1 << n;
-                weight.setup(N+1); W = &weight;
-                init_W(N, W);
+                if (N <= 16) W = 0;
+                else if (N < OMP_THRESHOLD) {
+                    weight.setup(2*N);
+                    W = &weight;
+                    init_Wt(16, N, W);
+                }
+                else {
+                    weight.setup(N/16);
+                    W = &weight;
+                    init_Wr1(16, N, W);
+                }
             }
 
             ///////////////////////////////////////////////////////////////////////////
