@@ -57,21 +57,21 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 const int sp   = s*p;
                 const int s16p = 16*sp;
 
-                const ymm w1p = duppz3(W[1*sp]);
-                const ymm w2p = duppz3(W[2*sp]);
-                const ymm w3p = duppz3(W[3*sp]);
-                const ymm w4p = mulpz2(w2p, w2p);
-                const ymm w5p = mulpz2(w2p, w3p);
-                const ymm w6p = mulpz2(w3p, w3p);
-                const ymm w7p = mulpz2(w3p, w4p);
-                const ymm w8p = mulpz2(w4p, w4p);
-                const ymm w9p = mulpz2(w4p, w5p);
-                const ymm wap = mulpz2(w5p, w5p);
-                const ymm wbp = mulpz2(w5p, w6p);
-                const ymm wcp = mulpz2(w6p, w6p);
-                const ymm wdp = mulpz2(w6p, w7p);
-                const ymm wep = mulpz2(w7p, w7p);
-                const ymm wfp = mulpz2(w7p, w8p);
+                const ymm w1p = duppz3(*twidT<16,N, 1>(W,sp));
+                const ymm w2p = duppz3(*twidT<16,N, 2>(W,sp));
+                const ymm w3p = duppz3(*twidT<16,N, 3>(W,sp));
+                const ymm w4p = duppz3(*twidT<16,N, 4>(W,sp));
+                const ymm w5p = duppz3(*twidT<16,N, 5>(W,sp));
+                const ymm w6p = duppz3(*twidT<16,N, 6>(W,sp));
+                const ymm w7p = duppz3(*twidT<16,N, 7>(W,sp));
+                const ymm w8p = duppz3(*twidT<16,N, 8>(W,sp));
+                const ymm w9p = duppz3(*twidT<16,N, 9>(W,sp));
+                const ymm wap = duppz3(*twidT<16,N,10>(W,sp));
+                const ymm wbp = duppz3(*twidT<16,N,11>(W,sp));
+                const ymm wcp = duppz3(*twidT<16,N,12>(W,sp));
+                const ymm wdp = duppz3(*twidT<16,N,13>(W,sp));
+                const ymm wep = duppz3(*twidT<16,N,14>(W,sp));
+                const ymm wfp = duppz3(*twidT<16,N,15>(W,sp));
 
                 for (int q = 0; q < s; q += 2) {
                     complex_vector xq_sp   = x + q + sp;
@@ -142,7 +142,7 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                     const ymm s19mjs5d_mw_s3bmjs7f = subpz2(s19mjs5d, w8_s3bmjs7f);
                     const ymm a19m1a5d_pj_a3bm1a7f = addpz2(a19m1a5d,  j_a3bm1a7f);
                     const ymm s19pjs5d_pv_s3bpjs7f = addpz2(s19pjs5d, v8_s3bpjs7f);
-
+#if 0
                     const ymm h1_s19mjs5d_pw_s3bmjs7f = h1xpz2(s19mjs5d_pw_s3bmjs7f);
                     const ymm w8_a19m1a5d_mj_a3bm1a7f = w8xpz2(a19m1a5d_mj_a3bm1a7f);
                     const ymm h3_s19pjs5d_mv_s3bpjs7f = h3xpz2(s19pjs5d_mv_s3bpjs7f);
@@ -168,6 +168,38 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                     setpz2(xq_sp+Nd, addpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f));
                     setpz2(xq_sp+Ne, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
                     setpz2(xq_sp+Nf, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
+#else
+                    setpz2(xq_sp+N0, addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+                    setpz2(xq_sp+N8, subpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+
+                    const ymm h1_s19mjs5d_pw_s3bmjs7f = h1xpz2(s19mjs5d_pw_s3bmjs7f);
+                    setpz2(xq_sp+N1, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
+                    setpz2(xq_sp+N9, subpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
+
+                    const ymm w8_a19m1a5d_mj_a3bm1a7f = w8xpz2(a19m1a5d_mj_a3bm1a7f);
+                    setpz2(xq_sp+N2, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
+                    setpz2(xq_sp+Na, subpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
+
+                    const ymm h3_s19pjs5d_mv_s3bpjs7f = h3xpz2(s19pjs5d_mv_s3bpjs7f);
+                    setpz2(xq_sp+N3, addpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f));
+                    setpz2(xq_sp+Nb, subpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f));
+
+                    const ymm  j_a19p1a5d_m1_a3bp1a7f =  jxpz2(a19p1a5d_m1_a3bp1a7f);
+                    setpz2(xq_sp+N4, subpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f));
+                    setpz2(xq_sp+Nc, addpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f));
+
+                    const ymm hd_s19mjs5d_mw_s3bmjs7f = hdxpz2(s19mjs5d_mw_s3bmjs7f);
+                    setpz2(xq_sp+N5, subpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f));
+                    setpz2(xq_sp+Nd, addpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f));
+
+                    const ymm v8_a19m1a5d_pj_a3bm1a7f = v8xpz2(a19m1a5d_pj_a3bm1a7f);
+                    setpz2(xq_sp+N6, subpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
+                    setpz2(xq_sp+Ne, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
+
+                    const ymm hf_s19pjs5d_pv_s3bpjs7f = hfxpz2(s19pjs5d_pv_s3bpjs7f);
+                    setpz2(xq_sp+N7, subpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
+                    setpz2(xq_sp+Nf, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
+#endif
                 }
             }
         }
@@ -198,7 +230,7 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
             for (int p = 0; p < N1; p += 2) {
                 complex_vector x_p   = x + p;
                 complex_vector y_16p = y + 16*p;
-
+#if 0
                 const ymm w1p = getpz2(W+p);
                 const ymm w2p = mulpz2(w1p, w1p);
                 const ymm w3p = mulpz2(w1p, w2p);
@@ -214,6 +246,40 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 const ymm wdp = mulpz2(w6p, w7p);
                 const ymm wep = mulpz2(w7p, w7p);
                 const ymm wfp = mulpz2(w7p, w8p);
+
+                const ymm y0 =             getpz3<16>(y_16p+0x0);
+                const ymm y1 = mulpz2(w1p, getpz3<16>(y_16p+0x1));
+                const ymm y2 = mulpz2(w2p, getpz3<16>(y_16p+0x2));
+                const ymm y3 = mulpz2(w3p, getpz3<16>(y_16p+0x3));
+                const ymm y4 = mulpz2(w4p, getpz3<16>(y_16p+0x4));
+                const ymm y5 = mulpz2(w5p, getpz3<16>(y_16p+0x5));
+                const ymm y6 = mulpz2(w6p, getpz3<16>(y_16p+0x6));
+                const ymm y7 = mulpz2(w7p, getpz3<16>(y_16p+0x7));
+                const ymm y8 = mulpz2(w8p, getpz3<16>(y_16p+0x8));
+                const ymm y9 = mulpz2(w9p, getpz3<16>(y_16p+0x9));
+                const ymm ya = mulpz2(wap, getpz3<16>(y_16p+0xa));
+                const ymm yb = mulpz2(wbp, getpz3<16>(y_16p+0xb));
+                const ymm yc = mulpz2(wcp, getpz3<16>(y_16p+0xc));
+                const ymm yd = mulpz2(wdp, getpz3<16>(y_16p+0xd));
+                const ymm ye = mulpz2(wep, getpz3<16>(y_16p+0xe));
+                const ymm yf = mulpz2(wfp, getpz3<16>(y_16p+0xf));
+#else
+                const ymm w1p = getpz2(twid<16,N, 1>(W,p));
+                const ymm w2p = getpz2(twid<16,N, 2>(W,p));
+                const ymm w3p = getpz2(twid<16,N, 3>(W,p));
+                const ymm w4p = getpz2(twid<16,N, 4>(W,p));
+                const ymm w5p = getpz2(twid<16,N, 5>(W,p));
+                const ymm w6p = getpz2(twid<16,N, 6>(W,p));
+                const ymm w7p = getpz2(twid<16,N, 7>(W,p));
+                const ymm w8p = getpz2(twid<16,N, 8>(W,p));
+                const ymm w9p = getpz2(twid<16,N, 9>(W,p));
+                const ymm wap = getpz2(twid<16,N,10>(W,p));
+                const ymm wbp = getpz2(twid<16,N,11>(W,p));
+                const ymm wcp = getpz2(twid<16,N,12>(W,p));
+                const ymm wdp = getpz2(twid<16,N,13>(W,p));
+                const ymm wep = getpz2(twid<16,N,14>(W,p));
+                const ymm wfp = getpz2(twid<16,N,15>(W,p));
+
                 const ymm ab = getpz2(y_16p+0x00);
                 const ymm cd = getpz2(y_16p+0x02);
                 const ymm ef = getpz2(y_16p+0x04);
@@ -248,6 +314,7 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 const ymm yd = mulpz2(wdp, cathi(mn, MN));
                 const ymm ye = mulpz2(wep, catlo(op, OP));
                 const ymm yf = mulpz2(wfp, cathi(op, OP));
+#endif
                 const ymm a08 = addpz2(y0, y8); const ymm s08 = subpz2(y0, y8);
                 const ymm a4c = addpz2(y4, yc); const ymm s4c = subpz2(y4, yc);
                 const ymm a2a = addpz2(y2, ya); const ymm s2a = subpz2(y2, ya);
@@ -296,7 +363,7 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 const ymm s19mjs5d_mw_s3bmjs7f = subpz2(s19mjs5d, w8_s3bmjs7f);
                 const ymm a19m1a5d_pj_a3bm1a7f = addpz2(a19m1a5d,  j_a3bm1a7f);
                 const ymm s19pjs5d_pv_s3bpjs7f = addpz2(s19pjs5d, v8_s3bpjs7f);
-
+#if 0
                 const ymm h1_s19mjs5d_pw_s3bmjs7f = h1xpz2(s19mjs5d_pw_s3bmjs7f);
                 const ymm w8_a19m1a5d_mj_a3bm1a7f = w8xpz2(a19m1a5d_mj_a3bm1a7f);
                 const ymm h3_s19pjs5d_mv_s3bpjs7f = h3xpz2(s19pjs5d_mv_s3bpjs7f);
@@ -322,6 +389,38 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 setpz2(x_p+Nd, addpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f));
                 setpz2(x_p+Ne, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
                 setpz2(x_p+Nf, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
+#else
+                setpz2(x_p+N0, addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+                setpz2(x_p+N8, subpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+    
+                const ymm h1_s19mjs5d_pw_s3bmjs7f = h1xpz2(s19mjs5d_pw_s3bmjs7f);
+                setpz2(x_p+N1, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
+                setpz2(x_p+N9, subpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
+    
+                const ymm w8_a19m1a5d_mj_a3bm1a7f = w8xpz2(a19m1a5d_mj_a3bm1a7f);
+                setpz2(x_p+N2, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
+                setpz2(x_p+Na, subpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
+    
+                const ymm h3_s19pjs5d_mv_s3bpjs7f = h3xpz2(s19pjs5d_mv_s3bpjs7f);
+                setpz2(x_p+N3, addpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f));
+                setpz2(x_p+Nb, subpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f));
+    
+                const ymm  j_a19p1a5d_m1_a3bp1a7f =  jxpz2(a19p1a5d_m1_a3bp1a7f);
+                setpz2(x_p+N4, subpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f));
+                setpz2(x_p+Nc, addpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f));
+    
+                const ymm hd_s19mjs5d_mw_s3bmjs7f = hdxpz2(s19mjs5d_mw_s3bmjs7f);
+                setpz2(x_p+N5, subpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f));
+                setpz2(x_p+Nd, addpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f));
+    
+                const ymm v8_a19m1a5d_pj_a3bm1a7f = v8xpz2(a19m1a5d_pj_a3bm1a7f);
+                setpz2(x_p+N6, subpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
+                setpz2(x_p+Ne, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
+    
+                const ymm hf_s19pjs5d_pv_s3bpjs7f = hfxpz2(s19pjs5d_pv_s3bpjs7f);
+                setpz2(x_p+N7, subpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
+                setpz2(x_p+Nf, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
+#endif
             }
         }
     };
@@ -620,21 +719,21 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 const int sp   = s*p;
                 const int s16p = 16*sp;
 
-                const ymm w1p = duppz3(W[N-1*sp]);
-                const ymm w2p = duppz3(W[N-2*sp]);
-                const ymm w3p = duppz3(W[N-3*sp]);
-                const ymm w4p = mulpz2(w2p, w2p);
-                const ymm w5p = mulpz2(w2p, w3p);
-                const ymm w6p = mulpz2(w3p, w3p);
-                const ymm w7p = mulpz2(w3p, w4p);
-                const ymm w8p = mulpz2(w4p, w4p);
-                const ymm w9p = mulpz2(w4p, w5p);
-                const ymm wap = mulpz2(w5p, w5p);
-                const ymm wbp = mulpz2(w5p, w6p);
-                const ymm wcp = mulpz2(w6p, w6p);
-                const ymm wdp = mulpz2(w6p, w7p);
-                const ymm wep = mulpz2(w7p, w7p);
-                const ymm wfp = mulpz2(w7p, w8p);
+                const ymm w1p = cnjpz2(duppz3(*twidT<16,N, 1>(W,sp)));
+                const ymm w2p = cnjpz2(duppz3(*twidT<16,N, 2>(W,sp)));
+                const ymm w3p = cnjpz2(duppz3(*twidT<16,N, 3>(W,sp)));
+                const ymm w4p = cnjpz2(duppz3(*twidT<16,N, 4>(W,sp)));
+                const ymm w5p = cnjpz2(duppz3(*twidT<16,N, 5>(W,sp)));
+                const ymm w6p = cnjpz2(duppz3(*twidT<16,N, 6>(W,sp)));
+                const ymm w7p = cnjpz2(duppz3(*twidT<16,N, 7>(W,sp)));
+                const ymm w8p = cnjpz2(duppz3(*twidT<16,N, 8>(W,sp)));
+                const ymm w9p = cnjpz2(duppz3(*twidT<16,N, 9>(W,sp)));
+                const ymm wap = cnjpz2(duppz3(*twidT<16,N,10>(W,sp)));
+                const ymm wbp = cnjpz2(duppz3(*twidT<16,N,11>(W,sp)));
+                const ymm wcp = cnjpz2(duppz3(*twidT<16,N,12>(W,sp)));
+                const ymm wdp = cnjpz2(duppz3(*twidT<16,N,13>(W,sp)));
+                const ymm wep = cnjpz2(duppz3(*twidT<16,N,14>(W,sp)));
+                const ymm wfp = cnjpz2(duppz3(*twidT<16,N,15>(W,sp)));
 
                 for (int q = 0; q < s; q += 2) {
                     complex_vector xq_sp   = x + q + sp;
@@ -705,7 +804,7 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                     const ymm s19mjs5d_mw_s3bmjs7f = subpz2(s19mjs5d, w8_s3bmjs7f);
                     const ymm a19m1a5d_pj_a3bm1a7f = addpz2(a19m1a5d,  j_a3bm1a7f);
                     const ymm s19pjs5d_pv_s3bpjs7f = addpz2(s19pjs5d, v8_s3bpjs7f);
-
+#if 0
                     const ymm h1_s19mjs5d_pw_s3bmjs7f = h1xpz2(s19mjs5d_pw_s3bmjs7f);
                     const ymm w8_a19m1a5d_mj_a3bm1a7f = w8xpz2(a19m1a5d_mj_a3bm1a7f);
                     const ymm h3_s19pjs5d_mv_s3bpjs7f = h3xpz2(s19pjs5d_mv_s3bpjs7f);
@@ -731,6 +830,38 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                     setpz2(xq_sp+Nd, addpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f));
                     setpz2(xq_sp+Ne, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
                     setpz2(xq_sp+Nf, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
+#else
+                    setpz2(xq_sp+N0, addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+                    setpz2(xq_sp+N8, subpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+    
+                    const ymm hf_s19pjs5d_pv_s3bpjs7f = hfxpz2(s19pjs5d_pv_s3bpjs7f);
+                    setpz2(xq_sp+N1, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
+                    setpz2(xq_sp+N9, subpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
+    
+                    const ymm v8_a19m1a5d_pj_a3bm1a7f = v8xpz2(a19m1a5d_pj_a3bm1a7f);
+                    setpz2(xq_sp+N2, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
+                    setpz2(xq_sp+Na, subpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
+    
+                    const ymm hd_s19mjs5d_mw_s3bmjs7f = hdxpz2(s19mjs5d_mw_s3bmjs7f);
+                    setpz2(xq_sp+N3, addpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f));
+                    setpz2(xq_sp+Nb, subpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f));
+    
+                    const ymm  j_a19p1a5d_m1_a3bp1a7f =  jxpz2(a19p1a5d_m1_a3bp1a7f);
+                    setpz2(xq_sp+N4, addpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f));
+                    setpz2(xq_sp+Nc, subpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f));
+    
+                    const ymm h3_s19pjs5d_mv_s3bpjs7f = h3xpz2(s19pjs5d_mv_s3bpjs7f);
+                    setpz2(xq_sp+N5, subpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f));
+                    setpz2(xq_sp+Nd, addpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f));
+    
+                    const ymm w8_a19m1a5d_mj_a3bm1a7f = w8xpz2(a19m1a5d_mj_a3bm1a7f);
+                    setpz2(xq_sp+N6, subpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
+                    setpz2(xq_sp+Ne, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
+    
+                    const ymm h1_s19mjs5d_pw_s3bmjs7f = h1xpz2(s19mjs5d_pw_s3bmjs7f);
+                    setpz2(xq_sp+N7, subpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
+                    setpz2(xq_sp+Nf, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
+#endif
                 }
             }
         }
@@ -761,7 +892,7 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
             for (int p = 0; p < N1; p += 2) {
                 complex_vector x_p   = x + p;
                 complex_vector y_16p = y + 16*p;
-
+#if 0
                 const ymm w1p = cnjpz2(getpz2(W+p));
                 const ymm w2p = mulpz2(w1p, w1p);
                 const ymm w3p = mulpz2(w1p, w2p);
@@ -777,6 +908,40 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 const ymm wdp = mulpz2(w6p, w7p);
                 const ymm wep = mulpz2(w7p, w7p);
                 const ymm wfp = mulpz2(w7p, w8p);
+
+                const ymm y0 =             getpz3<16>(y_16p+0x0);
+                const ymm y1 = mulpz2(w1p, getpz3<16>(y_16p+0x1));
+                const ymm y2 = mulpz2(w2p, getpz3<16>(y_16p+0x2));
+                const ymm y3 = mulpz2(w3p, getpz3<16>(y_16p+0x3));
+                const ymm y4 = mulpz2(w4p, getpz3<16>(y_16p+0x4));
+                const ymm y5 = mulpz2(w5p, getpz3<16>(y_16p+0x5));
+                const ymm y6 = mulpz2(w6p, getpz3<16>(y_16p+0x6));
+                const ymm y7 = mulpz2(w7p, getpz3<16>(y_16p+0x7));
+                const ymm y8 = mulpz2(w8p, getpz3<16>(y_16p+0x8));
+                const ymm y9 = mulpz2(w9p, getpz3<16>(y_16p+0x9));
+                const ymm ya = mulpz2(wap, getpz3<16>(y_16p+0xa));
+                const ymm yb = mulpz2(wbp, getpz3<16>(y_16p+0xb));
+                const ymm yc = mulpz2(wcp, getpz3<16>(y_16p+0xc));
+                const ymm yd = mulpz2(wdp, getpz3<16>(y_16p+0xd));
+                const ymm ye = mulpz2(wep, getpz3<16>(y_16p+0xe));
+                const ymm yf = mulpz2(wfp, getpz3<16>(y_16p+0xf));
+#else
+                const ymm w1p = cnjpz2(getpz2(twid<16,N, 1>(W,p)));
+                const ymm w2p = cnjpz2(getpz2(twid<16,N, 2>(W,p)));
+                const ymm w3p = cnjpz2(getpz2(twid<16,N, 3>(W,p)));
+                const ymm w4p = cnjpz2(getpz2(twid<16,N, 4>(W,p)));
+                const ymm w5p = cnjpz2(getpz2(twid<16,N, 5>(W,p)));
+                const ymm w6p = cnjpz2(getpz2(twid<16,N, 6>(W,p)));
+                const ymm w7p = cnjpz2(getpz2(twid<16,N, 7>(W,p)));
+                const ymm w8p = cnjpz2(getpz2(twid<16,N, 8>(W,p)));
+                const ymm w9p = cnjpz2(getpz2(twid<16,N, 9>(W,p)));
+                const ymm wap = cnjpz2(getpz2(twid<16,N,10>(W,p)));
+                const ymm wbp = cnjpz2(getpz2(twid<16,N,11>(W,p)));
+                const ymm wcp = cnjpz2(getpz2(twid<16,N,12>(W,p)));
+                const ymm wdp = cnjpz2(getpz2(twid<16,N,13>(W,p)));
+                const ymm wep = cnjpz2(getpz2(twid<16,N,14>(W,p)));
+                const ymm wfp = cnjpz2(getpz2(twid<16,N,15>(W,p)));
+
                 const ymm ab = getpz2(y_16p+0x00);
                 const ymm cd = getpz2(y_16p+0x02);
                 const ymm ef = getpz2(y_16p+0x04);
@@ -811,6 +976,7 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 const ymm yd = mulpz2(wdp, cathi(mn, MN));
                 const ymm ye = mulpz2(wep, catlo(op, OP));
                 const ymm yf = mulpz2(wfp, cathi(op, OP));
+#endif
                 const ymm a08 = addpz2(y0, y8); const ymm s08 = subpz2(y0, y8);
                 const ymm a4c = addpz2(y4, yc); const ymm s4c = subpz2(y4, yc);
                 const ymm a2a = addpz2(y2, ya); const ymm s2a = subpz2(y2, ya);
@@ -859,7 +1025,7 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 const ymm s19mjs5d_mw_s3bmjs7f = subpz2(s19mjs5d, w8_s3bmjs7f);
                 const ymm a19m1a5d_pj_a3bm1a7f = addpz2(a19m1a5d,  j_a3bm1a7f);
                 const ymm s19pjs5d_pv_s3bpjs7f = addpz2(s19pjs5d, v8_s3bpjs7f);
-
+#if 0
                 const ymm h1_s19mjs5d_pw_s3bmjs7f = h1xpz2(s19mjs5d_pw_s3bmjs7f);
                 const ymm w8_a19m1a5d_mj_a3bm1a7f = w8xpz2(a19m1a5d_mj_a3bm1a7f);
                 const ymm h3_s19pjs5d_mv_s3bpjs7f = h3xpz2(s19pjs5d_mv_s3bpjs7f);
@@ -885,6 +1051,38 @@ namespace OTFFT_AVXDIT16 { ////////////////////////////////////////////////////
                 setpz2(x_p+Nd, addpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f));
                 setpz2(x_p+Ne, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
                 setpz2(x_p+Nf, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
+#else
+                setpz2(x_p+N0, addpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+                setpz2(x_p+N8, subpz2(a08p1a4c_p1_a2ap1a6e,    a19p1a5d_p1_a3bp1a7f));
+    
+                const ymm hf_s19pjs5d_pv_s3bpjs7f = hfxpz2(s19pjs5d_pv_s3bpjs7f);
+                setpz2(x_p+N1, addpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
+                setpz2(x_p+N9, subpz2(s08pjs4c_pv_s2apjs6e, hf_s19pjs5d_pv_s3bpjs7f));
+    
+                const ymm v8_a19m1a5d_pj_a3bm1a7f = v8xpz2(a19m1a5d_pj_a3bm1a7f);
+                setpz2(x_p+N2, addpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
+                setpz2(x_p+Na, subpz2(a08m1a4c_pj_a2am1a6e, v8_a19m1a5d_pj_a3bm1a7f));
+    
+                const ymm hd_s19mjs5d_mw_s3bmjs7f = hdxpz2(s19mjs5d_mw_s3bmjs7f);
+                setpz2(x_p+N3, addpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f));
+                setpz2(x_p+Nb, subpz2(s08mjs4c_mw_s2amjs6e, hd_s19mjs5d_mw_s3bmjs7f));
+    
+                const ymm  j_a19p1a5d_m1_a3bp1a7f =  jxpz2(a19p1a5d_m1_a3bp1a7f);
+                setpz2(x_p+N4, addpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f));
+                setpz2(x_p+Nc, subpz2(a08p1a4c_m1_a2ap1a6e,  j_a19p1a5d_m1_a3bp1a7f));
+    
+                const ymm h3_s19pjs5d_mv_s3bpjs7f = h3xpz2(s19pjs5d_mv_s3bpjs7f);
+                setpz2(x_p+N5, subpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f));
+                setpz2(x_p+Nd, addpz2(s08pjs4c_mv_s2apjs6e, h3_s19pjs5d_mv_s3bpjs7f));
+    
+                const ymm w8_a19m1a5d_mj_a3bm1a7f = w8xpz2(a19m1a5d_mj_a3bm1a7f);
+                setpz2(x_p+N6, subpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
+                setpz2(x_p+Ne, addpz2(a08m1a4c_mj_a2am1a6e, w8_a19m1a5d_mj_a3bm1a7f));
+    
+                const ymm h1_s19mjs5d_pw_s3bmjs7f = h1xpz2(s19mjs5d_pw_s3bmjs7f);
+                setpz2(x_p+N7, subpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
+                setpz2(x_p+Nf, addpz2(s08mjs4c_pw_s2amjs6e, h1_s19mjs5d_pw_s3bmjs7f));
+#endif
             }
         }
     };

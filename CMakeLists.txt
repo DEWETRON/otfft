@@ -390,5 +390,6 @@ if (UNIX)
 endif(UNIX)
 
 if (Boost_FOUND)
+  message(STATUS "Using Boost unit test framework")
   add_subdirectory(unit_tests)
 endif()

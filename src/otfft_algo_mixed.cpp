@@ -46,7 +46,7 @@ namespace OTFFT_NAMESPACE
                     }
                 }
                 else {
-    #pragma omp parallel for
+                    #pragma omp parallel for
                     for (int p = 0; p <= n; p++) {
                         W[p] = complex_t(cos(p*theta0), -sin(p*theta0));
                     }
@@ -65,10 +65,11 @@ namespace OTFFT_NAMESPACE
                     for (int k = 0; k < N; k++) setpz(x[k], mulpd(rN, getpz(x[k])));
                 }
                 else {
-    #pragma omp parallel
+                    #pragma omp parallel
                     fwdfftp(N, 1, 0, x, y, W);
-    #pragma omp parallel for
-                    for (int k = 0; k < N; k++) setpz(x[k], mulpd(rN, getpz(x[k])));
+                    #pragma omp parallel for
+                    for (int k = 0; k < N; k++)
+                        setpz(x[k], mulpd(rN, getpz(x[k])));
                 }
             }
 
@@ -78,7 +79,7 @@ namespace OTFFT_NAMESPACE
                     fwdfft(N, 1, 0, x, y, W);
                 }
                 else {
-    #pragma omp parallel
+                    #pragma omp parallel
                     fwdfftp(N, 1, 0, x, y, W);
                 }
             }
@@ -92,10 +93,11 @@ namespace OTFFT_NAMESPACE
                     for (int k = 0; k < N; k++) setpz(x[k], mulpd(srN, getpz(x[k])));
                 }
                 else {
-    #pragma omp parallel
+                    #pragma omp parallel
                     fwdfftp(N, 1, 0, x, y, W);
-    #pragma omp parallel for
-                    for (int k = 0; k < N; k++) setpz(x[k], mulpd(srN, getpz(x[k])));
+                    #pragma omp parallel for
+                    for (int k = 0; k < N; k++)
+                        setpz(x[k], mulpd(srN, getpz(x[k])));
                 }
             }
 
@@ -112,7 +114,7 @@ namespace OTFFT_NAMESPACE
                     invfft(N, 1, 0, x, y, W);
                 }
                 else {
-    #pragma omp parallel
+                    #pragma omp parallel
                     invfftp(N, 1, 0, x, y, W);
                 }
             }
@@ -131,10 +133,11 @@ namespace OTFFT_NAMESPACE
                     for (int p = 0; p < N; p++) setpz(x[p], mulpd(srN, getpz(x[p])));
                 }
                 else {
-    #pragma omp parallel
+                    #pragma omp parallel
                     invfftp(N, 1, 0, x, y, W);
-    #pragma omp parallel for
-                    for (int p = 0; p < N; p++) setpz(x[p], mulpd(srN, getpz(x[p])));
+                    #pragma omp parallel for
+                    for (int p = 0; p < N; p++)
+                        setpz(x[p], mulpd(srN, getpz(x[p])));
                 }
             }
 
@@ -146,10 +149,11 @@ namespace OTFFT_NAMESPACE
                     for (int p = 0; p < N; p++) setpz(x[p], mulpd(rN, getpz(x[p])));
                 }
                 else {
-    #pragma omp parallel
+                    #pragma omp parallel
                     invfftp(N, 1, 0, x, y, W);
-    #pragma omp parallel for
-                    for (int p = 0; p < N; p++) setpz(x[p], mulpd(rN, getpz(x[p])));
+                    #pragma omp parallel for
+                    for (int p = 0; p < N; p++)
+                        setpz(x[p], mulpd(rN, getpz(x[p])));
                 }
             }
         };
