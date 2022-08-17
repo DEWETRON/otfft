@@ -107,6 +107,7 @@ include_directories(
 
 set(PUBLIC_OTFFT_HEADER_FILES
   inc/otfft_fwd.h
+  inc/otfft_complex.h
   inc/otfft_config.h
   inc/otfft.h
   inc/otfft_types.h

@@ -40,48 +40,62 @@
 namespace OTFFT_MISC {
     using namespace OTFFT;
 
-//using namespace OTFFT_Complex;
-
 constexpr double H1X =  0.923879532511286762010323247995557949;
 constexpr double H1Y = -0.382683432365089757574419179753100195;
 
 enum scaling_mode { scale_1 = 0, scale_unitary, scale_length };
+
+static inline complex_t v8x(const complex_t& z) NOEXCEPT force_inline;
+static inline complex_t v8x(const complex_t& z) NOEXCEPT
+{
+    return complex_t(M_SQRT1_2*(z.Re-z.Im), M_SQRT1_2*(z.Re+z.Im));
+}
+static inline complex_t w8x(const complex_t& z) NOEXCEPT force_inline;
+static inline complex_t w8x(const complex_t& z) NOEXCEPT
+{
+    return complex_t(M_SQRT1_2*(z.Re+z.Im), M_SQRT1_2*(z.Im-z.Re));
+}
+
 } // namespace OTFFT_MISC
 
-#ifdef _MSC_VER
+
 //=============================================================================
-// for Visual C++
+// constexpr sqrt
 //=============================================================================
 
-#if _M_IX86_FP >= 2
-#define __SSE2__ 1
-#endif
-#ifdef _M_X64
-#define __SSE2__ 1
-#define __SSE3__ 1
-#endif
-#ifdef __AVX__
-#define __SSE2__ 1
-#define __SSE3__ 1
-#endif
-#ifdef __AVX2__
-#define __SSE2__ 1
-#define __SSE3__ 1
-#define __FMA__ 1
-#endif
-#ifdef __AVX512F__
-#define __SSE2__ 1
-#define __SSE3__ 1
-#define __FMA__ 1
-#endif
+namespace OTFFT_MISC {
 
-#if _MSC_VER >= 1900
-#define VC_CONSTEXPR 1
-#else
-#error "This compiler is not supported."
-#endif
+constexpr double sqrt_aux(double a, double x, double y)
+{
+    return x == y ? x : sqrt_aux(a, (x + a/x)/2, x);
+}
 
-#endif // _MSC_VER
+constexpr double mysqrt(double x) { return sqrt_aux(x, x/2, x); }
+
+constexpr int mylog2(int N)
+{
+    return N <= 1 ? 0 : 1 + mylog2(N/2);
+}
+
+template <int N, int s>
+static complex_t modq(const_complex_vector W, const int p) noexcept
+{
+    constexpr int Nq = N/4;
+    constexpr int log_Nq = mylog2(Nq);
+    const int sp = s*p;
+    const int q = sp >> log_Nq;
+    const int r = sp & (Nq-1);
+    const complex_t z = W[r];
+    switch (q & 3) {
+        case 0: return z;
+        case 1: return mjx(z);
+        case 2: return neg(z);
+        case 3: return jx(z);
+    }
+    return complex_t();
+}
+
+} // namespace OTFFT_MISC
 
 //=============================================================================
 // FFT Weight Initialize Routine
@@ -481,12 +495,6 @@ namespace OTFFT_MISC {
         constexpr xmm hd = { -H1Y, H1X };
         return mulpz(hd, xy);
     }
-
-#if !defined(USE_AVX) && !defined(USE_AVX2)
-    static inline void* simd_malloc(const size_t n) { return _mm_malloc(n, 16); }
-    static inline void simd_free(void* p) { _mm_free(p); }
-#endif
-
 } // namespace OTFFT_MISC
 
 #else
@@ -678,9 +686,6 @@ static xmm modqpz(const_complex_vector W, const int p) noexcept
         constexpr xmm hd = { -H1Y, H1X };
         return mulpz(hd, xy);
     }
-
-    static inline void* simd_malloc(const size_t n) { return malloc(n); }
-    static inline void simd_free(void* p) { free(p); }
 
 } // namespace OTFFT_MISC
 
@@ -931,9 +936,6 @@ namespace OTFFT_MISC {
         setpz(z[0], getlo(x));
         setpz(z[s], gethi(x));
     }
-
-    static inline void* simd_malloc(const size_t n) { return _mm_malloc(n, 32); }
-    static inline void simd_free(void* p) { _mm_free(p); }
 
 } // namespace OTFFT_MISC
 
@@ -1853,40 +1855,6 @@ static inline bmm duppz17(const complex_t& z) noexcept
 {
     return duppz16(getpz(z));
 }
-
-} // namespace OTFFT_MISC
-
-//=============================================================================
-// Aligned Memory Allocator
-//=============================================================================
-
-namespace OTFFT_MISC {
-
-    template <class T> struct simd_array
-    {
-        T* p;
-
-        simd_array() noexcept : p(0) {}
-        simd_array(int n) : p((T*) simd_malloc(n*sizeof(T)))
-        {
-            if (p == 0) throw std::bad_alloc();
-        }
-
-        ~simd_array() { if (p) simd_free(p); }
-
-        void setup(int n)
-        {
-            if (p) simd_free(p);
-            p = (T*) simd_malloc(n*sizeof(T));
-            if (p == 0) throw std::bad_alloc();
-        }
-
-        void destroy() { if (p) simd_free(p); p = 0; }
-
-        T& operator[](int i) noexcept { return p[i]; }
-        const T& operator[](int i) const noexcept { return p[i]; }
-        T* operator&() const noexcept { return p; }
-    };
 
 } // namespace OTFFT_MISC
 
