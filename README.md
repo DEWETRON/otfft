@@ -1,30 +1,34 @@
-# otfft
+# OTFFT
 [![Github All Releases](https://img.shields.io/github/downloads/DEWETRON/otfft/total)]()
 
 OTFFT is a high-speed FFT library using the Stockham's algorithm and AVX.
-In addition, C++ template metaprogramming technique is used in OTFFT. And OTFFT is a mixed-radix FFT.
+In addition, C++ template metaprogramming technique is used in OTFFT.
+And OTFFT is a mixed-radix FFT.
 
 # Build Status
+It should be able to compile/use the sources using Visual Studio on Windows and GCC on Linux.
 | CI Server | Status |
 | ---------:| ------ |
 | Travis CI Ubuntu 14.04 | [![travis-ci](https://travis-ci.org/DEWETRON/otfft.svg?branch=master)](https://travis-ci.org/DEWETRON/otfft) |
-| Shippable Ubuntu 16.04 | [![Run Status](https://api.shippable.com/projects/5a5f2e8eb108ab0600ee3e3d/badge?branch=master)](https://app.shippable.com/github/DEWETRON/otfft) |
 | GitHub Ubuntu 20.04 | [![CMake](https://github.com/DEWETRON/otfft/actions/workflows/cmake.yml/badge.svg)](https://github.com/DEWETRON/otfft/actions/workflows/cmake.yml) |
 | Appveyor VS2013 | [![Build status](https://ci.appveyor.com/api/projects/status/1hxy8w9laeaf44ln?svg=true)](https://ci.appveyor.com/project/DEWETRON/otfft) |
 
 # Reasons for the fork
-OTFFT is developed by OK Ojisan (Takuya OKAHISA). It's original
-homepage is http://wwwa.pikara.ne.jp/okojisan/otfft-en/.
+OTFFT is developed by OK Ojisan (Takuya OKAHISA).
+It's original homepage is http://wwwa.pikara.ne.jp/okojisan/otfft-en/.
 
 The DEWETRON fork uses the original source code with improvements:
-* multi cpu ISS builds (AVX, SSE2,...)
+* multi CPU ISS builds (AVX2, AVX, SSE2,...)
 * unit test coverage
+* Use of standard OpenMP
 
-At the time of this writing, there is no existing up-to-date fork.
+## Status
+There is a continuous effort to keep the FFT computations in sync with the upstream OTFFT version.
+Relevant changed from version 11.5 have been merged into this repository.
+
 
 # How to use
-Just run cmake to get an appropriate build environment
-depending on your used build system and operating system.
+Just run cmake to get an appropriate build environment depending on your used build system and operating system.
 
 
 # Complex-to-Complex FFT
@@ -53,8 +57,8 @@ complex_t is defined as follows.
         double Re, Im;
 
         complex_t() : Re(0), Im(0) {}
-        complex_t(const double& x) : Re(x), Im(0) {}
-        complex_t(const double& x, const double& y) : Re(x), Im(y) {}
+        complex_t(double x) : Re(x), Im(0) {}
+        complex_t(double x, double y) : Re(x), Im(y) {}
         complex_t(const std::complex<double>& z) : Re(z.real()), Im(z.imag()) {}
         operator std::complex<double>(){ return std::complex(Re, Im); }
 
