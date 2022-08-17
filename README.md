@@ -1,17 +1,19 @@
-# otfft 
-OTFFT is a high-speed FFT library using the Stockham's
-algorithm and AVX.  In addition, C++ template metaprogramming
-technique is used in OTFFT. And OTFFT is a mixed-radix FFT.
+# otfft
+[![Github All Releases](https://img.shields.io/github/downloads/DEWETRON/otfft/total)]()
+
+OTFFT is a high-speed FFT library using the Stockham's algorithm and AVX.
+In addition, C++ template metaprogramming technique is used in OTFFT. And OTFFT is a mixed-radix FFT.
 
 # Build Status
 | CI Server | Status |
 | ---------:| ------ |
 | Travis CI Ubuntu 14.04 | [![travis-ci](https://travis-ci.org/DEWETRON/otfft.svg?branch=master)](https://travis-ci.org/DEWETRON/otfft) |
 | Shippable Ubuntu 16.04 | [![Run Status](https://api.shippable.com/projects/5a5f2e8eb108ab0600ee3e3d/badge?branch=master)](https://app.shippable.com/github/DEWETRON/otfft) |
+| GitHub Ubuntu 20.04 | [![CMake](https://github.com/DEWETRON/otfft/actions/workflows/cmake.yml/badge.svg)](https://github.com/DEWETRON/otfft/actions/workflows/cmake.yml) |
 | Appveyor VS2013 | [![Build status](https://ci.appveyor.com/api/projects/status/1hxy8w9laeaf44ln?svg=true)](https://ci.appveyor.com/project/DEWETRON/otfft) |
 
 # Reasons for the fork
-OTFFT is developed by OK Ojisan(Takuya OKAHISA). It's original
+OTFFT is developed by OK Ojisan (Takuya OKAHISA). It's original
 homepage is http://wwwa.pikara.ne.jp/okojisan/otfft-en/.
 
 The DEWETRON fork uses the original source code with improvements:
