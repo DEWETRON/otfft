@@ -32,6 +32,29 @@ Milestone 1b: Fixes and speed found by the benchmarks
 *   [ ] **R1.7** Decide whether the AVX2 backend is worth keeping (no gain over
     AVX in the benchmarks); recheck after R2.1.
 
+Milestone 1c: Catch up with upstream 11.6e
+------------------------------------------
+
+Background and measurements: `docs/upstream-comparison.md`.
+
+*   [ ] **R1.8** Re-tune the per-size algorithm table
+    (`src/otfft_algo.cpp`) for the machines we care about: port upstream's
+    `ffttune` or add a run-time tuner. Upstream's table alone gave +28% to
+    +94% for N = 2^16 to 2^20 on the benchmark machine.
+*   [ ] **R1.9** Port the `exp` kernels (`otfft_avx{dif,dit}{8,16}exp.h`,
+    `init_Wq`, `init_Wr`, `EXP_THRESHOLD = 2^18`) from upstream 11.6e.
+*   [ ] **R1.10** Port the OpenMP changes of 11.6e: two six-step thresholds,
+    `schedule(static)` and `guided`, `omp sections` in the eight-step; then
+    re-measure for issue [#19](https://github.com/DEWETRON/otfft/issues/19).
+*   [ ] **R1.11** After R1.8 to R1.10: update the version strings (still
+    11.4xv) and the sync statement in the README. Try to get upstream 11.5e
+    (the download link returned 404) to find which changes came when.
+*   [ ] **R1.12** Report the `(i*j)%k` overflow and the O(N^2) generic radix
+    (issues #16 to #18) to the upstream author; the code is identical in
+    11.6e.
+*   [ ] **R1.13** Decide whether to take over the C99 and Fortran 2003
+    interfaces, and the upstream benchmark programs, from 11.6e.
+
 Milestone 2: Platforms
 ----------------------
 
