@@ -45,7 +45,9 @@ Original upstream: <http://wwwa.pikara.ne.jp/okojisan/otfft-en/download.html>
 
 *   `inc/`: public headers (`otfft.h` is the API).
 *   `src/`: algorithms and per-backend headers.
-*   `unit_tests/`: doctest suites. `third_party/`: vendored doctest.
+*   `unit_tests/`: doctest suites. `benchmarks/`: comparison with FFTW,
+    PocketFFT and KissFFT (`-DOTFFT_BUILD_BENCHMARKS=ON`).
+*   `third_party/`: vendored doctest, PocketFFT and KissFFT.
 *   `cmake/`: build helpers. `docs/spec/`: behaviour spec. `docs/decisions.md`.
 
 ### Checks

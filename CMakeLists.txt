@@ -375,3 +375,8 @@ option(OTFFT_BUILD_TESTS "Build the unit tests (doctest)" ON)
 if (OTFFT_BUILD_TESTS)
   add_subdirectory(unit_tests)
 endif()
+
+option(OTFFT_BUILD_BENCHMARKS "Build the benchmarks (compare with FFTW, PocketFFT, KissFFT)" OFF)
+if (OTFFT_BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()

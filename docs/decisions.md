@@ -72,3 +72,16 @@ D8: doctest instead of Boost.Test
 *   **Done:** CI no longer installs Boost; stale Boost CMake code, `.travis.yml`
     and the duplicate `appyeyor.yml` removed.
 *   **Revisit when:** doctest stops being maintained.
+
+D10: Benchmark against FFTW, PocketFFT and KissFFT
+--------------------------------------------------
+*   **What:** `benchmarks/` holds a small in-repo harness (no Google Benchmark)
+    and adapters for each library. Every result is checked against PocketFFT
+    before it is timed. Results go to `docs/benchmarks.md` and
+    `docs/benchmark-data/<date>/`.
+*   **Why:** roadmap R1.1, and a baseline for the ARM64 and AVX-512 work.
+*   **Limit:** FFTW is GPL, so it is found on the system and linked only into
+    the benchmark tool; it is never vendored. PocketFFT and KissFFT (BSD) are
+    vendored.
+*   **Not in CI:** shared runners are too noisy; CI only builds it if asked.
+*   **Revisit when:** we want trend tracking, or a quieter benchmark machine.
