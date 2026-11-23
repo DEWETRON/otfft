@@ -30,6 +30,9 @@ Tests and pull requests
 
 7.  You MUST run the build and `ctest` (see below) before you say work is done.
 8.  You MUST NOT commit or push unless asked.
+9.  You MUST NOT add a `Co-Authored-By:` line, or any other agent attribution
+    (such as "Generated with Claude Code"), to commit messages or pull
+    request descriptions.
 
 This repository
 ---------------
