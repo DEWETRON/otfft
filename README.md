@@ -1,238 +1,165 @@
 # OTFFT
 [![Github All Releases](https://img.shields.io/github/downloads/DEWETRON/otfft/total)]()
 
-OTFFT is a high-speed FFT library using the Stockham's algorithm and AVX.
-In addition, C++ template metaprogramming technique is used in OTFFT.
-And OTFFT is a mixed-radix FFT.
+OTFFT is a high-speed FFT library using the Stockham algorithm, SIMD
+(SSE2, AVX, AVX2) and C++ template metaprogramming. It is a mixed-radix FFT
+with real-input FFT, DCT-II and Bluestein (any length) variants, and uses
+OpenMP for large transforms.
 
-# Build Status
-It should be able to compile/use the sources using Visual Studio on Windows and GCC on Linux.
-| CI Server | Status |
-| ---------:| ------ |
+OTFFT is developed by OK Ojisan (Takuya OKAHISA). The original homepage is
+http://wwwa.pikara.ne.jp/okojisan/otfft-en/. This repository is the DEWETRON
+fork.
+
+# Build status
+| CI | Status |
+| ---:| ------ |
 | GitHub Actions (Ubuntu, Windows) | [![CMake](https://github.com/DEWETRON/otfft/actions/workflows/cmake.yml/badge.svg)](https://github.com/DEWETRON/otfft/actions/workflows/cmake.yml) |
 
-# Reasons for the fork
-OTFFT is developed by OK Ojisan (Takuya OKAHISA).
-It's original homepage is http://wwwa.pikara.ne.jp/okojisan/otfft-en/.
+Built and tested with GCC on Linux and Visual Studio on Windows.
 
-The DEWETRON fork uses the original source code with improvements:
-* multi CPU ISS builds (AVX2, AVX, SSE2,...)
-* unit test coverage
-* Use of standard OpenMP
+# The DEWETRON fork
+The fork uses the original source code with these changes:
+* abstract interfaces behind a factory (`OTFFT::Factory`), so the caller does not depend on one instruction set
+* multi-CPU builds: SSE2, AVX and AVX2 backends, chosen at run time
+* unit tests (doctest) and CI
+* standard OpenMP
+* benchmarks against FFTW, PocketFFT and KissFFT
 
 ## Status
-There is a continuous effort to keep the FFT computations in sync with the upstream OTFFT version.
-Relevant changed from version 11.5 have been merged into this repository.
+Relevant changes from upstream version 11.5 are merged. The latest upstream
+release is 11.6e (2023-12-21), which this fork does not follow yet. The
+original classes (`OTFFT::FFT`, `RFFT`, `DCT`, `Bluestein`, `FFT0`, `DCT0`)
+are internal here; use the factory functions below.
 
+Planned work is in [docs/ROADMAP.md](docs/ROADMAP.md): newer AMD64 extensions,
+ARM64, examples, and fixes for the problems found by the benchmarks
+(issues [#16](https://github.com/DEWETRON/otfft/issues/16) to
+[#19](https://github.com/DEWETRON/otfft/issues/19)).
 
-# How to use
-Just run cmake to get an appropriate build environment depending on your used build system and operating system.
+# Build
+You need CMake 3.22 or newer, a C++11 compiler and OpenMP.
 
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+(cd build && ctest)          # unit tests
+```
 
-# Complex-to-Complex FFT
+Options:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `OTFFT_BUILD_TESTS` | ON | build the unit tests (doctest is included in `third_party/`) |
+| `OTFFT_BUILD_BENCHMARKS` | OFF | build `otfft_bench`; finds FFTW with pkg-config if installed |
+
+To use the library from another CMake project, add the directory with
+`add_subdirectory(otfft)` and link the `otfft` target. Include the header as
+`#include "otfft.h"`.
+
+# Using OTFFT
+All transforms are created by `OTFFT::Factory` and returned as smart pointers.
+The length is given on creation, or later with `setup(n)`. A transform object
+holds an internal work buffer: **use one object per thread**, never one object
+from several threads at once.
+
+Buffers must be SIMD aligned: allocate them with `OTFFT::simd_malloc` and
+release them with `OTFFT::simd_free`.
+
+The backend is chosen automatically at run time. To force one, pass an
+`OTFFT::OptimizationType` as second argument, for example
+`createComplexFFT(n, OTFFT::OptimizationType::OPTIMIZED_FFT_AVX)`.
+
+## Complex-to-complex FFT
 ``` c++
-    #include "otfft/otfft.h"
-    using OTFFT::complex_t;
-    using OTFFT::simd_malloc;
-    using OTFFT::simd_free;
+#include "otfft.h"
+using OTFFT::complex_t;
+using OTFFT::simd_free;
+using OTFFT::simd_malloc;
 
-    void f(int N)
-    {
-        complex_t* x = (complex_t*) simd_malloc(N*sizeof(complex_t));
-        // do something
-        OTFFT::FFT fft(N); // creation of FFT object. N is sequence length.
-        fft.fwd(x); // execution of transformation. x is input and output
-        // do something
-        simd_free(x);
+void f(int N)
+{
+    auto fft = OTFFT::Factory::createComplexFFT(N);   // N is the sequence length
+    complex_t* x = (complex_t*) simd_malloc(N * sizeof(complex_t));
+    // fill x
+    fft->fwd(x);   // x is input and output
+    // use the spectrum
+    fft->inv(x);   // back to the signal
+    simd_free(x);
 }
 ```
 
-complex_t is defined as follows.
+`complex_t` holds two doubles, `Re` and `Im`. The member functions are:
 
+| Forward | Inverse | Scale |
+| --- | --- | --- |
+| `fwd(x)`, `fwdn(x)` | `invn(x)` | 1/N |
+| `fwd0(x)` | `inv(x)`, `inv0(x)` | none |
+| `fwdu(x)` | `invu(x)` | 1/sqrt(N) |
+
+Note that `fwd` divides by N and `inv` does not, so `inv(fwd(x))` returns `x`.
+
+To change the length: `fft->setup(2 * N);`
+
+## Real-to-complex FFT
 ``` c++
-    struct complex_t
-    {
-        double Re, Im;
-
-        complex_t() : Re(0), Im(0) {}
-        complex_t(double x) : Re(x), Im(0) {}
-        complex_t(double x, double y) : Re(x), Im(y) {}
-        complex_t(const std::complex<double>& z) : Re(z.real()), Im(z.imag()) {}
-        operator std::complex<double>(){ return std::complex(Re, Im); }
-
-    // ...
-    };
+auto rfft = OTFFT::Factory::createRealFFT(N);        // N must be even
+double*    x = (double*)    simd_malloc(N * sizeof(double));
+complex_t* y = (complex_t*) simd_malloc(N * sizeof(complex_t));
+rfft->fwd(x, y);   // x is input, y is output; y gets the whole spectrum (N values)
+rfft->inv(y, x);   // y is input and is destroyed, x is output
 ```
 
-There are member functions, such as the following.
+The same function names and scales as above apply.
 
-    fwd(x)  -- DFT(with 1/N normalization) x:input/output
-    fwd0(x) -- DFT(non normalization) x:input/output
-    fwdu(x) -- DFT(unitary transformation) x:input/output
-    fwdn(x) -- DFT(with 1/N normalization) x:input/output
-
-    inv(x)  -- IDFT(non normalization) x:input/output
-    inv0(x) -- IDFT(non normalization) x:input/output
-    invu(x) -- IDFT(unitary transformation) x:input/output
-    invn(x) -- IDFT(with 1/N normalization) x:input/output
-
-To change the FFT size, do the following.
-
-    fft.setup(2 * N);
-
-To use in a multi-threaded environment, we do as follows.
-
+## Discrete cosine transform (DCT-II)
+The transform is not orthogonalised and works in place. N must be even.
 ``` c++
-    #include "otfft/otfft.h"
-    using OTFFT::complex_t;
-    using OTFFT::simd_malloc;
-    using OTFFT::simd_free;
-
-    void f(int N)
-    {
-        complex_t* x = (complex_t*) simd_malloc(N*sizeof(complex_t));
-        complex_t* y = (complex_t*) simd_malloc(N*sizeof(complex_t));
-        // do someting
-        OTFFT::FFT0 fft(N);
-        fft.fwd(x, y); // x is input/output. y is work area
-        // do something
-        fft.inv(x, y);
-        // x is input/output. y is work area
-        // do someting
-        simd_free(y);
-        simd_free(x);
-    }
+auto dct = OTFFT::Factory::createDCT(N);
+dct->fwd(x);   // x is input and output (scaled by 1/N); fwd0 does not scale
+dct->inv(x);
 ```
+Available: `fwd`, `fwd0`, `fwdn` and `inv`, `inv0`, `invn`. `fwd0` returns
+half of what FFTW's `REDFT10` and PocketFFT's DCT-II compute.
 
-Please note that "OTFFT::FFT" was changed to "OTFFT::FFT0".
-
-# Real-to-Complex FFT
+## Bluestein FFT (any length)
+Bluestein's FFT works for any length, including large primes, in O(N log N).
 ``` c++
-    #include "otfft/otfft.h"
-    using OTFFT::complex_t;
-    using OTFFT::simd_malloc;
-    using OTFFT::simd_free;
-
-    void f(int N)
-    {
-        double* x = (double*) simd_malloc(N*sizeof(double));
-        complex_t* y = (complex_t*) simd_malloc(N*sizeof(complex_t));
-        // do something
-        OTFFT::RFFT rfft(N);
-        rfft.fwd(x, y); // x is input. y is output
-        // do something
-        simd_free(y);
-        simd_free(x);
-        }
+auto bst = OTFFT::Factory::createBluesteinFFT(N);
+bst->fwd(x);   // same interface as the complex FFT
 ```
+For prime lengths use this one: `createComplexFFT` is very slow for primes and
+returns wrong results for some ([#16](https://github.com/DEWETRON/otfft/issues/16),
+[#17](https://github.com/DEWETRON/otfft/issues/17)).
 
-N must be an even number. There are member functions, such as the
-following.
+# Benchmarks
+Complex FFT, one thread, equivalent MFLOPS (higher is better), AMD Ryzen 9
+3900X, GCC 15.2:
 
-    fwd(x, y)  -- DFT(with 1/N normalization) x:input, y:output
-    fwd0(x,y)  -- DFT(non normalization) x:input, y:output
-    fwdu(x, y) -- DFT(unitary transformation) x:input, y:output
-    fwdn(x, y) -- DFT(with 1/N normalization) x:input, y:output
+| N | OTFFT | FFTW 3.3.10 | PocketFFT | KissFFT |
+| ---: | ---: | ---: | ---: | ---: |
+| 256 | 28,760 | 37,775 | 5,135 | 5,180 |
+| 4,096 | 23,500 | 27,356 | 7,409 | 5,914 |
+| 65,536 | 6,907 | 21,515 | 4,726 | 5,110 |
+| 1,048,576 | 5,346 | 8,176 | 3,095 | 2,256 |
 
-    inv(y, x)  -- IDFT(non normalization) y:input, x:output
-    inv0(y, x) -- IDFT(non normalization) y:input, x:output
-    invu(y, x) -- IDFT(unitary transformation) y:input, x:output
-    invn(y, x) -- IDFT(with 1/N normalization) y:input, x:output
+* OTFFT is within 1.3x of FFTW up to N=16,384 and 1.3x to 26x faster than PocketFFT and KissFFT on powers of two. From N=65,536, FFTW is 1.6x to 3x faster.
+* The DCT-II is 1.1x to 1.9x faster than FFTW's up to N=262,144.
+* Lengths with factors 3, 5 and 7 are 2x to 11x slower than FFTW, and OTFFT's own prime-length path is much slower still.
+* The upstream claim that OTFFT is faster than FFTW at every length is **not reproduced** on this machine; the section [Comparison with the upstream benchmark](docs/benchmarks.md#comparison-with-the-upstream-benchmark) shows the two side by side.
 
-inv,inv0,invu,invn will destroy the input.
+Method, caveats and all tables are in [docs/benchmarks.md](docs/benchmarks.md).
+The numbers come from one shared machine and vary by up to 30% for large sizes.
+To run them yourself: `cmake -B build -DOTFFT_BUILD_BENCHMARKS=ON`, then
+`build/Release/otfft_bench` (see the benchmarks page).
 
+# Documentation
+* [docs/spec/](docs/spec/README.md): what the library does, rule by rule
+* [docs/decisions.md](docs/decisions.md): why it is built this way
+* [docs/benchmarks.md](docs/benchmarks.md): speed against FFTW, PocketFFT and KissFFT
+* [docs/ROADMAP.md](docs/ROADMAP.md): what is planned
+* [AGENTS.md](AGENTS.md): rules for people and tools working on the code
 
-# Discrete Cosine Transformation(DCT-II)
-
-This transformation, orthogonalization is not executed.
-``` c++
-    #include "otfft/otfft.h"
-    using OTFFT::complex_t;
-    using OTFFT::simd_malloc;
-    using OTFFT::simd_free;
-
-    void f(int N)
-    {
-        double* x = (double*) simd_malloc(N*sizeof(double));
-        // do something
-        OTFFT::DCT dct(N);
-        dct.fwd(x); // execution of DCT. x is input and output
-        // do something
-        simd_free(x);
-    }
-```
-
-N must be an even number. There are member functions, such as the
-following.
-
-    fwd(x)  -- DCT(with 1/N normalization) x:input/output
-    fwd0(x) -- DCT(non normalization) x:input/output
-    fwdn(x) -- DCT(with 1/N normalization) x:input/output
-
-    inv(x) -- IDCT(non normalization) x:input/output
-    inv0(x) -- IDCT(non normalization) x:input/output
-    invn(x) -- IDCT(with 1/N normalization) x:input/output
-
-To use in a multi-threaded environment, we do as follows.
-
-``` c++
-    #include "otfft/otfft.h"
-    using OTFFT::complex_t;
-    using OTFFT::simd_malloc;
-    using OTFFT::simd_free;
-
-    void f(int N)
-    {
-        double* x = (double*) simd_malloc(N*sizeof(double));
-        double* y = (double*) simd_malloc(N*sizeof(double));
-        complex_t* z = (complex_t*) simd_malloc(N*sizeof(complex_t));
-        // do something
-        OTFFT::DCT0 dct(N);
-        dct.fwd(x, y, z); // x is input/output. y,z are work area
-        // do something
-        dct.inv(x, y, z); // x is input/output. y,z are work area
-        // do somthing
-        simd_free(z);
-        simd_free(y);
-        simd_free(x);
-    }
-```
-
-Please note that "OTFFT::DCT" was changed to "OTFFT::DCT0".
-
-# Bluestein's FFT
-
-Bluestein's FFT is the FFT of any sequence length. Even if the
-sequence length is a big prime number, the order of complexity is O(N
-log N).
-``` c++
-    #include "otfft/otfft.h"
-    using OTFFT::complex_t;
-    using OTFFT::simd_malloc;
-    using OTFFT::simd_free;
-
-    void f(int N)
-    {
-        complex_t* x = (complex_t*) simd_malloc(N*sizeof(complex_t));
-        // do something
-        OTFFT::Bluestein bst(N);
-        bst.fwd(x); // execution of Bluestein's FFT. x is input and output
-        // do something
-        simd_free(x);
-    }
-```
-
-There are member functions, such as the following.
-
-    fwd(x)  -- DFT(with 1/N normalization) x:input/output
-    fwd0(x) -- DFT(non normalization) x:input/output
-    fwdu(x) -- DFT(unitary transformation) x:input/output
-    fwdn(x) -- DFT(with 1/N normalization) x:input/output
-
-    inv(x)  -- IDFT(non normalization) x:input/output
-    inv0(x) -- IDFT(non normalization) x:input/output
-    invu(x) -- IDFT(unitary transformation) x:input/output
-    invn(x) -- IDFT(with 1/N normalization) x:input/output
-
-To use in a multi-threaded environment, we need to create objects of
-the same number as the number of threads.
+# License
+OTFFT is released under the MIT license (see [LICENSE](LICENSE)). The benchmark
+tool uses PocketFFT and KissFFT (BSD, in `third_party/`) and, if you install it,
+FFTW (GPL; never linked into the library).
