@@ -3,7 +3,7 @@
 
 #undef VALGRIND_MEM_LEAK_DETECTION
 
-#include <boost/test/unit_test.hpp>
+#include "otfft_test_checks.h"
 
 #include <algorithm>
 #include <cmath>
@@ -41,11 +41,11 @@ namespace
         {
             if (std::fabs(expected[idx]) < 1e-10)
             {
-                BOOST_CHECK_SMALL(absSpectrum[idx], 1e-8);
+                CHECK_SMALL(absSpectrum[idx], 1e-8);
             }
             else
             {
-                BOOST_CHECK_CLOSE(expected[idx], absSpectrum[idx], .1);
+                CHECK_CLOSE_PCT(expected[idx], absSpectrum[idx], .1);
             }
         }
     }
@@ -79,11 +79,11 @@ namespace
         {
             if (std::fabs(expected[idx]) < 1e-10)
             {
-                BOOST_CHECK_SMALL(absSpectrum[idx], 1e-8);
+                CHECK_SMALL(absSpectrum[idx], 1e-8);
             }
             else
             {
-                BOOST_CHECK_CLOSE(expected[idx], absSpectrum[idx], .1);
+                CHECK_CLOSE_PCT(expected[idx], absSpectrum[idx], .1);
             }
         }
     }
@@ -110,11 +110,11 @@ namespace
         {
             if (std::fabs(expected[idx]) < 1e-10)
             {
-                BOOST_CHECK_SMALL(output[idx], 1e-8);
+                CHECK_SMALL(output[idx], 1e-8);
             }
             else
             {
-                BOOST_CHECK_CLOSE(expected[idx], output[idx], .1);
+                CHECK_CLOSE_PCT(expected[idx], output[idx], .1);
             }
         }
     }
@@ -140,11 +140,11 @@ namespace
         {
             if (std::fabs(expected[idx]) < 1e-10)
             {
-                BOOST_CHECK_SMALL(output[idx], 1e-8);
+                CHECK_SMALL(output[idx], 1e-8);
             }
             else
             {
-                BOOST_CHECK_CLOSE(expected[idx], output[idx], .1);
+                CHECK_CLOSE_PCT(expected[idx], output[idx], .1);
             }
         }
     }
@@ -176,7 +176,7 @@ namespace
 
         for (std::size_t idx{0}; idx < SIZE / 2; ++idx)
         {
-            BOOST_CHECK_CLOSE(testArray[idx], output[idx], .1);
+            CHECK_CLOSE_PCT(testArray[idx], output[idx], .1);
         }
     }
 
@@ -255,9 +255,10 @@ namespace
     }
 }
 
-BOOST_AUTO_TEST_SUITE(otfft_transform_test)
+TEST_SUITE("otfft_transform_test")
+{
 
-BOOST_AUTO_TEST_CASE(TestDeltaSpectrum)
+TEST_CASE("TestDeltaSpectrum")
 {
     deltaSpectrumTest<8>();
     deltaSpectrumTest<16>();
@@ -268,7 +269,7 @@ BOOST_AUTO_TEST_CASE(TestDeltaSpectrum)
     deltaSpectrumTest<16384>();
 }
 
-BOOST_AUTO_TEST_CASE(TestConstSpectrum)
+TEST_CASE("TestConstSpectrum")
 {
     constSpectrumTest<8>();
     constSpectrumTest<16>();
@@ -279,7 +280,7 @@ BOOST_AUTO_TEST_CASE(TestConstSpectrum)
     constSpectrumTest<16384>();
 }
 
-BOOST_AUTO_TEST_CASE(TestDeltaInverse)
+TEST_CASE("TestDeltaInverse")
 {
     deltaInverseTest<8>();
     deltaInverseTest<16>();
@@ -290,7 +291,7 @@ BOOST_AUTO_TEST_CASE(TestDeltaInverse)
     deltaInverseTest<16384>();
 }
 
-BOOST_AUTO_TEST_CASE(TestConstInverse)
+TEST_CASE("TestConstInverse")
 {
     constInverseTest<8>();
     constInverseTest<16>();
@@ -301,7 +302,7 @@ BOOST_AUTO_TEST_CASE(TestConstInverse)
     constInverseTest<16384>();
 }
 
-BOOST_AUTO_TEST_CASE(TestIdentity)
+TEST_CASE("TestIdentity")
 {
     identityTest<8>();
     identityTest<16>();
@@ -313,7 +314,7 @@ BOOST_AUTO_TEST_CASE(TestIdentity)
 }
 
 #ifdef VALGRIND_MEM_LEAK_DETECTION
-BOOST_AUTO_TEST_CASE(TestValgrind)
+TEST_CASE("TestValgrind")
 {
     const std::size_t N = static_cast<std::size_t>(std::pow(2, 24));
 
@@ -332,8 +333,8 @@ BOOST_AUTO_TEST_CASE(TestValgrind)
         n += static_cast<std::size_t>(std::ceil(std::pow(log_n, std::sqrt(log_n))));
     }
 
-    BOOST_CHECK(true);
+    CHECK(true);
 }
 #endif
 
-BOOST_AUTO_TEST_SUITE_END()
+}

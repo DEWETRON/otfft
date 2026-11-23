@@ -11,9 +11,8 @@ Milestone 1: Foundations
 *   [ ] **R1.1** Run benchmarks: measure the transforms (complex, real, DCT,
     Bluestein) per backend and length, and record results in
     `docs/benchmarks.md`.
-*   [ ] **R1.2** Remove dependencies: list what the library and the build
-    need (for example Boost.Test for the unit tests) and drop or replace
-    what is not essential.
+*   [x] **R1.2** Remove dependencies: Boost.Test replaced by vendored doctest
+    (D8). The library itself never depended on Boost.
 *   [ ] **R1.3** Add examples: small buildable programs for the complex,
     real, DCT and Bluestein transforms, built by CMake.
 

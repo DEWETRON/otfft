@@ -59,3 +59,16 @@ D7: Specs and decisions live in `docs/`
 *   **What:** `docs/spec/` holds behaviour rules with ids and status tags;
     this file holds decisions. `AGENTS.md` holds working rules.
 *   **Why:** same layout as the other glaure projects.
+
+D8: doctest instead of Boost.Test
+---------------------------------
+*   **What:** unit tests use doctest 2.4.11, vendored as one header in
+    `third_party/doctest`. `BOOST_CHECK_CLOSE` is kept as `CHECK_CLOSE_PCT`
+    (same strong percent comparison) in `unit_tests/otfft_test_checks.h`.
+*   **Why:** Boost was needed only by the tests. It had to be installed on every
+    CI machine, `FindBoost` is gone from CMake 4, and about 80 lines of
+    Boost link logic had no caller.
+*   **Rejected:** a home-made test macro set (we would have to maintain it).
+*   **Done:** CI no longer installs Boost; stale Boost CMake code, `.travis.yml`
+    and the duplicate `appyeyor.yml` removed.
+*   **Revisit when:** doctest stops being maintained.

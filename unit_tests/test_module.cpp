@@ -1,5 +1,4 @@
 // Copyright (c) Dewetron 2017
 
-#define BOOST_TEST_MODULE otfft_test
-
-#include <boost/test/unit_test.hpp>
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "otfft_test_checks.h"

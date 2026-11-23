@@ -13,8 +13,9 @@ Rules
     on. Other targets get SSE2 only.
 *   **BLD-4** `[built]` OpenMP is the standard one. Thread count follows
     `OMP_NUM_THREADS`.
-*   **BLD-5** `[done]` `ctest` runs the Boost.Test suites in `unit_tests/`.
-    Boost.Test is required.
+*   **BLD-5** `[done]` `ctest` runs the doctest suites in `unit_tests/`. doctest
+    is vendored in `third_party/doctest`, so no test dependency needs
+    installing. `-DOTFFT_BUILD_TESTS=OFF` skips the tests.
 *   **BLD-6** `[built]` Public headers: `otfft.h`, `otfft_complex.h`,
     `otfft_fwd.h`, `otfft_types.h`, plus the generated `otfft_config.h`.
 
@@ -26,4 +27,4 @@ Decided
 Questions
 ---------
 
-*   `.travis.yml`, `.shippable.yml` and `appyeyor.yml` (sic) look stale. Remove?
+*   `.shippable.yml` looks stale. Remove?

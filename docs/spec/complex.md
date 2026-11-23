@@ -27,8 +27,9 @@ Rules
 
 *   **CFFT-5** `[done]` Any length N works, power of two or not (mixed radix).
     (`otfft_transform_test`, `otfft_optimization_test: TestComplex`)
-*   **CFFT-6** `[done]` No out-of-bounds access for the tested lengths.
-    (`TestValgrind`, run under valgrind in CI)
+*   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
+    (`TestValgrind` exists, but is compiled only with
+    `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)
 
 Seen in upstream
 ----------------

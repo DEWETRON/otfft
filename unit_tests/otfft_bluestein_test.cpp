@@ -1,16 +1,17 @@
 // Copyright (c) Dewetron 2017
 #include "otfft.h"
 
-#include <boost/test/unit_test.hpp>
+#include "otfft_test_checks.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <vector>
 
-BOOST_AUTO_TEST_SUITE(otfft_bluestein_test)
+TEST_SUITE("otfft_bluestein_test")
+{
 
-BOOST_AUTO_TEST_CASE(TestBluesteinEven)
+TEST_CASE("TestBluesteinEven")
 {
     const auto SIZE = 16;
     std::vector<OTFFT::complex_t> expected{
@@ -48,20 +49,20 @@ BOOST_AUTO_TEST_CASE(TestBluesteinEven)
     {
         if (std::fabs(expected[idx].Re) < 1e-10)
         {
-            BOOST_CHECK_SMALL(spectrum[idx].Re, 1e-8);
+            CHECK_SMALL(spectrum[idx].Re, 1e-8);
         }
         else
         {
-            BOOST_CHECK_CLOSE(expected[idx].Re, spectrum[idx].Re, .1);
+            CHECK_CLOSE_PCT(expected[idx].Re, spectrum[idx].Re, .1);
         }
 
         if (std::fabs(expected[idx].Im) < 1e-10)
         {
-            BOOST_CHECK_SMALL(spectrum[idx].Im, 1e-8);
+            CHECK_SMALL(spectrum[idx].Im, 1e-8);
         }
         else
         {
-            BOOST_CHECK_CLOSE(expected[idx].Im, spectrum[idx].Im, .1);
+            CHECK_CLOSE_PCT(expected[idx].Im, spectrum[idx].Im, .1);
         }
     }
 
@@ -81,25 +82,25 @@ BOOST_AUTO_TEST_CASE(TestBluesteinEven)
     {
         if (std::fabs(expected[idx].Re) < 1e-10)
         {
-            BOOST_CHECK_SMALL(spectrum[idx].Re, 1e-8);
+            CHECK_SMALL(spectrum[idx].Re, 1e-8);
         }
         else
         {
-            BOOST_CHECK_CLOSE(expected[idx].Re, spectrum[idx].Re, .1);
+            CHECK_CLOSE_PCT(expected[idx].Re, spectrum[idx].Re, .1);
         }
 
         if (std::fabs(expected[idx].Im) < 1e-10)
         {
-            BOOST_CHECK_SMALL(spectrum[idx].Im, 1e-8);
+            CHECK_SMALL(spectrum[idx].Im, 1e-8);
         }
         else
         {
-            BOOST_CHECK_CLOSE(expected[idx].Im, spectrum[idx].Im, .1);
+            CHECK_CLOSE_PCT(expected[idx].Im, spectrum[idx].Im, .1);
         }
     }
 }
 
-BOOST_AUTO_TEST_CASE(TestBluesteinOdd)
+TEST_CASE("TestBluesteinOdd")
 {
     const auto SIZE = 13;
     std::vector<OTFFT::complex_t> expected{
@@ -134,20 +135,20 @@ BOOST_AUTO_TEST_CASE(TestBluesteinOdd)
     {
         if (std::fabs(expected[idx].Re) < 1e-10)
         {
-            BOOST_CHECK_SMALL(spectrum[idx].Re, 1e-8);
+            CHECK_SMALL(spectrum[idx].Re, 1e-8);
         }
         else
         {
-            BOOST_CHECK_CLOSE(expected[idx].Re, spectrum[idx].Re, .1);
+            CHECK_CLOSE_PCT(expected[idx].Re, spectrum[idx].Re, .1);
         }
 
         if (std::fabs(expected[idx].Im) < 1e-10)
         {
-            BOOST_CHECK_SMALL(spectrum[idx].Im, 1e-8);
+            CHECK_SMALL(spectrum[idx].Im, 1e-8);
         }
         else
         {
-            BOOST_CHECK_CLOSE(expected[idx].Im, spectrum[idx].Im, .1);
+            CHECK_CLOSE_PCT(expected[idx].Im, spectrum[idx].Im, .1);
         }
     }
 
@@ -167,22 +168,22 @@ BOOST_AUTO_TEST_CASE(TestBluesteinOdd)
     {
         if (std::fabs(expected[idx].Re) < 1e-10)
         {
-            BOOST_CHECK_SMALL(spectrum[idx].Re, 1e-8);
+            CHECK_SMALL(spectrum[idx].Re, 1e-8);
         }
         else
         {
-            BOOST_CHECK_CLOSE(expected[idx].Re, spectrum[idx].Re, .1);
+            CHECK_CLOSE_PCT(expected[idx].Re, spectrum[idx].Re, .1);
         }
 
         if (std::fabs(expected[idx].Im) < 1e-10)
         {
-            BOOST_CHECK_SMALL(spectrum[idx].Im, 1e-8);
+            CHECK_SMALL(spectrum[idx].Im, 1e-8);
         }
         else
         {
-            BOOST_CHECK_CLOSE(expected[idx].Im, spectrum[idx].Im, .1);
+            CHECK_CLOSE_PCT(expected[idx].Im, spectrum[idx].Im, .1);
         }
     }
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+}
