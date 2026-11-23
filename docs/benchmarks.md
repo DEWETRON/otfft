@@ -31,6 +31,8 @@ Summary
 *   **Upstream claim.** The OTFFT author's page says OTFFT beats FFTW at every length from 2^1
     to 2^24. A round trip like upstream's does not reproduce that here: see "Comparison
     with the upstream benchmark".
+*   **Compilers.** GCC 15.2 and Clang 21.1.8 give the same picture; the real FFT and DCT
+    are 4 to 12 percent slower with Clang and Bluestein 15 to 43 percent. See "Compiler comparison".
 *   **Planning.** OTFFT plans in 8 microseconds to 100 ms. FFTW with
     `FFTW_MEASURE` needs 0.3 ms to 10 s (the time limit we set).
 
@@ -495,6 +497,100 @@ whereas upstream's FFTW times for those sizes (for example 0.64 microseconds at
 *   Upstream's latest release is 11.6e (2023-12-21). This fork's headers still
     say version 11.4xv and the README says changes from 11.5 are merged, so the
     fork is at best at 11.5.
+
+Compiler comparison: GCC and Clang
+-----------------------------------
+
+The same code was also built and measured with Clang 21.1.8 (Ubuntu, OpenMP
+runtime `libomp`, OpenMP 5.1) on the same machine, with the same options,
+Release build. The unit tests pass with Clang (22 of 22 test cases). FFTW is
+the same library in both runs; PocketFFT and KissFFT are recompiled by the
+compiler under test. Raw data: `docs/benchmark-data/2026-11-23/clang-*.csv`,
+and `gcc-again-t1.csv` for a GCC re-run of the complex power-of-two sizes made
+in the same session as the Clang runs.
+
+**Summary:** the compiler does not change the picture. For the complex FFT on
+powers of two OTFFT is within a few percent of its GCC speed for N up to
+16,384 and 9 to 15 percent slower above that; FFTW (an identical binary) also
+measured 7 to 9 percent lower from N=262,144 up in the Clang session, so part of
+that is the state of the machine. The real FFT and the DCT are 4 to 12 percent
+slower with Clang. The one clear difference is Bluestein, which is 15 to 43
+percent slower with Clang.
+
+**Complex FFT, powers of two, one thread, MFLOPS.** "GCC" is the re-run made
+next to the Clang run. The FFTW columns show how much the machine itself moved
+between the main GCC run and the Clang session (same binary).
+
+| N | OTFFT GCC | OTFFT Clang | Clang vs GCC | FFTW, main GCC run | FFTW, Clang session |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 16 | 21,475 | 20,240 | -6% | 20,846 | 20,290 |
+| 64 | 29,555 | 27,764 | -6% | 30,741 | 30,818 |
+| 256 | 29,778 | 28,866 | -3% | 37,775 | 37,764 |
+| 1,024 | 29,053 | 29,003 | -0% | 35,771 | 37,117 |
+| 4,096 | 24,434 | 24,913 | +2% | 27,356 | 27,287 |
+| 16,384 | 18,628 | 18,450 | -1% | 19,744 | 22,086 |
+| 65,536 | 7,240 | 6,402 | -12% | 21,515 | 21,910 |
+| 262,144 | 8,436 | 7,654 | -9% | 16,624 | 15,501 |
+| 1,048,576 | 5,608 | 4,872 | -13% | 8,176 | 7,474 |
+| 4,194,304 | 5,980 | 5,074 | -15% | 4,093 | 3,704 |
+
+**Other transforms, one thread, MFLOPS** (GCC from the main run above):
+
+| Transform | N | OTFFT GCC | OTFFT Clang | Clang vs GCC |
+| --- | ---: | ---: | ---: | ---: |
+| real | 256 | 18,483 | 16,654 | -10% |
+| real | 4,096 | 20,849 | 18,458 | -11% |
+| real | 65,536 | 15,406 | 13,951 | -9% |
+| real | 1,048,576 | 5,580 | 5,089 | -9% |
+| dct | 256 | 11,303 | 10,227 | -10% |
+| dct | 4,096 | 13,528 | 12,146 | -10% |
+| dct | 65,536 | 12,193 | 10,787 | -12% |
+| dct | 1,048,576 | 3,784 | 3,573 | -6% |
+| complex, smooth | 480 | 10,676 | 10,949 | +3% |
+| complex, smooth | 1,000 | 8,036 | 7,695 | -4% |
+| complex, smooth | 10,080 | 2,271 | 2,243 | -1% |
+| complex, smooth | 100,000 | 6,452 | 6,147 | -5% |
+
+**Bluestein, one thread, MFLOPS:**
+
+| N | `createBluesteinFFT` GCC | `createBluesteinFFT` Clang | Clang vs GCC |
+| ---: | ---: | ---: | ---: |
+| 480 | 2,389 | 1,522 | -36% |
+| 1,000 | 2,630 | 1,580 | -40% |
+| 3,000 | 1,471 | 976 | -34% |
+| 10,080 | 1,461 | 1,044 | -29% |
+| 100,000 | 815 | 667 | -18% |
+| 1,000,000 | 739 | 628 | -15% |
+| 1,009 | 2,775 | 1,580 | -43% |
+| 10,007 | 1,462 | 1,086 | -26% |
+| 100,003 | 778 | 660 | -15% |
+
+**12 threads, complex FFT, powers of two, MFLOPS** (GCC from the main run):
+
+| N | OTFFT GCC | OTFFT Clang | FFTW, main GCC run | FFTW, Clang session |
+| ---: | ---: | ---: | ---: | ---: |
+| 4,096 | 22,663 | 23,651 | 13,697 | 14,477 |
+| 16,384 | 7,256 | 7,855 | 31,849 | 31,318 |
+| 65,536 | 14,427 | 14,114 | 41,944 | 46,655 |
+| 262,144 | 16,901 | 18,582 | 47,953 | 55,844 |
+| 1,048,576 | 20,588 | 19,965 | 24,250 | 25,086 |
+| 4,194,304 | 10,244 | 11,742 | 17,154 | 16,488 |
+
+**Upstream-style round trip** (OTFFT time as a percentage of FFTW
+`FFTW_MEASURE`, one thread, median over 2^1 to 2^21): upstream 80% (its own
+Clang 8 on a Mac), this repository with GCC 15: 111%, with Clang 21:
+112%. So switching to Clang does **not** bring this fork's numbers
+towards upstream's, which weakens the explanation "upstream used another
+compiler". Remaining candidates are the CPU (Zen 2 against a 2016 Intel core),
+the FFTW version and the fork's code and algorithm table
+(`docs/upstream-comparison.md`).
+
+Caveats: differences below about 10 percent are within the noise of this
+shared machine; PocketFFT and KissFFT varied by up to 38 percent between
+sessions at small sizes, so they are not compared here. The Clang binary was
+built before `-fsignaling-nans` was restricted to GCC (PR #22); Clang ignored
+that flag, so the generated code is the same. The problems of #16 to #19 occur
+with both compilers.
 
 Problems found
 --------------

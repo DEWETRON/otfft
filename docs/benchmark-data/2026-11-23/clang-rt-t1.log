@@ -1,0 +1,30 @@
+# cpu: AMD Ryzen 9 3900X 12-Core Processor
+# governor: schedutil
+# compiler: Ubuntu Clang 21.1.8 (6ubuntu1)
+# optimised build: yes
+# fftw: fftw-3.3.10-sse2-avx-avx2-avx2_128
+# threads: 1, samples: 11, target batch: 2.0 ms
+# done roundtrip n=2
+# done roundtrip n=4
+# done roundtrip n=8
+# done roundtrip n=16
+# done roundtrip n=32
+# done roundtrip n=64
+# done roundtrip n=128
+# done roundtrip n=256
+# done roundtrip n=512
+# done roundtrip n=1024
+# done roundtrip n=2048
+# done roundtrip n=4096
+# done roundtrip n=8192
+# done roundtrip n=16384
+# done roundtrip n=32768
+# done roundtrip n=65536
+# done roundtrip n=131072
+# done roundtrip n=262144
+# done roundtrip n=524288
+# done roundtrip n=1048576
+# done roundtrip n=2097152
+# done roundtrip n=4194304
+# done roundtrip n=8388608
+# done roundtrip n=16777216
