@@ -7,7 +7,7 @@
 # from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
 #
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.22)
 
 set(LIBNAME otfft)
 project(otfft)
@@ -59,7 +59,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     find_package(OpenMP REQUIRED)
   endif()
 
-  find_package(Boost COMPONENTS unit_test_framework)
 endif()
 
 if(OPENMP_FOUND)
@@ -372,7 +371,7 @@ if (UNIX)
   set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full" )
 endif(UNIX)
 
-if (Boost_FOUND)
-  message(STATUS "Using Boost unit test framework")
+option(OTFFT_BUILD_TESTS "Build the unit tests (doctest)" ON)
+if (OTFFT_BUILD_TESTS)
   add_subdirectory(unit_tests)
 endif()

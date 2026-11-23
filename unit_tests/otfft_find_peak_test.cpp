@@ -2,7 +2,7 @@
 #include "otfft.h"
 #include "otfft_test_utils.h"
 
-#include <boost/test/unit_test.hpp>
+#include "otfft_test_checks.h"
 
 #include <algorithm>
 #include <cmath>
@@ -39,36 +39,37 @@ namespace
     }
 }
 
-BOOST_AUTO_TEST_SUITE(otfft_find_peak_test)
+TEST_SUITE("otfft_find_peak_test")
+{
 
-BOOST_AUTO_TEST_CASE(TestSinePeakDetect1)
+TEST_CASE("TestSinePeakDetect1")
 {
     const auto peak_position = findPeak(64, 10000, 1000);
-    BOOST_CHECK_EQUAL(6u, peak_position);
+    CHECK_EQ(6u, peak_position);
 }
 
-BOOST_AUTO_TEST_CASE(TestSinePeakDetect2)
+TEST_CASE("TestSinePeakDetect2")
 {
     const auto peak_position = findPeak(1024, 10000, 50);
-    BOOST_CHECK_EQUAL(5u, peak_position);
+    CHECK_EQ(5u, peak_position);
 }
 
-BOOST_AUTO_TEST_CASE(TestSinePeakDetect3)
+TEST_CASE("TestSinePeakDetect3")
 {
     const auto peak_position = findPeak(8192, 50000, 4999);
-    BOOST_CHECK_EQUAL(819u, peak_position);
+    CHECK_EQ(819u, peak_position);
 }
 
-BOOST_AUTO_TEST_CASE(TestSinePeakDetect4)
+TEST_CASE("TestSinePeakDetect4")
 {
     const auto peak_position = findPeak(262144, 1000000, 60000);
-    BOOST_CHECK_EQUAL(15729u, peak_position);
+    CHECK_EQ(15729u, peak_position);
 }
 
-BOOST_AUTO_TEST_CASE(TestSinePeakDetect5)
+TEST_CASE("TestSinePeakDetect5")
 {
     const auto peak_position = findPeak(32, 512, 1);
-    BOOST_CHECK_EQUAL(0u, peak_position);
+    CHECK_EQ(0u, peak_position);
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+}

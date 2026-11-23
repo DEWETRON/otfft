@@ -45,7 +45,7 @@ Original upstream: <http://wwwa.pikara.ne.jp/okojisan/otfft-en/download.html>
 
 *   `inc/`: public headers (`otfft.h` is the API).
 *   `src/`: algorithms and per-backend headers.
-*   `unit_tests/`: Boost.Test suites.
+*   `unit_tests/`: doctest suites. `third_party/`: vendored doctest.
 *   `cmake/`: build helpers. `docs/spec/`: behaviour spec. `docs/decisions.md`.
 
 ### Checks
@@ -56,4 +56,4 @@ cmake --build build --parallel
 (cd build && ctest)
 ```
 
-Needs Boost.Test (`libboost-test-dev`); CI also uses valgrind.
+Tests use doctest, vendored in `third_party/doctest`; no other dependency.

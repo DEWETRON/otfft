@@ -3,17 +3,8 @@
 
 set(TEST_NAME otfft.${UNIT_TEST_SUFFIX})
 
-find_package(Boost
-    REQUIRED COMPONENTS
-    unit_test_framework
-)
-
-include_directories(
-  SYSTEM
-  ${Boost_INCLUDE_DIRS}
-)
-
 set(UNIT_TEST_HEADERS
+  otfft_test_checks.h
   otfft_test_utils.h
 )
 
@@ -27,17 +18,16 @@ set(UNIT_TEST_SOURCES
   otfft_transform_test.cpp
 )
 
-add_definitions(-DBOOST_SPIRIT_THREADSAFE)
-
 add_executable(${TEST_NAME}
   ${UNIT_TEST_HEADERS}
   ${UNIT_TEST_SOURCES}
 )
 
-SetBoostUnitTestFlags(${TEST_NAME})
+target_include_directories(${TEST_NAME} SYSTEM PRIVATE
+  ${PROJECT_SOURCE_DIR}/third_party
+)
 
 target_link_libraries(${TEST_NAME}
-  ${Boost_LIBRARIES}
   otfft
 )
 

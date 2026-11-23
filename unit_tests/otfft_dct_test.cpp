@@ -1,16 +1,17 @@
 // Copyright (c) Dewetron 2017
 #include "otfft.h"
 
-#include <boost/test/unit_test.hpp>
+#include "otfft_test_checks.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <vector>
 
-BOOST_AUTO_TEST_SUITE(otfft_dct_test)
+TEST_SUITE("otfft_dct_test")
+{
 
-BOOST_AUTO_TEST_CASE(TestAlternatingOnes)
+TEST_CASE("TestAlternatingOnes")
 {
     const std::size_t SIZE = 4;
     const double testArray[SIZE] = {1.0, -1.0, 1.0, -1.0};
@@ -24,11 +25,11 @@ BOOST_AUTO_TEST_CASE(TestAlternatingOnes)
 
     for (std::size_t idx{0}; idx < SIZE; ++idx)
     {
-        BOOST_CHECK_CLOSE(testArray[idx], workspace[idx], .1);
+        CHECK_CLOSE_PCT(testArray[idx], workspace[idx], .1);
     }
 }
 
-BOOST_AUTO_TEST_CASE(TestConstantInput)
+TEST_CASE("TestConstantInput")
 {
     const std::size_t SIZE = 4;
     const double testArray[SIZE] = {1.0, 1.0, 1.0, 1.0};
@@ -42,11 +43,11 @@ BOOST_AUTO_TEST_CASE(TestConstantInput)
 
     for (std::size_t idx{0}; idx < SIZE; ++idx)
     {
-        BOOST_CHECK_CLOSE(testArray[idx], workspace[idx], .1);
+        CHECK_CLOSE_PCT(testArray[idx], workspace[idx], .1);
     }
 }
 
-BOOST_AUTO_TEST_CASE(TestCachedCosines)
+TEST_CASE("TestCachedCosines")
 {
     const std::size_t SIZE = 4;
     const double testArray[SIZE] = {1.0, 1.0, 1.0, 1.0};
@@ -62,8 +63,8 @@ BOOST_AUTO_TEST_CASE(TestCachedCosines)
 
     for (std::size_t idx{0}; idx < SIZE; ++idx)
     {
-        BOOST_CHECK_CLOSE(testArray[idx], workspace[idx], .1);
+        CHECK_CLOSE_PCT(testArray[idx], workspace[idx], .1);
     }
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+}

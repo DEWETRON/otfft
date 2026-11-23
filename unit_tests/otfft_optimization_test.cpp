@@ -1,7 +1,7 @@
 // Copyright (c) Dewetron 2017
 #include "otfft.h"
 
-#include <boost/test/unit_test.hpp>
+#include "otfft_test_checks.h"
 
 #include <algorithm>
 #include <cmath>
@@ -83,20 +83,20 @@ namespace
         {
             if (std::fabs(expected[idx].Re) < 1e-10)
             {
-                BOOST_CHECK_SMALL(spectrum[idx].Re, 1e-8);
+                CHECK_SMALL(spectrum[idx].Re, 1e-8);
             }
             else
             {
-                BOOST_CHECK_CLOSE(expected[idx].Re, spectrum[idx].Re, .1);
+                CHECK_CLOSE_PCT(expected[idx].Re, spectrum[idx].Re, .1);
             }
 
             if (std::fabs(expected[idx].Im) < 1e-10)
             {
-                BOOST_CHECK_SMALL(spectrum[idx].Im, 1e-8);
+                CHECK_SMALL(spectrum[idx].Im, 1e-8);
             }
             else
             {
-                BOOST_CHECK_CLOSE(expected[idx].Im, spectrum[idx].Im, .1);
+                CHECK_CLOSE_PCT(expected[idx].Im, spectrum[idx].Im, .1);
             }
         }
     }
@@ -127,14 +127,14 @@ namespace
         std::stringstream loc;
         loc << "Error for size " << SIZE << " with " << OPT_TYPE << " and " << TR_TYPE << ": ";
 
-        BOOST_CHECK_MESSAGE(OTFFT::abs(spectrum[0]) < 1e-3, loc.str() << "DC is " << OTFFT::abs(spectrum[0]));
+        CHECK_MESSAGE(OTFFT::abs(spectrum[0]) < 1e-3, loc.str() << "DC is " << OTFFT::abs(spectrum[0]));
 
-        BOOST_CHECK_MESSAGE(std::abs(OTFFT::abs(spectrum[1]) - ampl) < 1e-3, loc.str() << "amp is " << OTFFT::abs(spectrum[1]));
-        BOOST_CHECK_MESSAGE(std::abs(OTFFT::arg(spectrum[1])) < 1e-3, loc.str() << "phase is " << OTFFT::arg(spectrum[1]));
+        CHECK_MESSAGE(std::abs(OTFFT::abs(spectrum[1]) - ampl) < 1e-3, loc.str() << "amp is " << OTFFT::abs(spectrum[1]));
+        CHECK_MESSAGE(std::abs(OTFFT::arg(spectrum[1])) < 1e-3, loc.str() << "phase is " << OTFFT::arg(spectrum[1]));
 
         for (std::size_t n = 2; n < SIZE; ++n)
         {
-            //BOOST_CHECK_SMALL(OTFFT::abs(spectrum[n]), 1e-3); // no remaining power
+            //CHECK_SMALL(OTFFT::abs(spectrum[n]), 1e-3); // no remaining power
         }
     }
 
@@ -169,11 +169,11 @@ namespace
         {
             if (std::fabs(expected[idx]) < 1e-10)
             {
-                BOOST_CHECK_SMALL(spectrum[idx], 1e-8);
+                CHECK_SMALL(spectrum[idx], 1e-8);
             }
             else
             {
-                BOOST_CHECK_CLOSE(expected[idx], spectrum[idx], .1);
+                CHECK_CLOSE_PCT(expected[idx], spectrum[idx], .1);
             }
         }
     }
@@ -206,14 +206,14 @@ namespace
         const auto bin = spectrum[1] + spectrum[SIZE - 1];
         const double ampl_bin = OTFFT::abs(bin);
         const double dc_bin = OTFFT::abs(spectrum[0]);
-        BOOST_CHECK_MESSAGE(std::abs(ampl_bin - ampl) < 1e-3, loc.str() << "amp is " << ampl_bin);
-        BOOST_CHECK_MESSAGE(dc_bin < 1e-3, loc.str() << "DC is " << dc_bin);
+        CHECK_MESSAGE(std::abs(ampl_bin - ampl) < 1e-3, loc.str() << "amp is " << ampl_bin);
+        CHECK_MESSAGE(dc_bin < 1e-3, loc.str() << "DC is " << dc_bin);
 
-        BOOST_CHECK_CLOSE(OTFFT::abs(bin), ampl, 1e-3); // all power in first bin
-        BOOST_CHECK_SMALL(OTFFT::arg(bin), 1e-3); // zero phase in first bin
+        CHECK_CLOSE_PCT(OTFFT::abs(bin), ampl, 1e-3); // all power in first bin
+        CHECK_SMALL(OTFFT::arg(bin), 1e-3); // zero phase in first bin
         for (std::size_t n = 2; n < SIZE / 2; ++n)
         {
-            BOOST_CHECK_SMALL(OTFFT::abs(spectrum[n]), 1e-3); // no remaining power
+            CHECK_SMALL(OTFFT::abs(spectrum[n]), 1e-3); // no remaining power
         }
     }
 
@@ -245,19 +245,20 @@ namespace
         {
             if (std::fabs(expected[idx]) < 1e-10)
             {
-                BOOST_CHECK_SMALL(spectrum[idx], 1e-8);
+                CHECK_SMALL(spectrum[idx], 1e-8);
             }
             else
             {
-                BOOST_CHECK_CLOSE(expected[idx], spectrum[idx], .1);
+                CHECK_CLOSE_PCT(expected[idx], spectrum[idx], .1);
             }
         }
     }
 }
 
-BOOST_AUTO_TEST_SUITE(otfft_optimization_test)
+TEST_SUITE("otfft_optimization_test")
+{
 
-BOOST_AUTO_TEST_CASE(TestPowerOfTwoSine)
+TEST_CASE("TestPowerOfTwoSine")
 {
 #ifdef OTFFT_WITH_SSE2
     for (int n = 4; n <= (1 << 24); n <<= 2)
@@ -269,7 +270,7 @@ BOOST_AUTO_TEST_CASE(TestPowerOfTwoSine)
 #endif
 }
 
-BOOST_AUTO_TEST_CASE(TestBluestein)
+TEST_CASE("TestBluestein")
 {
     const std::vector<std::size_t> N{
       8, 13, 27, 32, 172, 347, 512, 3247, 4096, 12312, 16384,
@@ -299,7 +300,7 @@ BOOST_AUTO_TEST_CASE(TestBluestein)
 #endif
 }
 
-BOOST_AUTO_TEST_CASE(TestComplex)
+TEST_CASE("TestComplex")
 {
     const std::vector<std::size_t> N{
       8, 13, 27, 32, 172, 347, 512, 3247, 4096, 12312, 16384,
@@ -329,7 +330,7 @@ BOOST_AUTO_TEST_CASE(TestComplex)
 #endif
 }
 
-BOOST_AUTO_TEST_CASE(TestReal)
+TEST_CASE("TestReal")
 {
     const auto N = {
       8, 32, 64, 128, 256,
@@ -359,7 +360,7 @@ BOOST_AUTO_TEST_CASE(TestReal)
 #endif
 }
 
-BOOST_AUTO_TEST_CASE(TestRealMixedRadix)
+TEST_CASE("TestRealMixedRadix")
 {
     const auto N = {
         2 * 7, 4 * 7, 8 * 7, 
@@ -391,7 +392,7 @@ BOOST_AUTO_TEST_CASE(TestRealMixedRadix)
 #endif
 }
 
-BOOST_AUTO_TEST_CASE(TestDCT)
+TEST_CASE("TestDCT")
 {
     const std::vector<std::size_t> N{
       8, 32, 512, 4096, 16384, 32768, 65536, 131072,
@@ -417,4 +418,4 @@ BOOST_AUTO_TEST_CASE(TestDCT)
 #endif
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+}
