@@ -42,7 +42,9 @@
 namespace
 {
 
-enum class Kind { Complex, Real, DCT };
+// RoundTrip: complex forward + inverse of the same data, as in the benchmark
+// on the upstream OTFFT page (cost = DFT + IDFT).
+enum class Kind { Complex, Real, DCT, RoundTrip };
 
 const char* kindName(Kind k)
 {
@@ -51,17 +53,22 @@ const char* kindName(Kind k)
     case Kind::Complex: return "complex";
     case Kind::Real: return "real";
     case Kind::DCT: return "dct";
+    case Kind::RoundTrip: return "roundtrip";
     }
     return "?";
 }
 
 // Number of doubles in the input and in the output of a transform.
-std::size_t inputDoubles(Kind k, std::size_t n) { return k == Kind::Complex ? 2 * n : n; }
+std::size_t inputDoubles(Kind k, std::size_t n)
+{
+    return (k == Kind::Complex || k == Kind::RoundTrip) ? 2 * n : n;
+}
 std::size_t outputDoubles(Kind k, std::size_t n)
 {
     switch (k)
     {
-    case Kind::Complex: return 2 * n;
+    case Kind::Complex:
+    case Kind::RoundTrip: return 2 * n;
     case Kind::Real: return 2 * (n / 2 + 1);
     case Kind::DCT: return n;
     }
@@ -72,7 +79,12 @@ std::size_t outputDoubles(Kind k, std::size_t n)
 double equivalentFlops(Kind k, std::size_t n)
 {
     const double nl = static_cast<double>(n) * std::log2(static_cast<double>(n));
-    return k == Kind::Complex ? 5.0 * nl : 2.5 * nl;
+    switch (k)
+    {
+    case Kind::Complex: return 5.0 * nl;
+    case Kind::RoundTrip: return 10.0 * nl;
+    default: return 2.5 * nl;
+    }
 }
 
 template <class T>
@@ -166,6 +178,7 @@ public:
         switch (k)
         {
         case Kind::Complex:
+        case Kind::RoundTrip:
             m_cfft = m_bluestein ? OTFFT::Factory::createBluesteinFFT(len, m_type)
                                  : OTFFT::Factory::createComplexFFT(len, m_type);
             m_in.reset(2 * n);
@@ -194,12 +207,22 @@ public:
     void load(const double* in) override
     {
         std::memcpy(m_in.get(), in, inputDoubles(m_kind, m_n) * sizeof(double));
+        if (m_kind == Kind::RoundTrip)
+        {
+            std::memcpy(m_work.get(), in, 2 * m_n * sizeof(double));
+        }
     }
 
     void run() override
     {
         switch (m_kind)
         {
+        case Kind::RoundTrip:
+            // fwd scales by 1/N and inv does not: the data comes back unchanged,
+            // so it can be transformed in place again and again without copying
+            m_cfft->fwd(reinterpret_cast<OTFFT::complex_t*>(m_work.get()));
+            m_cfft->inv(reinterpret_cast<OTFFT::complex_t*>(m_work.get()));
+            break;
         case Kind::Complex:
             std::memcpy(m_work.get(), m_in.get(), 2 * m_n * sizeof(double));
             m_cfft->fwd0(reinterpret_cast<OTFFT::complex_t*>(m_work.get()));
@@ -251,6 +274,7 @@ public:
         m_n = n;
         m_in.reset(inputDoubles(k, n));
         m_out.reset(outputDoubles(k, n));
+        m_out2.reset(outputDoubles(k, n));
         // warm the plan cache so that planning is not part of the first run
         run();
     }
@@ -265,6 +289,14 @@ public:
         const shape_t shape{m_n};
         switch (m_kind)
         {
+        case Kind::RoundTrip:
+            c2c(shape, stride_t{sizeof(std::complex<double>)}, stride_t{sizeof(std::complex<double>)},
+                shape_t{0}, FORWARD, reinterpret_cast<const std::complex<double>*>(m_in.get()),
+                reinterpret_cast<std::complex<double>*>(m_out.get()), 1.0);
+            c2c(shape, stride_t{sizeof(std::complex<double>)}, stride_t{sizeof(std::complex<double>)},
+                shape_t{0}, BACKWARD, reinterpret_cast<const std::complex<double>*>(m_out.get()),
+                reinterpret_cast<std::complex<double>*>(m_out2.get()), 1.0);
+            break;
         case Kind::Complex:
             c2c(shape, stride_t{sizeof(std::complex<double>)}, stride_t{sizeof(std::complex<double>)},
                 shape_t{0}, FORWARD, reinterpret_cast<const std::complex<double>*>(m_in.get()),
@@ -282,13 +314,14 @@ public:
     }
     void result(double* out) override
     {
-        std::memcpy(out, m_out.get(), outputDoubles(m_kind, m_n) * sizeof(double));
+        const double* src = m_kind == Kind::RoundTrip ? m_out2.get() : m_out.get();
+        std::memcpy(out, src, outputDoubles(m_kind, m_n) * sizeof(double));
     }
 
 private:
     Kind m_kind = Kind::Complex;
     std::size_t m_n = 0;
-    AlignedBuf<double> m_in, m_out;
+    AlignedBuf<double> m_in, m_out, m_out2;
 };
 
 // ----- KissFFT --------------------------------------------------------------
@@ -315,9 +348,11 @@ public:
         m_n = n;
         m_in.reset(inputDoubles(k, n));
         m_out.reset(outputDoubles(k, n));
-        if (k == Kind::Complex)
+        if (k == Kind::Complex || k == Kind::RoundTrip)
         {
             m_cfg = kiss_fft_alloc(static_cast<int>(n), 0, nullptr, nullptr);
+            m_icfg = kiss_fft_alloc(static_cast<int>(n), 1, nullptr, nullptr);
+            m_out2.reset(2 * n);
         }
         else
         {
@@ -327,7 +362,9 @@ public:
     void teardown() override
     {
         std::free(m_cfg);
+        std::free(m_icfg);
         std::free(m_rcfg);
+        m_icfg = nullptr;
         m_cfg = nullptr;
         m_rcfg = nullptr;
     }
@@ -337,7 +374,14 @@ public:
     }
     void run() override
     {
-        if (m_kind == Kind::Complex)
+        if (m_kind == Kind::RoundTrip)
+        {
+            kiss_fft(m_cfg, reinterpret_cast<const kiss_fft_cpx*>(m_in.get()),
+                     reinterpret_cast<kiss_fft_cpx*>(m_out.get()));
+            kiss_fft(m_icfg, reinterpret_cast<const kiss_fft_cpx*>(m_out.get()),
+                     reinterpret_cast<kiss_fft_cpx*>(m_out2.get()));
+        }
+        else if (m_kind == Kind::Complex)
         {
             kiss_fft(m_cfg, reinterpret_cast<const kiss_fft_cpx*>(m_in.get()),
                      reinterpret_cast<kiss_fft_cpx*>(m_out.get()));
@@ -349,14 +393,16 @@ public:
     }
     void result(double* out) override
     {
-        std::memcpy(out, m_out.get(), outputDoubles(m_kind, m_n) * sizeof(double));
+        const double* src = m_kind == Kind::RoundTrip ? m_out2.get() : m_out.get();
+        std::memcpy(out, src, outputDoubles(m_kind, m_n) * sizeof(double));
     }
 
 private:
     Kind m_kind = Kind::Complex;
     std::size_t m_n = 0;
-    AlignedBuf<double> m_in, m_out;
+    AlignedBuf<double> m_in, m_out, m_out2;
     kiss_fft_cfg m_cfg = nullptr;
+    kiss_fft_cfg m_icfg = nullptr;
     kiss_fftr_cfg m_rcfg = nullptr;
 };
 
@@ -389,6 +435,14 @@ public:
 #endif
         switch (k)
         {
+        case Kind::RoundTrip:
+            m_out2 = static_cast<double*>(fftw_malloc(2 * n * sizeof(double)));
+            std::memset(m_out2, 0, 2 * n * sizeof(double));
+            m_plan = fftw_plan_dft_1d(len, reinterpret_cast<fftw_complex*>(m_in),
+                                      reinterpret_cast<fftw_complex*>(m_out), FFTW_FORWARD, m_flags);
+            m_plan2 = fftw_plan_dft_1d(len, reinterpret_cast<fftw_complex*>(m_out),
+                                       reinterpret_cast<fftw_complex*>(m_out2), FFTW_BACKWARD, m_flags);
+            break;
         case Kind::Complex:
             m_plan = fftw_plan_dft_1d(len, reinterpret_cast<fftw_complex*>(m_in),
                                       reinterpret_cast<fftw_complex*>(m_out), FFTW_FORWARD, m_flags);
@@ -400,7 +454,7 @@ public:
             m_plan = fftw_plan_r2r_1d(len, m_in, m_out, FFTW_REDFT10, m_flags);
             break;
         }
-        if (!m_plan)
+        if (!m_plan || (k == Kind::RoundTrip && !m_plan2))
         {
             std::fprintf(stderr, "FFTW could not plan %s n=%zu\n", kindName(k), n);
             std::exit(2);
@@ -412,19 +466,33 @@ public:
         {
             fftw_destroy_plan(m_plan);
         }
+        if (m_plan2)
+        {
+            fftw_destroy_plan(m_plan2);
+        }
         m_plan = nullptr;
+        m_plan2 = nullptr;
         fftw_free(m_in);
         fftw_free(m_out);
-        m_in = m_out = nullptr;
+        fftw_free(m_out2);
+        m_in = m_out = m_out2 = nullptr;
     }
     void load(const double* in) override
     {
         std::memcpy(m_in, in, inputDoubles(m_kind, m_n) * sizeof(double));
     }
-    void run() override { fftw_execute(m_plan); }
+    void run() override
+    {
+        fftw_execute(m_plan);
+        if (m_plan2)
+        {
+            fftw_execute(m_plan2);
+        }
+    }
     void result(double* out) override
     {
-        std::memcpy(out, m_out, outputDoubles(m_kind, m_n) * sizeof(double));
+        const double* src = m_kind == Kind::RoundTrip ? m_out2 : m_out;
+        std::memcpy(out, src, outputDoubles(m_kind, m_n) * sizeof(double));
     }
     int effectiveThreads(int requested) const override
     {
@@ -446,7 +514,9 @@ private:
     std::size_t m_n = 0;
     double* m_in = nullptr;
     double* m_out = nullptr;
+    double* m_out2 = nullptr;
     fftw_plan m_plan = nullptr;
+    fftw_plan m_plan2 = nullptr;
 };
 int FftwAdapter::s_threads = 1;
 #endif
@@ -493,6 +563,14 @@ std::vector<Size> sizesFor(const Options& o)
         for (int e = 4; e <= (o.quick ? 20 : 22); e += step)
         {
             v.push_back({"pow2", std::size_t(1) << e});
+        }
+    }
+    if (want("pow2all"))
+    {
+        // every exponent, like the table on the upstream OTFFT page
+        for (int e = 1; e <= 24; ++e)
+        {
+            v.push_back({"pow2all", std::size_t(1) << e});
         }
     }
     if (want("smooth"))
@@ -655,13 +733,14 @@ bool parseArgs(int argc, char** argv, Options& o)
                 if (k == "complex") o.kinds.push_back(Kind::Complex);
                 else if (k == "real") o.kinds.push_back(Kind::Real);
                 else if (k == "dct") o.kinds.push_back(Kind::DCT);
+                else if (k == "roundtrip") o.kinds.push_back(Kind::RoundTrip);
                 else { std::fprintf(stderr, "unknown kind %s\n", k.c_str()); return false; }
             }
         }
         else
         {
             std::fprintf(stderr,
-                         "usage: otfft_bench [--kinds complex,real,dct] [--sizes pow2,smooth,prime]\n"
+                         "usage: otfft_bench [--kinds complex,real,dct,roundtrip] [--sizes pow2,pow2all,smooth,prime]\n"
                          "                   [--lib NAME] [--threads T] [--samples S] [--target-ms MS]\n                   [--max-run-ms MS]\n"
                          "                   [--csv FILE] [--quick]\n");
             return false;
@@ -735,11 +814,18 @@ int main(int argc, char** argv)
 
             // reference result
             std::vector<double> ref(outputDoubles(kind, n));
-            reference->setup(kind, n);
-            reference->load(input.data());
-            reference->run();
-            reference->result(ref.data());
-            reference->teardown();
+            if (kind == Kind::RoundTrip)
+            {
+                ref = input; // forward + inverse gives the input back, up to a scale
+            }
+            else
+            {
+                reference->setup(kind, n);
+                reference->load(input.data());
+                reference->run();
+                reference->result(ref.data());
+                reference->teardown();
+            }
 
             for (auto& a : adapters)
             {
@@ -764,9 +850,10 @@ int main(int argc, char** argv)
                 a->result(got.data());
                 double scale = 1.0;
                 const double err = compare(got, ref, scale);
-                const bool valid = std::isfinite(err) && err < 1e-9;
+                // unnormalised round trips accumulate more rounding error with N
+                const bool valid = std::isfinite(err) && err < (kind == Kind::RoundTrip ? 1e-7 : 1e-9);
                 // a different DCT scale is fine, a different complex/real scale is not
-                const bool scaleOk = kind == Kind::DCT || scale == 1.0;
+                const bool scaleOk = kind == Kind::DCT || kind == Kind::RoundTrip || scale == 1.0;
 
                 if (!valid || !scaleOk)
                 {

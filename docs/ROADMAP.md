@@ -19,13 +19,16 @@ Milestone 1: Foundations
 Milestone 1b: Fixes and speed found by the benchmarks
 -----------------------------------------------------
 
-*   [ ] **R1.4** Prime lengths with `createComplexFFT`: wrong result at
-    N=100,003 and O(N^2) speed at 1,009 and 10,007. Fix, or route to Bluestein,
-    and add a unit test for prime lengths.
+*   [ ] **R1.4** Prime lengths with `createComplexFFT`: wrong result from a
+    prime factor of 46,341 (int overflow, [#16](https://github.com/DEWETRON/otfft/issues/16))
+    and O(N^2) speed ([#17](https://github.com/DEWETRON/otfft/issues/17)). Fix, or route to
+    Bluestein, and add a unit test for prime lengths.
 *   [ ] **R1.5** Lengths with factors 3, 5 and 7 are 2x to 11x slower than FFTW
-    (worst: N=10,080). Improve the mixed radix steps.
+    (worst: N=10,080). Add a radix-7 butterfly and improve the mixed radix
+    steps ([#18](https://github.com/DEWETRON/otfft/issues/18)).
 *   [ ] **R1.6** OpenMP: do not thread below the break-even size (N=16,384 is
-    2.5x slower with 12 threads) and scale better above it (1.8x at 4M points).
+    2.5x slower with 12 threads) and scale better above it (1.8x at 4M points,
+    [#19](https://github.com/DEWETRON/otfft/issues/19)).
 *   [ ] **R1.7** Decide whether the AVX2 backend is worth keeping (no gain over
     AVX in the benchmarks); recheck after R2.1.
 

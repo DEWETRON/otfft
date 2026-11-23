@@ -28,6 +28,9 @@ Summary
 *   **Threads.** OTFFT with 12 threads is 1.8x to 3.9x faster for N >= 65,536, but
     slower for N=16,384 (0.4x). FFTW scales better and is 1.2x to 4.4x ahead of
     OTFFT with 12 threads for N >= 16,384.
+*   **Upstream claim.** The OTFFT author's page says OTFFT beats FFTW at every length from 2^1
+    to 2^24. A round trip like upstream's does not reproduce that here: see "Comparison
+    with the upstream benchmark".
 *   **Planning.** OTFFT plans in 8 microseconds to 100 ms. FFTW with
     `FFTW_MEASURE` needs 0.3 ms to 10 s (the time limit we set).
 
@@ -378,18 +381,138 @@ Note: OTFFT-avx2 dct output is 0.5 times PocketFFT's (convention only).
 
 Note: OTFFT-sse2 dct output is 0.5 times PocketFFT's (convention only).
 
+Comparison with the upstream benchmark
+---------------------------------------
+
+The OTFFT author publishes benchmarks at
+<http://wwwa.pikara.ne.jp/okojisan/otfft-en/index.html> (read on 2026-11-23;
+the page says it was last changed 2026-06-03) and states that OTFFT is faster
+than FFTW for sequence lengths 2^1 to 2^24. This section sets those numbers
+next to a run of this repository.
+
+**What upstream measures:** the summed time of a complex DFT and IDFT (a round
+trip) on power-of-two lengths 2^1 to 2^24, double precision, in place for
+OTFFT, with the percentage of FFTW's time in brackets. The tables below use
+the same idea: `otfft_bench --kinds roundtrip --sizes pow2all` times OTFFT's
+`fwd` (which scales by 1/N) followed by `inv` on the same buffer, with no
+copying, against FFTW's forward and backward plans out of place. Under 100%
+means OTFFT is faster than FFTW. The upstream percentages below are copied
+from that page.
+
+**One thread**
+
+| N | Upstream: OTFFT / FFTW | This run: OTFFT / FFTW-measure |
+| ---: | ---: | ---: |
+| 2^1 | 40% | 105% |
+| 2^2 | 44% | 107% |
+| 2^3 | 59% | 108% |
+| 2^4 | 58% | 95% |
+| 2^5 | 62% | 85% |
+| 2^6 | 67% | 96% |
+| 2^7 | 84% | 105% |
+| 2^8 | 64% | 124% |
+| 2^9 | 77% | 111% |
+| 2^10 | 76% | 129% |
+| 2^11 | 87% | 109% |
+| 2^12 | 90% | 104% |
+| 2^13 | 84% | 120% |
+| 2^14 | 84% | 116% |
+| 2^15 | 75% | 102% |
+| 2^16 | 100% | 303% |
+| 2^17 | 107% | 117% |
+| 2^18 | 94% | 174% |
+| 2^19 | 80% | 123% |
+| 2^20 | 85% | 148% |
+| 2^21 | 94% | 171% |
+| 2^22 | 88% | 30% |
+| 2^23 | 85% | 37% |
+| 2^24 | 82% | – |
+| cost (sum, 2^1 to 2^21) | 84% (2^1 to 2^24) | 158% |
+
+*Upstream: MacBook Pro 2016 (Core i7 2.6 GHz), macOS, Clang 8.0, OTFFT 11.5,
+FFTW 3.3.8 with `FFTW_MEASURE` (AVX2). This run: Ryzen 9 3900X, Linux, GCC
+15.2, OTFFT at this repository's `master`, FFTW 3.3.10 with `FFTW_MEASURE`.
+Sizes 2^22 and 2^23 are not reliable here: FFTW's round trip took 2 to 3 times
+longer than its forward-only time suggests (the 10 s planning limit and memory
+bandwidth), which is why the cost row stops at 2^21. At 2^24 a single FFTW run
+took over 2 s and was skipped.*
+
+**12 threads** (compare from 2^13 up only)
+
+| N | Upstream: OTFFT / FFTW | This run: OTFFT / FFTW-estimate |
+| ---: | ---: | ---: |
+| 2^1 | 39% | 113% |
+| 2^2 | 49% | 102% |
+| 2^3 | 56% | 110% |
+| 2^4 | 66% | 97% |
+| 2^5 | 76% | 90% |
+| 2^6 | 86% | 73% |
+| 2^7 | 91% | 59% |
+| 2^8 | 99% | 5% |
+| 2^9 | 91% | 9% |
+| 2^10 | 81% | 18% |
+| 2^11 | 89% | 27% |
+| 2^12 | 92% | 49% |
+| 2^13 | 85% | 224% |
+| 2^14 | 73% | 293% |
+| 2^15 | 49% | 197% |
+| 2^16 | 23% | 135% |
+| 2^17 | 38% | 302% |
+| 2^18 | 43% | 132% |
+| 2^19 | 46% | 462% |
+| 2^20 | 80% | 69% |
+| 2^21 | 87% | 280% |
+| 2^22 | 92% | 141% |
+| 2^23 | 86% | 288% |
+| 2^24 | 83% | 91% |
+
+*Upstream: Surface Laptop 5 (10 cores / 12 threads), Ubuntu on WSL2, GCC 11.4,
+OTFFT 11.6, FFTW 3.3.10 with `FFTW_ESTIMATE`. This run: 12 threads for both
+libraries. Up to 2^12 the figures here are meaningless: FFTW was forced to use
+12 threads for transforms where thread start-up costs far more than the work,
+whereas upstream's FFTW times for those sizes (for example 0.64 microseconds at
+2^8) show it ran on one thread there. Above 2^12 the run was also noisy
+(OTFFT's time at 2^19 is higher than at 2^20), so no cost row is given.*
+
+**What this shows**
+
+*   The claim "OTFFT is faster than FFTW" is **not reproduced** on this
+    machine. With one thread OTFFT and FFTW are within about 10% of each other
+    up to 2^7 (within 15%) and FFTW is 1.0 to 1.3 times faster from 2^8 to 2^15
+    (about 1.2 to 3 times from 2^16 to 2^21). Upstream reports OTFFT 10% to 60%
+    faster on most of these sizes.
+*   With 12 threads FFTW is ahead from 2^13 on in all but two of the sizes, in
+    contrast to upstream's table where OTFFT is 8% to 77% faster.
+*   The forward-only tables earlier in this document agree with the round trip
+    results. Their OTFFT numbers include a copy of the input, which the round
+    trip avoids, and the picture is about the same.
+*   Possible reasons, **none of which is verified**: a different CPU (Zen 2 against
+    a 2016 Intel core), compiler (GCC 15.2 against Clang 8) and FFTW version
+    (3.3.10 against 3.3.8); this fork's merged OTFFT is not upstream 11.6 (see
+    below); different build flags; and timing noise on a shared machine. A
+    run on the author's hardware class (an Intel core with AVX2) would tell
+    which of these matters.
+*   Upstream's latest release is 11.6e (2023-12-21). This fork's headers still
+    say version 11.4xv and the README says changes from 11.5 are merged, so the
+    fork is at best at 11.5.
+
 Problems found
 --------------
 
-1.  **Prime lengths with `createComplexFFT`.** OTFFT's mixed radix falls
-    back to a slow generic step: 12 MFLOPS at N=1,009 and 2 MFLOPS at
-    N=10,007, which looks like O(N^2). At N=100,003 the output is garbage
-    (relative error about 170 against PocketFFT, the same in every run and on
-    every backend). The cause is not investigated. The unit tests do not
-    cover primes. Use `createBluesteinFFT` for such lengths.
-2.  **Factor 7.** N=10,080 is 11x slower than FFTW and 3.4x slower than
-    PocketFFT, much worse than neighbouring sizes.
-3.  **Threading.** OpenMP is used for N=16,384 where it makes OTFFT 2.5x
+1.  **Prime lengths with `createComplexFFT`** ([#17](https://github.com/DEWETRON/otfft/issues/17),
+    [#16](https://github.com/DEWETRON/otfft/issues/16)). Only radix 2, 3, 4, 5 and 8 have
+    butterflies; every other factor uses a naive O(k^2) DFT (`fwdfftany` in
+    `src/otfft_mixedradix.h`). That gives 12 MFLOPS at N=1,009 and 2 MFLOPS at
+    N=10,007 (434 ms), and 48 s at N=100,003. From a prime factor of 46,341
+    the index `(i*j)%k` overflows `int`, so the result is wrong (correct at
+    N=30,011, wrong at 50,021) and the twiddle table is read at a negative
+    offset. The unit tests do not cover primes. Use `createBluesteinFFT` for
+    such lengths.
+2.  **Factor 7** ([#18](https://github.com/DEWETRON/otfft/issues/18)). N=10,080 is 11x
+    slower than FFTW and 3.4x slower than PocketFFT, much worse than
+    neighbouring sizes. There is no radix-7 butterfly; 7 goes to the generic
+    code above.
+3.  **Threading** ([#19](https://github.com/DEWETRON/otfft/issues/19)). OpenMP is used for N=16,384 where it makes OTFFT 2.5x
     slower, and scales to only 1.8x at N=4,194,304.
 4.  **AVX2.** No gain over AVX in these tests, so the AVX2 backend adds
     build time for no measured benefit.
@@ -428,8 +551,8 @@ python3 benchmarks/report.py bench-t1.csv bench-t12.csv > tables.md
 
 FFTW is found with pkg-config (`libfftw3-dev` on Debian and Ubuntu); its
 OpenMP threading library `libfftw3_omp` is used when it is found next to it.
-Without FFTW the benchmark runs the other libraries. Options: `--kinds complex,real,dct`,
-`--sizes pow2,smooth,prime`, `--lib NAME`, `--samples S`, `--quick`.
+Without FFTW the benchmark runs the other libraries. Options: `--kinds complex,real,dct,roundtrip`,
+`--sizes pow2,pow2all,smooth,prime`, `--lib NAME`, `--samples S`, `--quick`.
 
 The raw results and logs of this run are in
 `docs/benchmark-data/2026-11-23/`.

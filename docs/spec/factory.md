@@ -18,9 +18,11 @@ Rules
 *   **FAC-5** `[done]` A caller may force `SSE2`, `AVX` or `AVX2`. The values
     exist only if the library was built with that backend.
     (`otfft_optimization_test`)
-*   **FAC-6** `[built]` All transform methods are `const noexcept`. One object
-    may be used from several threads at once, because it holds no mutable
-    state during a transform.
+*   **FAC-6** `[built]` All transform methods are `const noexcept`, but a
+    complex, real or DCT object owns an internal work buffer (`FFT::work` in
+    `src/otfft_base.h`) that every call uses. **Do not share one object between
+    threads;** create one object per thread, as `otfft_basic_test: TestFactory`
+    does.
 *   **FAC-7** `[built]` Buffers passed to transforms must be SIMD-aligned.
     Use `OTFFT::simd_malloc` and `simd_free`.
 
