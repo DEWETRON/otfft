@@ -14,7 +14,7 @@
 
 # Merge_static_libs(outlib lib1 lib2 ... libn) merges a number of static
 # libs into a single static library
-function(merge_static_libs outlib )
+function(merge_static_libs outlib)
   set(libs ${ARGV})
   list(REMOVE_AT libs 0)
   # Create a dummy file that the target will depend on
@@ -23,97 +23,51 @@ function(merge_static_libs outlib )
 
   add_library(${outlib} STATIC ${dummyfile})
 
-  if("${CMAKE_CFG_INTDIR}" STREQUAL ".")
-    set(multiconfig FALSE)
-  else()
-    set(multiconfig TRUE)
-  endif()
-
-  # First get the file names of the libraries to be merged
+  # Library files, resolved per configuration at generate time
+  set(libfiles "")
   foreach(lib ${libs})
     get_target_property(libtype ${lib} TYPE)
     if(NOT libtype STREQUAL "STATIC_LIBRARY")
       message(FATAL_ERROR "Merge_static_libs can only process static libraries")
     endif()
-    if(multiconfig)
-      foreach(CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
-        get_target_property("libfile_${CONFIG_TYPE}" ${lib} "LOCATION_${CONFIG_TYPE}")
-        list(APPEND libfiles_${CONFIG_TYPE} ${libfile_${CONFIG_TYPE}})
-      endforeach()
-    else()
-      get_target_property(libfile ${lib} LOCATION)
-      list(APPEND libfiles "${libfile}")
-    endif(multiconfig)
+    list(APPEND libfiles "$<TARGET_FILE:${lib}>")
   endforeach()
-  message(STATUS "will be merging ${libfiles}")
-  # Just to be sure: cleanup from duplicates
-  if(multiconfig)
-    foreach(CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
-      list(REMOVE_DUPLICATES libfiles_${CONFIG_TYPE})
-      set(libfiles ${libfiles} ${libfiles_${CONFIG_TYPE}})
-    endforeach()
-  endif()
-  list(REMOVE_DUPLICATES libfiles)
+  message(STATUS "will be merging ${libs}")
 
-  # Now the easy part for MSVC and for MAC
   if(MSVC)
-    # lib.exe does the merging of libraries just need to conver the list into string
-    foreach(CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
-      set(flags "")
-      foreach(lib ${libfiles_${CONFIG_TYPE}})
-        set(flags "${flags} ${lib}")
-      endforeach()
-      string(TOUPPER "STATIC_LIBRARY_FLAGS_${CONFIG_TYPE}" PROPNAME)
-      set_target_properties(${outlib} PROPERTIES ${PROPNAME} "${flags}")
-    endforeach()
+    # lib.exe does the merging: pass the other libraries as extra inputs
+    string(REPLACE ";" " " flags "${libfiles}")
+    set_target_properties(${outlib} PROPERTIES STATIC_LIBRARY_FLAGS "${flags}")
 
   elseif(APPLE)
     # Use OSX's libtool to merge archives
-    if(multiconfig)
-      message(FATAL_ERROR "Multiple configurations are not supported")
-    endif()
-    get_target_property(outfile ${outlib} LOCATION)
     add_custom_command(TARGET ${outlib} POST_BUILD
-      COMMAND rm ${outfile}
-      COMMAND /usr/bin/libtool -static -o ${outfile}
-      ${libfiles}
-      )
+      COMMAND /usr/bin/libtool -static -o $<TARGET_FILE:${outlib}>.merged
+              $<TARGET_FILE:${outlib}> ${libfiles}
+      COMMAND ${CMAKE_COMMAND} -E rename
+              $<TARGET_FILE:${outlib}>.merged $<TARGET_FILE:${outlib}>
+      COMMAND_EXPAND_LISTS)
+
   else()
-    # general UNIX - need to "ar -xv" and then "ar -qc"
-    if(multiconfig)
-      message(FATAL_ERROR "Multiple configurations are not supported")
-    endif()
-    get_target_property(outfile ${outlib} LOCATION)
-    message(STATUS "outfile location is ${outfile}")
-    foreach(lib ${libfiles})
-      set(objdir ${lib}.objdir)
-      set(objlistfile "${lib}.objlist")
-      file(MAKE_DIRECTORY ${objdir})
-      list(APPEND extrafiles "${objdir}")
-      file(RELATIVE_PATH relobjdir "${objdir}/.." "${objdir}")
-      list(APPEND objectfilepattern "${relobjdir}/*${CMAKE_CXX_OUTPUT_EXTENSION}")
-      file(RELATIVE_PATH reloutfile "${objdir}" "${lib}")
-      if(${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/cmake.check_cache IS_NEWER_THAN ${objlistfile})
-        add_custom_command(TARGET ${outlib} POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E echo "Running: ${CMAKE_AR} -xv ${reloutfile}"
-          COMMAND ${CMAKE_AR} -xv "${reloutfile}" > "${objlistfile}"
-          WORKING_DIRECTORY ${objdir})
-      endif()
+    # general UNIX - add the libraries with an ar MRI script
+    set(mri "${CMAKE_CURRENT_BINARY_DIR}/${outlib}_merge_$<CONFIG>.mri")
+    set(content "OPEN $<TARGET_FILE:${outlib}>\n")
+    foreach(f ${libfiles})
+      string(APPEND content "ADDLIB ${f}\n")
     endforeach()
-    file(RELATIVE_PATH reloutfile "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}" "${outfile}")
-    set(objlistfile "${reloutfile}.objlist")
-    if(${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/cmake.check_cache IS_NEWER_THAN ${objlistfile})
-      add_custom_command(TARGET ${outlib} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E echo "Running: ${CMAKE_AR} -qvcs ${reloutfile}"
-        COMMAND ${CMAKE_AR} -qvcs "${reloutfile}" ${objectfilepattern} > "${objlistfile}"
-        WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-    endif()
+    string(APPEND content "SAVE\nEND\n")
+    file(GENERATE OUTPUT "${mri}" CONTENT "${content}")
+    add_custom_command(TARGET ${outlib} POST_BUILD
+      COMMAND ${CMAKE_AR} -M < "${mri}"
+      VERBATIM)
   endif()
+
   file(WRITE ${dummyfile}.base "const char* ${outlib}_sublibs=\"${libs}\";")
   add_custom_command(
     OUTPUT  ${dummyfile}
     COMMAND ${CMAKE_COMMAND}  -E copy ${dummyfile}.base ${dummyfile}
-    DEPENDS ${libs} ${extrafiles}
+    DEPENDS ${libs}
     WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+  add_dependencies(${outlib} ${libs})
 
 endfunction()

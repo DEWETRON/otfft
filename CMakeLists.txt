@@ -7,7 +7,7 @@
 # from OK Ojisan(Takuya OKAHISA), source: http://www.moon.sannet.ne.jp/okahisa/stockham/stockham.html
 #
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 
 set(LIBNAME otfft)
 project(otfft)
@@ -18,21 +18,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   #
   # Set used policies
 
-  # Use .cmake scripts from CMAKE_MODULE_PATH over cmake files
-  # from the current cmake installation
-  if(POLICY CMP0017)
-    cmake_policy(SET CMP0017 OLD)
-  endif(POLICY CMP0017)
-
-  # Continue to use the COMPILE_DEFINITIONS_<Config> properties
-  if(POLICY CMP0043)
-    cmake_policy(SET CMP0043 OLD)
-  endif(POLICY CMP0043)
-
-  # suppress warnings on BYPRODUCTS
-  if (POLICY CMP0058)
-    cmake_policy(SET CMP0058 OLD)
-  endif()
+  # (CMP0017, CMP0026, CMP0043 and CMP0058 are NEW since CMake 3.x/4;
+  # their OLD behaviour is no longer supported and not needed here.)
 
   #
   # define PROJECT_ROOT
@@ -210,11 +197,6 @@ if (OTFFT_WITH_AVX2)
   set_property(TARGET ${LIBNAME}_avx2 APPEND_STRING PROPERTY COMPILE_PDB_NAME ${LIBNAME}_avx2)
   list(APPEND OTFFT_BACKENDS ${LIBNAME}_avx2)
 endif()
-
-# allow use of LOCATION property
-if(POLICY CMP0026)
-  cmake_policy(SET CMP0026 OLD)
-endif(POLICY CMP0026)
 
 MESSAGE("Using backends ${OTFFT_BACKENDS}")
 
