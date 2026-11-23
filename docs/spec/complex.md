@@ -1,0 +1,48 @@
+Complex FFT
+===========
+
+`ComplexFFT`: in-place discrete Fourier transform on `complex_vector`
+(`complex_t`: two doubles, `Re` and `Im`).
+
+Rules
+-----
+
+*   **CFFT-1** `[done]` Forward transforms replace `x` with its spectrum.
+    A delta input gives a flat spectrum, a constant input gives a delta.
+    (`otfft_transform_test: TestDeltaSpectrum, TestConstSpectrum`)
+*   **CFFT-2** `[done]` Inverse transforms replace a spectrum with the signal.
+    (`TestDeltaInverse, TestConstInverse`)
+*   **CFFT-3** `[done]` Forward followed by inverse gives back the input, when
+    the normalisations of the two match. (`TestIdentity`)
+*   **CFFT-4** `[built]` Normalisation per method:
+
+    | Method        | Direction | Scale     |
+    | ------------- | --------- | --------- |
+    | `fwd`, `fwdn` | forward   | 1/N       |
+    | `fwd0`        | forward   | none      |
+    | `fwdu`        | forward   | 1/sqrt(N) |
+    | `inv`, `inv0` | inverse   | none      |
+    | `invu`        | inverse   | 1/sqrt(N) |
+    | `invn`        | inverse   | 1/N       |
+
+*   **CFFT-5** `[done]` Any length N works, power of two or not (mixed radix).
+    (`otfft_transform_test`, `otfft_optimization_test: TestComplex`)
+*   **CFFT-6** `[done]` No out-of-bounds access for the tested lengths.
+    (`TestValgrind`, run under valgrind in CI)
+
+Seen in upstream
+----------------
+
+*   `fwd` scales by 1/N and `inv` does not: upstream's convention, kept.
+    The doc comment of `fwd` says so; `fwdn` repeats it.
+
+Decided
+-------
+
+*   D4: keep upstream's normalisation names.
+
+Questions
+---------
+
+*   `fwd` and `fwdn` are the same operation, and so are `inv` and `inv0`.
+    Keep both for source compatibility?
