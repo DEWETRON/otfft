@@ -73,6 +73,16 @@ D8: doctest instead of Boost.Test
     and the duplicate `appyeyor.yml` removed.
 *   **Revisit when:** doctest stops being maintained.
 
+D9: GitHub Actions is the only CI
+---------------------------------
+*   **What:** `.github/workflows/cmake.yml` builds and tests on Ubuntu and
+    Windows. AppVeyor (`.appveyor.yml`) and Shippable (`.shippable.yml`) are
+    removed, like Travis before.
+*   **Why:** the AppVeyor config built only tags on Visual Studio 2013/2017
+    images that cannot run our CMake 3.22 minimum; Shippable has shut down.
+*   **Revisit when:** we need compilers or platforms GitHub runners lack
+    (for example ARM64, roadmap R2.2).
+
 D10: Benchmark against FFTW, PocketFFT and KissFFT
 --------------------------------------------------
 *   **What:** `benchmarks/` holds a small in-repo harness (no Google Benchmark)
@@ -85,13 +95,3 @@ D10: Benchmark against FFTW, PocketFFT and KissFFT
     vendored.
 *   **Not in CI:** shared runners are too noisy; CI only builds it if asked.
 *   **Revisit when:** we want trend tracking, or a quieter benchmark machine.
-
-D9: GitHub Actions is the only CI
----------------------------------
-*   **What:** `.github/workflows/cmake.yml` builds and tests on Ubuntu and
-    Windows. AppVeyor (`.appveyor.yml`) and Shippable (`.shippable.yml`) are
-    removed, like Travis before.
-*   **Why:** the AppVeyor config built only tags on Visual Studio 2013/2017
-    images that cannot run our CMake 3.22 minimum; Shippable has shut down.
-*   **Revisit when:** we need compilers or platforms GitHub runners lack
-    (for example ARM64, roadmap R2.2).
