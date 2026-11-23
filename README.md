@@ -9,8 +9,7 @@ And OTFFT is a mixed-radix FFT.
 It should be able to compile/use the sources using Visual Studio on Windows and GCC on Linux.
 | CI Server | Status |
 | ---------:| ------ |
-| GitHub Ubuntu 20.04 | [![CMake](https://github.com/DEWETRON/otfft/actions/workflows/cmake.yml/badge.svg)](https://github.com/DEWETRON/otfft/actions/workflows/cmake.yml) |
-| Appveyor VS2013 | [![Build status](https://ci.appveyor.com/api/projects/status/1hxy8w9laeaf44ln?svg=true)](https://ci.appveyor.com/project/DEWETRON/otfft) |
+| GitHub Actions (Ubuntu, Windows) | [![CMake](https://github.com/DEWETRON/otfft/actions/workflows/cmake.yml/badge.svg)](https://github.com/DEWETRON/otfft/actions/workflows/cmake.yml) |
 
 # Reasons for the fork
 OTFFT is developed by OK Ojisan (Takuya OKAHISA).
