@@ -35,9 +35,10 @@ function(merge_static_libs outlib)
   message(STATUS "will be merging ${libs}")
 
   if(MSVC)
-    # lib.exe does the merging: pass the other libraries as extra inputs
-    string(REPLACE ";" " " flags "${libfiles}")
-    set_target_properties(${outlib} PROPERTIES STATIC_LIBRARY_FLAGS "${flags}")
+    # lib.exe does the merging: pass the other libraries as extra inputs.
+    # STATIC_LIBRARY_OPTIONS (CMake 3.13+) expands generator expressions,
+    # STATIC_LIBRARY_FLAGS does not.
+    set_target_properties(${outlib} PROPERTIES STATIC_LIBRARY_OPTIONS "${libfiles}")
 
   elseif(APPLE)
     # Use OSX's libtool to merge archives
