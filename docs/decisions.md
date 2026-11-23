@@ -72,3 +72,13 @@ D8: doctest instead of Boost.Test
 *   **Done:** CI no longer installs Boost; stale Boost CMake code, `.travis.yml`
     and the duplicate `appyeyor.yml` removed.
 *   **Revisit when:** doctest stops being maintained.
+
+D9: GitHub Actions is the only CI
+---------------------------------
+*   **What:** `.github/workflows/cmake.yml` builds and tests on Ubuntu and
+    Windows. AppVeyor (`.appveyor.yml`) and Shippable (`.shippable.yml`) are
+    removed, like Travis before.
+*   **Why:** the AppVeyor config built only tags on Visual Studio 2013/2017
+    images that cannot run our CMake 3.22 minimum; Shippable has shut down.
+*   **Revisit when:** we need compilers or platforms GitHub runners lack
+    (for example ARM64, roadmap R2.2).

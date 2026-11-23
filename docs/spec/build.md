@@ -7,7 +7,7 @@ Rules
 *   **BLD-1** `[done]` `cmake` configures the library and the tests on Linux.
     (CI: `.github/workflows/cmake.yml`, Ubuntu)
 *   **BLD-2** `[built]` The library compiles with Visual Studio on Windows
-    (AppVeyor, VS2013 and VS2017) and GCC on Linux.
+    and GCC on Linux. CI (GitHub Actions) builds and tests both.
 *   **BLD-3** `[built]` Backends `OTFFT_WITH_SSE2`, `OTFFT_WITH_AVX` and
     `OTFFT_WITH_AVX2` are switched in `CMakeLists.txt`. At least one must be
     on. Other targets get SSE2 only.
@@ -27,4 +27,5 @@ Decided
 Questions
 ---------
 
-*   `.shippable.yml` looks stale. Remove?
+
+*   None open.
