@@ -237,8 +237,13 @@ if (CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
       " ${OTFFT_BACKENDS_FLAGS} -DUSE_AVX2 "
     )
   endif()
+  # -fsignaling-nans exists only in GCC; Clang warns that it ignores it
+  set(OTFFT_SNAN_FLAG "")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(OTFFT_SNAN_FLAG "-fsignaling-nans")
+  endif()
   set(DEFAULT_FLAGS
-    " -std=c++11 -frounding-math -fno-finite-math-only -fsignaling-nans -pedantic -Wall -Wextra -fpermissive ${OpenMP_CXX_FLAGS} "
+    " -std=c++11 -frounding-math -fno-finite-math-only ${OTFFT_SNAN_FLAG} -pedantic -Wall -Wextra -fpermissive ${OpenMP_CXX_FLAGS} "
   )
   set(SSE2_FLAGS
     " ${DEFAULT_FLAGS} -msse2 -DUSE_SSE2 -DOTFFT_NAMESPACE=OTFFT_SSE2 "
