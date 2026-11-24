@@ -130,3 +130,27 @@ D12: ffttune prints the algorithm table, it does not generate library files
     batches are not noise-free (the tool marks results within 5% as ties).
     CI builds and runs the tool only if asked.
 *   **Revisit when:** the table is re-tuned (R1.8), or run-time tuning is wanted.
+
+D13: createComplexFFT uses Bluestein for lengths with a large prime factor
+--------------------------------------------------------------------------
+*   **What:** `FFT::setup(n)` (the class behind `createComplexFFT`) builds a
+    `Bluestein` object when `n` has a prime factor above 100, and the mixed
+    radix code otherwise. The check is in the class, not the factory, so
+    `setup(n)` on an existing object also switches. Roadmap R1.4.
+*   **Why:** the mixed radix code has butterflies only for 2, 3, 4, 5 and 8;
+    any other prime factor k costs O(k) per point, so primes were O(N^2) (48 s at
+    N=100,003, issue #17). From k = 46,341 the index `(i*j)%k` overflowed `int`
+    and the result was wrong (issue #16). On one Intel notebook the Bluestein
+    FFT was as fast or faster from k = 53 to 79 and 2x to 17x faster from
+    k = 127; the limit 100 sits between. The index is also computed without
+    `%` and without overflow now, in all eight generic loops, so the mixed
+    radix code stays correct for any factor.
+*   **Rejected:** only fixing the overflow (still O(N^2)); a Bluestein path for
+    every length (slower for smooth lengths); a radix-7, 11, 13 butterfly
+    (R1.5 is about 7 and smooth lengths, separate work).
+*   **Limit:** the real FFT and the DCT of length N call the complex FFT of
+    length N/2 directly and are not routed (spec RFFT-6). Factors between 53 and
+    79 are close to the crossover; the limit was measured on one CPU and one
+    compiler and may move with R1.5.
+*   **Revisit when:** R1.5 adds butterflies for more factors, or measurements
+    on other CPUs (Ryzen, ARM64) put the crossover elsewhere.

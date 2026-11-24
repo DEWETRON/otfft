@@ -158,7 +158,7 @@ OTFFT is the fastest of the three at every power of two on this machine; see
 
 * OTFFT is within 1.3x of FFTW up to N=16,384 and 1.3x to 26x faster than PocketFFT and KissFFT on powers of two. From N=65,536, FFTW is 1.6x to 3x faster.
 * The DCT-II is 1.1x to 1.9x faster than FFTW's up to N=262,144.
-* Lengths with factors 3, 5 and 7 are 2x to 11x slower than FFTW, and OTFFT's own prime-length path is much slower still.
+* Lengths with factors 3, 5 and 7 are 2x to 11x slower than FFTW. (Measured before roadmap R1.4: lengths with a prime factor above 100 now use Bluestein's algorithm and are correct and far faster.)
 * The upstream claim that OTFFT is faster than FFTW at every length is **not reproduced** on this machine; the section [Comparison with the upstream benchmark](docs/benchmarks.md#comparison-with-the-upstream-benchmark) shows the two side by side.
 
 Method, caveats and all tables are in [docs/benchmarks.md](docs/benchmarks.md).

@@ -15,6 +15,7 @@ set(UNIT_TEST_SOURCES
   otfft_dct_test.cpp
   otfft_find_peak_test.cpp
   otfft_optimization_test.cpp
+  otfft_prime_test.cpp
   otfft_transform_test.cpp
 )
 

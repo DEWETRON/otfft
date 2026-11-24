@@ -142,9 +142,32 @@ namespace OTFFT_NAMESPACE
         obj->invn(x, y);
     }
 
-    FFT::FFT() noexcept : fft(), work(), y(0) {}
+    namespace
+    {
+        // The mixed radix FFT has butterflies for the factors 2, 3, 4, 5 and 8; any other
+        // prime factor k costs O(k) operations per point. Measured on one Intel CPU
+        // (docs/benchmarks.md), Bluestein's algorithm is faster from about k = 53 to 79
+        // and 2x to 17x faster from k = 127. Lengths with a prime factor above this
+        // limit use Bluestein (decision D13).
+        const int MAX_DIRECT_PRIME = 100;
 
-    FFT::FFT(int n) : fft(n), work(n), y(&work) {}
+        bool hasLargePrimeFactor(int n) noexcept
+        {
+            if (n < 2) return false;
+            for (int d = 2; d <= MAX_DIRECT_PRIME; d++)
+            {
+                while (n % d == 0) n /= d;
+            }
+            return n > 1;
+        }
+    }
+
+    FFT::FFT() noexcept : fft(), work(), y(0), bluestein() {}
+
+    FFT::FFT(int n) : fft(), work(), y(0), bluestein()
+    {
+        setup(n);
+    }
 
     FFT::~FFT()
     {
@@ -153,6 +176,12 @@ namespace OTFFT_NAMESPACE
 
     void FFT::setup(int n)
     {
+        if (hasLargePrimeFactor(n))
+        {
+            bluestein.reset(new Bluestein(n));
+            return;
+        }
+        bluestein.reset();
         fft.setup(n);
         work.setup(n);
         y = &work;
@@ -160,41 +189,49 @@ namespace OTFFT_NAMESPACE
 
     void FFT::fwd(complex_vector  x) const noexcept
     {
+        if (bluestein) return bluestein->fwd(x);
         fft.fwd(x, y);
     }
 
     void FFT::fwd0(complex_vector x) const noexcept
     {
+        if (bluestein) return bluestein->fwd0(x);
         fft.fwd0(x, y);
     }
 
     void FFT::fwdu(complex_vector x) const noexcept
     {
+        if (bluestein) return bluestein->fwdu(x);
         fft.fwdu(x, y);
     }
 
     void FFT::fwdn(complex_vector x) const noexcept
     {
+        if (bluestein) return bluestein->fwdn(x);
         fft.fwdn(x, y);
     }
 
     void FFT::inv(complex_vector  x) const noexcept
     {
+        if (bluestein) return bluestein->inv(x);
         fft.inv(x, y);
     }
 
     void FFT::inv0(complex_vector x) const noexcept
     {
+        if (bluestein) return bluestein->inv0(x);
         fft.inv0(x, y);
     }
 
     void FFT::invu(complex_vector x) const noexcept
     {
+        if (bluestein) return bluestein->invu(x);
         fft.invu(x, y);
     }
 
     void FFT::invn(complex_vector x) const noexcept
     {
+        if (bluestein) return bluestein->invn(x);
         fft.invn(x, y);
     }
 

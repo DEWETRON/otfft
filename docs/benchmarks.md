@@ -956,8 +956,11 @@ Problems found
     N=10,007 (434 ms), and 48 s at N=100,003. From a prime factor of 46,341
     the index `(i*j)%k` overflows `int`, so the result is wrong (correct at
     N=30,011, wrong at 50,021) and the twiddle table is read at a negative
-    offset. The unit tests do not cover primes. Use `createBluesteinFFT` for
-    such lengths.
+    offset. The unit tests did not cover primes. **Fixed** (roadmap R1.4,
+    D13): lengths with a prime factor above 100 now use Bluestein's algorithm.
+    One run on the Intel notebook above (MSVC, one thread): N=1,009 gives
+    2,069 MFLOPS (was 39), N=10,007 gives 1,110 (was 5) and N=100,003 is correct
+    and gives 901 (was wrong). The real FFT and DCT are not routed yet.
 2.  **Factor 7** ([#18](https://github.com/DEWETRON/otfft/issues/18)). N=10,080 is 11x
     slower than FFTW and 3.4x slower than PocketFFT, much worse than
     neighbouring sizes. There is no radix-7 butterfly; 7 goes to the generic
