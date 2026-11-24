@@ -1,0 +1,4 @@
+21:13:58
+ 15  5.9 /usr/bin/gnome-shell --mode=ubuntu
+  3  4.9 /usr/share/code/code --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/rend
+ 21:13:58 up  2:19,  1 user,  load average: 2,76, 3,58, 3,70

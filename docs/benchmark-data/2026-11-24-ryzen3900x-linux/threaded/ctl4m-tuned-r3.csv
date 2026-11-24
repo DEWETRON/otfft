@@ -1,0 +1,2 @@
+library,kind,category,n,threads,median_ns,min_ns,mflops,plan_us,rel_error,scale,status
+OTFFT-avx2,complex,pow2,4194304,12,46150321.0,44992580.0,9997.2,69907.0,8.67e-16,1,ok

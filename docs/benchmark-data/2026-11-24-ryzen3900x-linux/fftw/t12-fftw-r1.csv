@@ -1,0 +1,14 @@
+library,kind,category,n,threads,median_ns,min_ns,mflops,plan_us,rel_error,scale,status
+FFTW-measure,complex,pow2all,4096,12,16486.1,16047.4,14907.1,167660.0,2.73e-16,1,ok
+FFTW-measure,complex,pow2all,8192,12,23530.8,23325.3,22629.1,240604.0,4.32e-16,1,ok
+FFTW-measure,complex,pow2all,16384,12,37321.3,37005.7,30729.9,336795.0,3.67e-16,1,ok
+FFTW-measure,complex,pow2all,32768,12,59864.1,59426.2,41053.0,503762.8,4.66e-16,1,ok
+FFTW-measure,complex,pow2all,65536,12,112756.7,110664.8,46497.3,777441.0,5.01e-16,1,ok
+FFTW-measure,complex,pow2all,131072,12,200978.8,199315.8,55434.3,1375167.1,4.11e-16,1,ok
+FFTW-measure,complex,pow2all,262144,12,425831.8,417227.8,55404.4,2408115.7,4.77e-16,1,ok
+FFTW-measure,complex,pow2all,524288,12,763536.7,745580.0,65232.4,5197028.5,4.92e-16,1,ok
+FFTW-measure,complex,pow2all,1048576,12,3803204.0,3744534.0,27570.9,10022892.8,4.44e-16,1,ok
+FFTW-measure,complex,pow2all,2097152,12,8678876.0,8599675.0,25372.1,10051035.0,5.62e-16,1,ok
+FFTW-measure,complex,pow2all,4194304,12,21354433.0,21230962.0,21605.5,10089819.7,4.94e-16,1,ok
+FFTW-measure,complex,pow2all,8388608,12,47799820.0,47208662.0,20181.9,10154172.7,6.21e-16,1,ok
+FFTW-measure,complex,pow2all,16777216,12,238050172.0,230274691.0,8457.3,10373893.5,5.55e-16,1,ok

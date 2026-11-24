@@ -1089,6 +1089,118 @@ Raw results: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/tuning-file/`
 (`tuning-avx2-serial.txt` and `.log`, `ab-default-r1..r3.csv`, `ab-tuned-r1..r3.csv` with the
 matching `.log` and `.load` files).
 
+Tuning file with 12 threads on the Ryzen 9 3900X (R1.8, R1.6, issue #19)
+------------------------------------------------------------------------
+
+The 12-thread counterpart of the section above, measured on 2026-11-24 on the Ryzen 9 3900X
+(GCC 15.2.0, Release, `schedutil` governor, threads not pinned) after the other work on the
+machine had finished: in every load check the busiest process besides the benchmark was
+`gnome-shell` at about 6% (`*.load` files). **Nothing was changed in the library.**
+
+Steps:
+
+1.  `ffttune --backend avx2 --threads 12 --out tuning-avx2-threaded-rN.txt`, three runs (r1 to
+    r3). The fastest class is the same in all three runs at every length from 2^11 except 2^19
+    (SixStep in r1, DIF16 in r2 and r3, within 6%): DIF4 at 2^12 to 2^14, 2^16 and 2^17, DIF8
+    at 2^15, SixStep from 2^18. The library uses the threaded table only from 2^15 (CFFT-8).
+2.  The file of r1 (chosen before the benchmark, not picked afterwards) against the built-in
+    tables: `otfft_bench --kinds complex --sizes pow2all --lib OTFFT-avx2 --threads 12
+    --min-n 32768`, with and without `--tuning`, alternately, three rounds, default first.
+    An earlier run of the same kind over every second power of two (`ab-t12-*`) gave the same
+    result where the lengths overlap.
+
+**Complex FFT, powers of two, AVX2, 12 threads: the built-in threaded table against the tuning
+file** (median of 3 rounds)
+
+| N | log2 N | Built-in picks | File picks | Default (us) | Tuned (us) | Speedup | Per round |
+| ---: | ---: | --- | --- | ---: | ---: | ---: | --- |
+| 32,768 | 15 | DIT8 | DIF8 | 114.9 | 91.4 | 1.26x | 1.52, 1.26, 0.81 |
+| 65,536 | 16 | SixStep | DIF4 | 358.1 | 214.3 | 1.67x | 1.61, 1.75, 1.60 |
+| 131,072 | 17 | DIT8 | DIF4 | 1,146.3 | 457.4 | 2.51x | 2.58, 2.54, 2.38 |
+| 262,144 | 18 | SixStep | SixStep | 1,555.0 | 1,544.1 | 1.01x | 1.02, 0.98, 0.99 |
+| 524,288 | 19 | SixStep | SixStep | 4,092.1 | 4,051.6 | 1.01x | 0.93, 1.05, 1.01 |
+| 1,048,576 | 20 | SixStep | SixStep | 6,071.0 | 6,185.0 | 0.98x | 0.99, 0.98, 0.99 |
+| 2,097,152 | 21 | SixStep | SixStep | 15,823.2 | 16,960.2 | 0.93x | 0.91, 0.92, 1.00 |
+| 4,194,304 | 22 | SixStep | SixStep | 46,277.4 | 40,326.5 | 1.15x | 1.09, 1.17, 1.12 |
+| 8,388,608 | 23 | SixStep | SixStep | 86,125.5 | 85,200.8 | 1.01x | 0.97, 1.01, 1.02 |
+| 16,777,216 | 24 | SixStep | SixStep | 200,666.2 | 205,795.4 | 0.98x | 1.00, 1.00, 0.94 |
+
+What this shows:
+
+*   **Large gains where the built-in table is wrong.** 2^17: 2.51x (three rounds from 2.38x to
+    2.58x). 2^16: 1.67x (1.60x to 1.75x). Both are lengths where a serial class (DIF4) beats
+    every threaded class, as the baseline above showed (the built-in picks are 1.28x and
+    2.23x slower than the fastest there in `ffttune`).
+*   **2^15 is not established.** The median is 1.26x but the rounds are 1.52x, 1.26x and 0.81x
+    (a time of about 100 us).
+*   **No effect where both tables pick the same algorithm** (2^18 and up), as expected. These
+    rows give the noise: single rounds from 0.91x to 1.17x, and the medians 0.93x at 2^21 and
+    1.15x at 2^22. Controls at N = 4,194,304 (three alternating pairs each, `ctl4m-*` and
+    `ctl2-*`), speedup as default over tuned: 0.86x to 0.96x with the tuned file, and, with a
+    file that changes no choice (`ctl-irrelevant-tuning.txt`), 1.01x to 1.10x. So
+    differences up to about 15% at 2^21 and above with 12 threads are not a result.
+*   **The built-in default for 2^16 and 2^17 is wrong on this machine** for 12 threads, and a
+    tuning file fixes it without a rebuild. Whether the built-in default should change is a
+    separate decision (Intel notebook and the 9950X have not been measured with this file).
+
+**Against FFTW and against one thread (issue #19)**, same machine, later the same day, after
+`libfftw3-dev` was installed. FFTW 3.3.10 with `FFTW_MEASURE` (the distribution package,
+`sse2-avx`, not an AVX2 build) and its OpenMP threads. `otfft_bench --kinds complex --sizes
+pow2all --min-n 4096 --lib ...`; per library, 12 threads: default and tuned OTFFT and FFTW
+alternately, three rounds, then 1 thread: default OTFFT and FFTW, three rounds. Median of 3
+rounds, time in microseconds for one forward plus one inverse transform as in the table above.
+"Tuned" is the file `tuning-avx2-threaded-r1.txt` from above.
+
+| log2 N | OTFFT 1 thread | FFTW 1 thread | OTFFT 12 default | OTFFT 12 tuned | FFTW 12 | OTFFT 12 over 1 thread (default / tuned) | FFTW 12 over 1 thread | OTFFT over FFTW at 12 threads (default / tuned) |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 12 | 10.1 | 8.9 | 10.3 | 10.1 | 17.0 | 0.98x / 1.00x | 0.53x | 0.61x / 0.60x |
+| 13 | 28.7 | 21.0 | 28.5 | 28.8 | 24.5 | 1.01x / 1.00x | 0.86x | 1.16x / 1.18x |
+| 14 | 59.3 | 52.7 | 43.6 | 43.0 | 37.6 | 1.36x / 1.38x | 1.40x | 1.16x / 1.15x |
+| 15 | 88.9 | 116.1 | 113.2 | 126.5 | 61.9 | 0.78x / 0.70x | 1.87x | 1.83x / 2.04x |
+| 16 | 212.1 | 262.5 | 362.9 | 230.7 | 112.2 | 0.58x / 0.92x | 2.34x | 3.23x / 2.06x |
+| 17 | 678.2 | 574.6 | 1,141.9 | 471.8 | 215.6 | 0.59x / 1.44x | 2.67x | 5.30x / 2.19x |
+| 18 | 1,688.2 | 1,347.4 | 1,513.7 | 1,547.7 | 425.8 | 1.12x / 1.09x | 3.16x | 3.55x / 3.63x |
+| 19 | 5,294.7 | 5,099.0 | 4,293.9 | 4,030.4 | 862.5 | 1.23x / 1.31x | 5.91x | 4.98x / 4.67x |
+| 20 | 15,731.2 | 12,250.6 | 6,166.6 | 6,147.8 | 3,803.2 | 2.55x / 2.56x | 3.22x | 1.62x / 1.62x |
+| 21 | 33,863.9 | 26,044.7 | 16,582.6 | 15,989.2 | 8,678.9 | 2.04x / 2.12x | 3.00x | 1.91x / 1.84x |
+| 22 | 84,158.1 | 120,633.6 | 46,171.1 | 41,400.8 | 21,354.4 | 1.82x / 2.03x | 5.65x | 2.16x / 1.94x |
+| 23 | 180,790.0 | 427,176.1 | 87,630.3 | 86,986.7 | 46,725.1 | 2.06x / 2.08x | 9.14x | 1.88x / 1.86x |
+| 24 | 400,878.0 | 955,365.3 | 200,589.2 | 201,946.4 | 201,859.4 | 2.00x / 1.99x | 4.73x | 0.99x / 1.00x |
+
+"Over 1 thread" is the 1-thread time divided by the 12-thread time (above 1 means the
+threads help). "OTFFT over FFTW" is the OTFFT time divided by the FFTW time at 12 threads
+(above 1 means OTFFT is slower). The tuned column is a different table than the built-in one
+only at 2^15 to 2^17, so differences elsewhere are noise (up to about 15% from 2^21).
+
+What this shows:
+
+*   **Issue #19 still holds for the built-in table at 2^15 to 2^17.** With 12 threads OTFFT is
+    slower than with one thread: 0.78x, 0.58x and 0.59x. With the tuning file the loss goes
+    away (0.70x at 2^15, which is within noise there, 0.92x at 2^16) or becomes a gain (1.44x at
+    2^17). N = 16,384 (2^14) is no longer a loss (1.36x), as D17 intended.
+*   **FFTW is faster than OTFFT with 12 threads from 2^13 to 2^23**, by 1.2x to 5.3x with the
+    built-in table: the biggest gaps are at 2^17 to 2^19 (3.6x to 5.3x). With the tuning file
+    the gap at 2^16 and 2^17 shrinks from 3.2x and 5.3x to 2.1x and 2.2x; at 2^18 and 2^19 it
+    stays at 3.6x and 4.7x (SixStep in both). OTFFT is faster at 2^12 (FFTW's threads make it
+    slower than its own 1 thread) and equal at 2^24.
+*   **Scaling above the break-even is poor**: at 2^18 and 2^19 OTFFT gains 1.1x to 1.3x with
+    12 threads, and 1.8x to 2.6x from 2^20, where FFTW gains 3.0x to 9.1x. This is the second
+    part of issue #19 (scaling at large N); the tuning file does not change it.
+*   **One thread** (for orientation): OTFFT's time is 0.4x to 1.4x of FFTW's. At 2^22 to 2^24
+    FFTW's one-thread times are the slowest in the table (up to 2.4x OTFFT's), but
+    `otfft_bench` limits each FFTW plan to 10 s, so its large plans may not be the best FFTW
+    can do. Do not read the large one-thread FFTW numbers as FFTW's best.
+
+Limits: one CPU, one backend (AVX2), one compiler, 12 of 24 logical CPUs. The tuning file was
+made on this machine in the same session. Other thread counts were not run. FFTW is the
+distribution package (SSE2 and AVX code, no AVX2 or FMA), planned with `FFTW_MEASURE` and a
+10 s time limit. The Intel notebook and the 9950X were not run with this file.
+
+Raw results: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/threaded/`
+(`tuning-avx2-threaded-r1..r3.txt` and `.log`; `all-t12-default-rN.csv`,
+`all-t12-tuned-rN.csv`; `ab-t12-*` for every second power of two; `ctl4m-*`, `ctl2-*` and
+`ctl-irrelevant-tuning.txt` for the noise controls; `*.load` for the machine state).
+
 Algorithm table change: effect on the Intel notebook
 ----------------------------------------------------
 

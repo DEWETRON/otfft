@@ -1,0 +1,15 @@
+# cpu: AMD Ryzen 9 3900X 12-Core Processor
+# governor: schedutil
+# compiler: 15.2.0
+# optimised build: yes
+# threads: 12, samples: 11, target batch: 2.0 ms
+# done complex n=16
+# done complex n=64
+# done complex n=256
+# done complex n=1024
+# done complex n=4096
+# done complex n=16384
+# done complex n=65536
+# done complex n=262144
+# done complex n=1048576
+# done complex n=4194304
