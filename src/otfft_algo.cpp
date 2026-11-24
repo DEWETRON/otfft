@@ -19,6 +19,9 @@
 #include <cassert>
 #include <stdint.h>
 #include <iostream>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 namespace OTFFT_NAMESPACE
 {
@@ -40,6 +43,38 @@ namespace OTFFT_NAMESPACE
     namespace FFT6 = OTFFT_AVXDIT16;
     namespace FFT7 = OTFFT_SixStep;
     namespace FFT8 = OTFFT_MixedRadix;
+
+    namespace
+    {
+        // Algorithm per length 2^log_N (index log_N, 1 to 24), numbered as FFT1 to FFT7 above:
+        // 1 DIF4, 2 DIT4, 3 DIF8, 4 DIT8, 5 DIF16, 6 DIT16, 7 SixStep.
+        //
+        // Used when more than one OpenMP thread is configured: the upstream table (see
+        // upstream otfft_gen_*.h), not re-tuned. From 2^18 it is SixStep, the algorithm that
+        // scales with threads (12 threads on the Ryzen: SixStep is fastest at most lengths
+        // from 2^13, see docs/benchmarks.md).
+        const int ALGORITHM_THREADED[25] = {0,
+            2, 1, 4, 1, 4, 3, 5, 3, 3, 1, 5, 4, 3, 4, 4, 7, 4, 7, 7, 7, 7, 7, 7, 7};
+
+        // Used with one thread. Measured with tools/ffttune on an Intel Core Ultra 7 268V
+        // (MSVC) and an AMD Ryzen 9 9950X (GCC), see docs/benchmarks.md ("Algorithm
+        // selection baseline"): for each length from 2^14 the algorithm whose slowdown against
+        // the fastest is smallest on the worse of the two machines (at most 1.26x). Lengths up
+        // to 2^13 are unchanged: the algorithms are within noise or 1.1x apart there.
+        const int ALGORITHM_SERIAL[25] = {0,
+            2, 1, 4, 1, 4, 3, 5, 3, 3, 1, 5, 4, 3, 3, 3, 1, 3, 3, 3, 3, 3, 5, 5, 3};
+
+        // The table is chosen when the plan is made, from the OpenMP thread count at that time.
+        int selectAlgorithm(int log_N) noexcept
+        {
+#ifdef _OPENMP
+            const bool threaded = omp_get_max_threads() > 1;
+#else
+            const bool threaded = false;
+#endif
+            return threaded ? ALGORITHM_THREADED[log_N] : ALGORITHM_SERIAL[log_N];
+        }
+    }
 
     /******************************************************************************
     *  Complex FFT
@@ -65,34 +100,24 @@ namespace OTFFT_NAMESPACE
         try
         {
             // see upstream otfft_gen_setup.h
-            switch (log_N)
+            if (log_N >= 1 && log_N <= 24)
             {
-            case  0: break;
-            case  1: obj = FFT2::instance(); obj->setup2(log_N); break;
-            case  2: obj = FFT1::instance(); obj->setup2(log_N); break;
-            case  3: obj = FFT4::instance(); obj->setup2(log_N); break;
-            case  4: obj = FFT1::instance(); obj->setup2(log_N); break;
-            case  5: obj = FFT4::instance(); obj->setup2(log_N); break;
-            case  6: obj = FFT3::instance(); obj->setup2(log_N); break;
-            case  7: obj = FFT5::instance(); obj->setup2(log_N); break;
-            case  8: obj = FFT3::instance(); obj->setup2(log_N); break;
-            case  9: obj = FFT3::instance(); obj->setup2(log_N); break;
-            case 10: obj = FFT1::instance(); obj->setup2(log_N); break;
-            case 11: obj = FFT5::instance(); obj->setup2(log_N); break;
-            case 12: obj = FFT4::instance(); obj->setup2(log_N); break;
-            case 13: obj = FFT3::instance(); obj->setup2(log_N); break;
-            case 14: obj = FFT4::instance(); obj->setup2(log_N); break;
-            case 15: obj = FFT4::instance(); obj->setup2(log_N); break;
-            case 16: obj = FFT7::instance(); obj->setup2(log_N); break;
-            case 17: obj = FFT4::instance(); obj->setup2(log_N); break;
-            case 18: obj = FFT7::instance(); obj->setup2(log_N); break;
-            case 19: obj = FFT7::instance(); obj->setup2(log_N); break;
-            case 20: obj = FFT7::instance(); obj->setup2(log_N); break;
-            case 21: obj = FFT7::instance(); obj->setup2(log_N); break;
-            case 22: obj = FFT7::instance(); obj->setup2(log_N); break;
-            case 23: obj = FFT7::instance(); obj->setup2(log_N); break;
-            case 24: obj = FFT7::instance(); obj->setup2(log_N); break;
-            default: obj = FFT8::instance(); obj->setup(N); break;
+                switch (selectAlgorithm(log_N))
+                {
+                case 1: obj = FFT1::instance(); break;
+                case 2: obj = FFT2::instance(); break;
+                case 3: obj = FFT3::instance(); break;
+                case 4: obj = FFT4::instance(); break;
+                case 5: obj = FFT5::instance(); break;
+                case 6: obj = FFT6::instance(); break;
+                default: obj = FFT7::instance(); break;
+                }
+                obj->setup2(log_N);
+            }
+            else if (log_N != 0)
+            {
+                obj = FFT8::instance();
+                obj->setup(N);
             }
         }
         catch (...)

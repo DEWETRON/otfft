@@ -34,6 +34,15 @@ Rules
     other lengths. (`otfft_prime_test: TestComplexPrimeSmall,
     TestComplexLargePrimeFactor, TestComplexPrimeAboveIntOverflow,
     TestComplexPrimeIsFast, TestComplexSetupChangesPath`)
+*   **CFFT-8** `[done]` For a power-of-two length the algorithm is chosen in
+    `setup(n)` from a table per length. There are two tables: one for a
+    configured OpenMP thread count of 1 (tuned with `tools/ffttune` on an
+    Intel and an AMD CPU) and one for more than 1 thread (the upstream table,
+    not re-tuned). The thread count is read when the plan is made, so a plan
+    keeps its algorithm if `omp_set_num_threads` is called later. The result
+    does not depend on the table. (`otfft_algorithm_table_test:
+    TestPowerOfTwoOneThread, TestPowerOfTwoSeveralThreads,
+    TestPlanSurvivesThreadCountChange`)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)
@@ -49,6 +58,7 @@ Decided
 
 *   D4: keep upstream's normalisation names.
 *   D13: lengths with a prime factor above 100 use Bluestein.
+*   D14: two algorithm tables, chosen by the thread count.
 
 Questions
 ---------

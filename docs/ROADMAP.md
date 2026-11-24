@@ -44,9 +44,13 @@ Background and measurements: `docs/upstream-comparison.md`.
     (`src/otfft_algo.cpp`) for the machines we care about: port upstream's
     `ffttune` or add a run-time tuner. Upstream's table alone gave +28% to
     +94% for N = 2^16 to 2^20 on the benchmark machine.
-    Done: the tool, `tools/ffttune.cpp` (`-DOTFFT_BUILD_TOOLS=ON`, D12). Still
-    open: run it on the machines we care about (a baseline for one Intel
-    notebook is in `docs/benchmarks.md`) and apply the table.
+    Done: the tool, `tools/ffttune.cpp` (`-DOTFFT_BUILD_TOOLS=ON`, D12), the
+    baselines on an Intel and an AMD CPU, and a new table for one thread
+    (D14, 1.15x to 1.87x faster from N = 16,384 on the Intel notebook). Still
+    open: re-tune the table used with more than one thread (it is the old
+    table; one 12-thread run exists, with odd results at 2^19 and 2^21), and
+    check the new serial table on the Ryzen with the library, not only with
+    `ffttune`.
     Measured target (2026-11-24, `docs/benchmarks.md`): the fork reaches 0.5 to
     0.6 of upstream 11.6e for complex N = 65,536 to 524,288 with one thread.
 *   [ ] **R1.9** Port the `exp` kernels (`otfft_avx{dif,dit}{8,16}exp.h`,

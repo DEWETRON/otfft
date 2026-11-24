@@ -948,6 +948,43 @@ at the sizes compared) and
 (`tune-avx2-t1-r1..r3`, `tune-avx-t1-r1`, `tune-avx2-t12-r1`, each as `.log`
 with the full table and `.txt` with the suggested `case` lines).
 
+Algorithm table change: effect on the Intel notebook
+----------------------------------------------------
+
+Roadmap R1.8, decision D14. From the two tuning baselines above, `src/otfft_algo.cpp`
+now has two algorithm tables: one for a configured OpenMP thread count of 1
+(new, from the data of both machines) and one for more than one thread (the
+old table, unchanged). This section measures the change on the Intel notebook
+(MSVC, Release), `otfft_bench` of `master` before the change and of the
+branch after it, built in the same session and run alternately: complex
+transforms, powers of two, `OTFFT` (default algorithm choice), MFLOPS.
+
+| N | 1 thread, before (r1, r2) | 1 thread, after (r1, r2) | Change | 8 threads before | 8 threads after |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 4,096 | 22,744 / 26,610 | 27,379 / 24,862 | 1.06x | 22,231 | 24,453 |
+| 16,384 | 19,231 / 14,684 | 23,524 / 23,110 | 1.38x | 7,086 | 6,858 |
+| 65,536 | 13,092 / 12,234 | 14,541 / 14,697 | 1.15x | 13,286 | 8,786 |
+| 262,144 | 10,070 / 9,491 | 11,945 / 13,317 | 1.29x | 18,028 | 18,762 |
+| 1,048,576 | 5,511 / 6,576 | 11,593 / 10,964 | 1.87x | 17,661 | 14,829 |
+| 4,194,304 | 4,776 / 4,955 | 8,342 / 8,700 | 1.75x | 16,354 | 16,523 |
+
+The change column is the mean of the two "after" runs over the mean of the two
+"before" runs.
+
+*   With one thread the new table is faster at every size from 16,384
+    (1.15x to 1.87x), in line with the tuning data. At N=4,096 the pick did not
+    change (DIT8 in both tables), so the 1.06x there is run noise.
+*   With 8 threads the table did not change, so the differences in the last two
+    columns (up to 0.66x at N=65,536) are run-to-run noise of one run each: the
+    same code runs in both. This is also why the 8-thread table was not
+    re-tuned here.
+*   One CPU, MSVC, two runs per cell at one thread. On the Ryzen (GCC) the
+    tuning data predict gains of 1.5x to 3.3x with one thread above 2^15;
+    that run was not repeated with the new library.
+
+Raw results: `docs/benchmark-data/2026-11-24-intel/table-change/`
+(`old-*` and `new-*`).
+
 Problems found
 --------------
 
