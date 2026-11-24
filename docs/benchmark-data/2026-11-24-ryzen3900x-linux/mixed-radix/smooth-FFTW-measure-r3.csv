@@ -1,0 +1,13 @@
+library,kind,category,n,threads,median_ns,min_ns,mflops,plan_us,rel_error,scale,status
+FFTW-measure,complex,smooth,480,1,762.3,755.0,28040.7,112783.8,3.88e-16,1,ok
+PocketFFT,complex,smooth,480,1,3439.9,3399.4,6214.2,6.5,0,1,ok
+FFTW-measure,complex,smooth,1000,1,1958.8,1956.4,25438.3,59073.6,3.25e-16,1,ok
+PocketFFT,complex,smooth,1000,1,7568.2,7543.4,6584.0,17.0,0,1,ok
+FFTW-measure,complex,smooth,3000,1,6674.6,6649.6,25958.2,172924.9,4.58e-16,1,ok
+PocketFFT,complex,smooth,3000,1,24783.4,24606.9,6991.0,39.3,0,1,ok
+FFTW-measure,complex,smooth,10080,1,29459.0,29270.9,22753.0,646163.9,4.78e-16,1,ok
+PocketFFT,complex,smooth,10080,1,174829.4,173364.0,3833.9,353.7,0,1,ok
+FFTW-measure,complex,smooth,100000,1,380603.8,379483.8,21820.1,2075453.4,4.73e-16,1,ok
+PocketFFT,complex,smooth,100000,1,1793827.5,1790092.5,4629.7,4906.0,0,1,ok
+FFTW-measure,complex,smooth,1000000,1,10415562.0,10365092.0,9568.2,2926517.6,4.62e-16,1,ok
+PocketFFT,complex,smooth,1000000,1,30138616.0,29983195.0,3306.6,62783.0,0,1,ok
