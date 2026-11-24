@@ -25,6 +25,9 @@ Rules
     does.
 *   **FAC-7** `[built]` Buffers passed to transforms must be SIMD-aligned.
     Use `OTFFT::simd_malloc` and `simd_free`.
+*   **FAC-8** `[built]` The AVX2 backend is chosen (automatically or forced) only on a CPU
+    that has AVX2 **and** FMA, because it is compiled with FMA (D21); otherwise the AVX
+    backend is used. No test fakes the CPU, so only the build side is tested (BLD-9).
 
 Seen in upstream
 ----------------

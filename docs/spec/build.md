@@ -34,12 +34,20 @@ Rules
     `ctest` runs them as `example.<name>` and also requires the line
     `<name>: ok`, so CI builds and runs them on Linux and Windows.
 
+*   **BLD-9** `[done]` The three backends are compiled for the instruction set they are named
+    for: SSE2 without AVX, AVX with AVX and without AVX2 and FMA, AVX2 with AVX2 and FMA. GCC
+    and Clang get `-msse2`, `-mavx` and `-mavx2 -mfma`; MSVC `/arch:AVX` and `/arch:AVX2` (which
+    includes FMA). (`otfft_backend_test: TestSse2BackendUsesNoAvx,
+    TestAvxBackendUsesAvxWithoutFma, TestAvx2BackendUsesAvx2AndFma`; the Intel compiler branch
+    in `CMakeLists.txt` is not covered.)
+
 Decided
 -------
 
 *   D3: one library per backend, chosen at run time.
 *   D12: `ffttune` prints the algorithm table, it does not generate library files.
 *   D18: the examples check themselves and run under `ctest`.
+*   D21: the AVX2 backend is kept and built with FMA.
 
 Questions
 ---------

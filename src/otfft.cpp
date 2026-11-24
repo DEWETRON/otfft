@@ -133,7 +133,8 @@ namespace
                 {
                     const auto cpu_info_7 = CPUID(7);
 
-                    CPU_FEATURE_AVX2 = ((cpu_info_7[1] & 0x00000020) != 0);
+                    // The AVX2 backend is compiled with FMA (D21), so it needs both.
+                    CPU_FEATURE_AVX2 = ((cpu_info_7[1] & 0x00000020) != 0) && CPU_FEATURE_FMA;
                 }
             }
         }

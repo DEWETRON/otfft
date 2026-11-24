@@ -1,0 +1,5 @@
+6.6.114.1-microsoft-standard-WSL2
+gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+CPU(s):                                  8
+Model name:                              Intel(R) Core(TM) Ultra 7 268V
+fma

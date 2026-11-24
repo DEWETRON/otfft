@@ -25,6 +25,34 @@
 
 namespace OTFFT_NAMESPACE
 {
+    // How this backend was compiled; checked by unit_tests/otfft_backend_test.cpp (D21).
+    bool compiledWithAvx()
+    {
+#ifdef __AVX__
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool compiledWithAvx2()
+    {
+#ifdef __AVX2__
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool compiledWithFma()
+    {
+#ifdef __FMA__
+        return true;
+#else
+        return false;
+#endif
+    }
+
     namespace OTFFT_AVXDIF4 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIT4 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIF8 { extern std::unique_ptr<FFT_IF> instance(); }

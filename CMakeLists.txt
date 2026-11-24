@@ -255,8 +255,10 @@ if (CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
   set(AVX_FLAGS
     " ${DEFAULT_FLAGS} -mavx -DUSE_AVX -DOTFFT_NAMESPACE=OTFFT_AVX "
   )
+  # -mavx2 does not enable FMA in GCC and Clang; the AVX2 backend uses it (otfft_misc.h tests __FMA__,
+  # as MSVC defines it for /arch:AVX2) and is chosen at run time only if the CPU has FMA too (D21).
   set(AVX2_FLAGS
-    " ${DEFAULT_FLAGS} -mavx2 -DUSE_AVX2 -DOTFFT_NAMESPACE=OTFFT_AVX2 "
+    " ${DEFAULT_FLAGS} -mavx2 -mfma -DUSE_AVX2 -DOTFFT_NAMESPACE=OTFFT_AVX2 "
   )
 # Intel C++ Compiler
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "Intel")

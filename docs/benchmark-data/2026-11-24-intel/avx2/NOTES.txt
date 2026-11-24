@@ -1,0 +1,11 @@
+AVX2 backend with FMA under GCC (roadmap R1.7, decision D21), Intel Core Ultra 7 268V, WSL2 Ubuntu, GCC 15.2.0, 2026-11-24.
+
+gcc-fma/A-t1-r<run>.csv : otfft_bench --kinds complex,real,dct --sizes pow2 --lib OTFFT --threads 1, OMP_NUM_THREADS=1 taskset -c 2,
+                          library built with the flags of master (AVX2 backend: -mavx2, no FMA).
+gcc-fma/B-t1-r<run>.csv : the same with -mfma added to the AVX2 backend flags (what D21 changes).
+                          A and B alternate, five runs each. The CSV files contain the rows OTFFT (auto = AVX2),
+                          OTFFT-sse2, OTFFT-avx, OTFFT-avx2 and PocketFFT; the .log files are the program output.
+gcc-fma/machine.txt     : kernel, compiler, CPU.
+
+The OTFFT-avx rows of A and B come from identical code and show the noise (geometric mean of B/A 1.02, single cells
+0.94 to 1.08).

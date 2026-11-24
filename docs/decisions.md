@@ -331,3 +331,27 @@ D20: one parallel region for the eight-step code, guided schedule from 2^18
     selects it.
 *   **Revisit when:** the Ryzen result is in (the guided threshold may be lower there), or
     the threaded table is retuned (R1.8).
+
+D21: keep the AVX2 backend, build it with FMA everywhere
+--------------------------------------------------------
+*   **What:** the AVX2 backend stays. The GCC and Clang flags for it are `-mavx2 -mfma` (CMake);
+    the run-time check chooses it only if the CPU has AVX2 and FMA (`CPU_FEATURE_AVX2` in
+    `src/otfft.cpp` includes the FMA bit); every backend reports how it was compiled
+    (`compiledWithAvx`, `compiledWithAvx2`, `compiledWithFma` in `src/otfft_algo.cpp`) and
+    `otfft_backend_test` checks it. Roadmap R1.7, spec FAC-8 and BLD-9.
+*   **Why:** the backends share all code and differ in flags. The complex multiplication uses FMA
+    where `__FMA__` is defined; MSVC defines it for `/arch:AVX2`, GCC and Clang need `-mfma`.
+    Without it the GCC AVX2 backend was up to 3% slower than AVX (the "no gain" of R1.1); with it
+    5% to 7% faster over all sizes and 10% to 18% faster at N = 64 to 4,096 (`docs/benchmarks.md`,
+    "AVX2 backend: FMA with GCC and Clang (R1.7)").
+*   **Rejected:** removing the AVX2 backend (it would give up the MSVC gain of 1.06x to 1.10x and
+    this one, to save build time); `-march=haswell` or `-march=native`
+    (ties the build to a CPU generation or the build machine); FMA in the AVX or SSE2 backend (an
+    AVX-only CPU has no FMA, the code would crash there); a run-time FMA switch inside one
+    backend (every call would branch).
+*   **Limit:** measured with GCC 15.2, one thread, on one CPU (Core Ultra 7 268V). Not run on the
+    Ryzen or with Clang. The Intel compiler flags were not changed. A CPU with AVX2 and no FMA
+    (not known to exist in hardware) would use the AVX backend. The dispatch is not unit tested
+    (no way to fake CPUID); `otfft_backend_test` checks the build flags only.
+*   **Revisit when:** R2.1 adds AVX-512 (the roadmap item asks for a recheck), or the Ryzen shows
+    no gain.

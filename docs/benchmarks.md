@@ -1534,6 +1534,70 @@ Limits:
     a deviation from upstream (2^16).
 *   `firstprivate` clauses on the parallel regions (fork specific, not in upstream) are kept.
 
+AVX2 backend: FMA with GCC and Clang (R1.7)
+-------------------------------------------
+
+Roadmap R1.7, decision D21. The question: is the AVX2 backend worth keeping, since the first
+benchmarks (R1.1) showed no gain over AVX?
+
+**Why there was no gain.** The AVX and AVX2 backends share all of their code
+(`src/otfft_avx.h` and `src/otfft_avx2.h` differ only in the namespace name); they differ in the
+compiler flags. The only code that depends on the instruction set is the complex multiplication,
+which uses a fused multiply-add where `__FMA__` is defined (`src/otfft_misc.h`). MSVC defines
+`__FMA__` for `/arch:AVX2` (through `inc/otfft_complex.h`). GCC and Clang do **not** enable FMA with
+`-mavx2`, and the flags had no `-mfma`, so with them the AVX2 backend was the AVX backend with
+different code generation.
+
+**Existing data** (`docs/benchmark-data/*`, OTFFT-avx against OTFFT-avx2 in the same run, geometric
+mean of the MFLOPS ratio over sizes):
+
+| Machine, compiler | complex | real | DCT |
+| --- | ---: | ---: | ---: |
+| Ryzen 9 3900X, GCC, 1 thread / 12 threads | 1.00 / 0.98 | 1.00 / 1.00 | 1.00 / 1.01 |
+| Ryzen 9 3900X, Clang, 1 thread / 12 threads | 1.03 / 1.02 | 1.02 / 1.01 | 1.01 / 1.00 |
+| Ryzen 9 9950X, GCC, 1 thread / 12 threads | 1.00 / 1.01 | | |
+| Core Ultra 7 268V, MSVC, 1 thread / 8 threads | 1.06 / 1.10 | | |
+
+On MSVC (FMA) 10 of 18 sizes are more than 5% faster (up to 1.25x with one thread and 1.61x with 8);
+on GCC and Clang the ratio is 1.00 within the noise.
+
+**Experiment.** GCC 15.2 in WSL2 on the Core Ultra 7 268V, one thread pinned (`taskset -c 2`),
+`otfft_bench --kinds complex,real,dct --sizes pow2`, two builds alternating, 5 runs, medians: A =
+`master` flags, B = the same with `-mfma` added to the AVX2 backend. Data:
+`docs/benchmark-data/2026-11-24-intel/avx2/gcc-fma/`.
+
+| | complex | real | DCT |
+| --- | ---: | ---: | ---: |
+| AVX2 without FMA (A) over AVX, geometric mean | 0.975 | 0.995 | 0.970 |
+| AVX2 with FMA (B) over AVX2 without (A), all sizes | 1.061 | 1.066 | 1.049 |
+| same, N = 64 to 4,096 (per size) | 1.18, 1.17, 1.10, 1.12 | 1.10, 1.18, 1.17, 1.14 | 1.08, 1.12, 1.10, 1.03 |
+| AVX2 with FMA (B) over AVX, all sizes | 1.034 | 1.061 | 1.017 |
+| AVX2 with FMA (B) over AVX, N = 64 to 4,096 | 1.14, 1.11, 1.18, 1.10 | 1.05, 1.18, 1.17, 1.12 | 0.99, 1.11, 1.12, 1.04 |
+| through the library (`createComplexFFT` etc., AVX2 chosen), B over A, all sizes | 1.058 | 1.056 | 1.022 |
+| same, N = 64 to 4,096 | 1.12 | 1.13 | 1.05 |
+| noise: the AVX backend of B over the AVX backend of A (same code) | 1.021 | 1.022 | 0.988 |
+
+Single cells vary by about 5% (0.94 to 1.08 for the unchanged AVX backend); from N = 16,384 up
+(memory-bound) the effect is 1.0 within that. The gain is in the cache-resident sizes.
+
+What this shows:
+
+*   "No gain" was a build flag gap on GCC and Clang, not a property of AVX2: without FMA the
+    GCC AVX2 backend is up to 3% *slower* than AVX (0.975, 0.995, 0.970); with FMA it is faster by
+    5% to 7% over all sizes and by 10% to 18% for N = 64 to 4,096. That is the size of the gain MSVC already had.
+*   So the AVX2 backend is worth keeping, with FMA in every compiler. `-mfma` is now in the GCC and
+    Clang flags, and the AVX2 backend is chosen at run time only if the CPU has AVX2 *and* FMA
+    (D21). A new test (`otfft_backend_test`) fails if a backend loses its instruction set flags.
+
+Limits:
+
+*   One CPU, GCC only, one thread. Not run on the Ryzen (Zen has FMA units, but the gain there is
+    not measured), not with Clang (the flag is the same) or with the Intel compiler (its flags
+    were not changed: `-mavx2` only, untested).
+*   FMA rounds once instead of twice, so AVX2 results differ from AVX results in the last bits
+    (they already did with MSVC). The unit tests pass with a tolerance of `1e-9 * N`.
+*   The recheck "after R2.1" of the roadmap item stays: AVX-512 may change the picture.
+
 Problems found
 --------------
 
@@ -1567,8 +1631,11 @@ Problems found
     fixed in R1.10: SixStep 1.5x to 2.5x faster there, complex N = 4,194,304 with 8
     threads 1.19x, real 1.82x, DCT 1.58x (see "OpenMP structure of the eight-step and
     six-step code (R1.10)").
-4.  **AVX2.** No gain over AVX in these tests, so the AVX2 backend adds
-    build time for no measured benefit.
+4.  **AVX2.** No gain over AVX in these tests, so the AVX2 backend added
+    build time for no measured benefit. **Fixed** (roadmap R1.7, D21): the GCC and
+    Clang builds of the AVX2 backend had no FMA (`-mavx2` does not enable it); with
+    `-mfma` it is 5% to 7% faster over all sizes and 10% to 18% faster at N = 64 to 4,096
+    (see "AVX2 backend: FMA with GCC and Clang (R1.7)").
 5.  **DCT scale.** OTFFT's DCT-II output is 0.5 times FFTW's and PocketFFT's
     (they compute 2 * sum, OTFFT computes sum). Not a bug, but callers moving
     between libraries need to know.
