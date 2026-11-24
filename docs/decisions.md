@@ -184,3 +184,26 @@ D14: two algorithm tables for the power-of-two FFT, chosen by the thread count
     break-even size) changes which algorithms scale, or other CPUs (ARM64) are
     measured.
 
+D15: radix-7 butterfly in the symmetric form
+--------------------------------------------
+*   **What:** `src/otfft_mixedradix.h` has a radix-7 butterfly (`fwdend7`,
+    `fwdcore7`, `invend7`, `invcore7` and the OpenMP versions with `p`), called
+    when the remaining length is divisible by 7 after 8, 4, 2, 5 and 3. It
+    computes the 7-point DFT from the sums and differences of the symmetric
+    pairs (x1+x6, x2+x5, x3+x4 and the differences) with real constants (the
+    cosines and sines of 2 pi k / 7), 18 multiplications by a real number per
+    butterfly instead of 36 complex ones. The twiddle factors of the core
+    step are read from the table (`W[k*sp]`, inverse `W[N-k*sp]`), not built
+    by repeated multiplication. Roadmap R1.5, issue #18.
+*   **Why:** a factor 7 used the generic loop (O(7) complex multiplications per
+    output with a table lookup each); N=10,080 was 11x slower than FFTW on the
+    Ryzen. Now a factor 7 is 1.9x to 5.5x faster and costs about the same per
+    point as 3 and 5.
+*   **Rejected:** the same plain form as the radix 3 and 5 butterflies (no
+    gain from symmetry); butterflies for 11 and 13 (factors above 7 up to 100
+    stay in the generic code, above 100 they use Bluestein, D13).
+*   **Limit:** the results differ from the old code in the last bits (other
+    order of operations). Only the Intel notebook with MSVC was measured.
+*   **Revisit when:** the radix 3 and 5 butterflies are changed to the
+    symmetric form (R1.5), or when R2.1 and R2.2 need other kernels.
+

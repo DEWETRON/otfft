@@ -493,7 +493,103 @@ constexpr int OMP_THRESHOLD = 1<<15;
     }
 
     ///////////////////////////////////////////////////////////////////////////////
-    // Any Size FFT except Radix-2,3,5
+    // Radix-7 butterfly kernel
+    //
+    // The 7-point DFT with the symmetry of the 7th roots of unity: with
+    // t_j = x_j + x_(7-j) and d_j = x_j - x_(7-j) (j = 1, 2, 3),
+    //   X_k     = x_0 + sum_j cos(2 pi j k / 7) t_j -+ i sum_j sin(2 pi j k / 7) d_j
+    //   X_(7-k) = x_0 + sum_j cos(2 pi j k / 7) t_j +- i sum_j sin(2 pi j k / 7) d_j
+    // (upper sign: forward, lower: inverse). That is 18 multiplications of a complex
+    // number by a real constant instead of 36 complex multiplications.
+    ///////////////////////////////////////////////////////////////////////////////
+
+    constexpr double R7_C1 =  0.62348980185873353053; // cos(2 pi / 7)
+    constexpr double R7_C2 = -0.22252093395631440429; // cos(4 pi / 7)
+    constexpr double R7_C3 = -0.90096886790241912624; // cos(6 pi / 7)
+    constexpr double R7_S1 =  0.78183148246802980871; // sin(2 pi / 7)
+    constexpr double R7_S2 =  0.97492791218182360702; // sin(4 pi / 7)
+    constexpr double R7_S3 =  0.43388373911755812048; // sin(6 pi / 7)
+
+    // r[k] = k-th output; DIR = -1 forward, +1 inverse
+    template <int DIR> static inline void bfly7(const xmm x0, const xmm x1, const xmm x2, const xmm x3,
+                                                const xmm x4, const xmm x5, const xmm x6, xmm* r) noexcept force_inline;
+    template <int DIR> static inline void bfly7(const xmm x0, const xmm x1, const xmm x2, const xmm x3,
+                                                const xmm x4, const xmm x5, const xmm x6, xmm* r) noexcept
+    {
+        const xmm c1 = cmplx(R7_C1, R7_C1);
+        const xmm c2 = cmplx(R7_C2, R7_C2);
+        const xmm c3 = cmplx(R7_C3, R7_C3);
+        const xmm s1 = cmplx(R7_S1, R7_S1);
+        const xmm s2 = cmplx(R7_S2, R7_S2);
+        const xmm s3 = cmplx(R7_S3, R7_S3);
+        const xmm t1 = addpz(x1, x6), d1 = subpz(x1, x6);
+        const xmm t2 = addpz(x2, x5), d2 = subpz(x2, x5);
+        const xmm t3 = addpz(x3, x4), d3 = subpz(x3, x4);
+        r[0] = addpz(x0, addpz(t1, addpz(t2, t3)));
+        const xmm a1 = addpz(x0, addpz(mulpd(c1, t1), addpz(mulpd(c2, t2), mulpd(c3, t3))));
+        const xmm a2 = addpz(x0, addpz(mulpd(c2, t1), addpz(mulpd(c3, t2), mulpd(c1, t3))));
+        const xmm a3 = addpz(x0, addpz(mulpd(c3, t1), addpz(mulpd(c1, t2), mulpd(c2, t3))));
+        const xmm b1 = addpz(mulpd(s1, d1), addpz(mulpd(s2, d2), mulpd(s3, d3)));
+        const xmm b2 = subpz(subpz(mulpd(s2, d1), mulpd(s3, d2)), mulpd(s1, d3));
+        const xmm b3 = addpz(subpz(mulpd(s3, d1), mulpd(s1, d2)), mulpd(s2, d3));
+        if (DIR < 0) {
+            r[1] = addpz(a1, mjxpz(b1)); r[6] = addpz(a1, jxpz(b1));
+            r[2] = addpz(a2, mjxpz(b2)); r[5] = addpz(a2, jxpz(b2));
+            r[3] = addpz(a3, mjxpz(b3)); r[4] = addpz(a3, jxpz(b3));
+        }
+        else {
+            r[1] = addpz(a1, jxpz(b1)); r[6] = addpz(a1, mjxpz(b1));
+            r[2] = addpz(a2, jxpz(b2)); r[5] = addpz(a2, mjxpz(b2));
+            r[3] = addpz(a3, jxpz(b3)); r[4] = addpz(a3, mjxpz(b3));
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    void fwdend7(const int s, const bool eo,
+                 complex_vector x, complex_vector y) noexcept
+    {
+        complex_vector z = eo ? y : x;
+        for (int q = 0; q < s; q++) {
+            xmm r[7];
+            bfly7<-1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), getpz(x[q+s*3]),
+                      getpz(x[q+s*4]), getpz(x[q+s*5]), getpz(x[q+s*6]), r);
+            for (int k = 0; k < 7; k++) setpz(z[q+s*k], r[k]);
+        }
+    }
+
+    void fwdcore7(const int n, const int s,
+                  complex_vector x, complex_vector y, const_complex_vector W) noexcept
+    {
+        const int N  = n*s;
+        const int m  = n/7;
+        const int N1 = N/7;
+        for (int p = 0; p < m; p++) {
+            const int sp = s*p;
+            const cpx w1p = getpz(W[1*sp]);
+            const cpx w2p = getpz(W[2*sp]);
+            const cpx w3p = getpz(W[3*sp]);
+            const cpx w4p = getpz(W[4*sp]);
+            const cpx w5p = getpz(W[5*sp]);
+            const cpx w6p = getpz(W[6*sp]);
+            for (int q = 0; q < s; q++) {
+                const int q_sp = q + sp;
+                xmm r[7];
+                bfly7<-1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), getpz(x[q_sp+N1*3]),
+                          getpz(x[q_sp+N1*4]), getpz(x[q_sp+N1*5]), getpz(x[q_sp+N1*6]), r);
+                const int q_s7p = q + sp*7;
+                setpz(y[q_s7p+s*0], r[0]);
+                setpz(y[q_s7p+s*1], cpx(r[1])*w1p);
+                setpz(y[q_s7p+s*2], cpx(r[2])*w2p);
+                setpz(y[q_s7p+s*3], cpx(r[3])*w3p);
+                setpz(y[q_s7p+s*4], cpx(r[4])*w4p);
+                setpz(y[q_s7p+s*5], cpx(r[5])*w5p);
+                setpz(y[q_s7p+s*6], cpx(r[6])*w6p);
+            }
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // Any Size FFT except Radix-2,3,5,7
     ///////////////////////////////////////////////////////////////////////////////
 
     void fwdfftany(const int r, const int n, const int s, const bool eo,
@@ -595,6 +691,14 @@ constexpr int OMP_THRESHOLD = 1<<15;
             else {
                 fwdcore3(n, s, x, y, W);
                 fwdfft(n/3, 3*s, !eo, y, x, W);
+            }
+        }
+        else if (n%7 == 0) {
+            if (n == 7)
+                fwdend7(s, eo, x, y);
+            else {
+                fwdcore7(n, s, x, y, W);
+                fwdfft(n/7, 7*s, !eo, y, x, W);
             }
         }
         else fwdfftany(7, n, s, eo, x, y, W);
@@ -1054,7 +1158,51 @@ constexpr int OMP_THRESHOLD = 1<<15;
     }
 
     ///////////////////////////////////////////////////////////////////////////////
-    // Any Size IFFT except Radix-2,3,5
+    void invend7(const int s, const bool eo,
+                 complex_vector x, complex_vector y) noexcept
+    {
+        complex_vector z = eo ? y : x;
+        for (int q = 0; q < s; q++) {
+            xmm r[7];
+            bfly7<1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), getpz(x[q+s*3]),
+                      getpz(x[q+s*4]), getpz(x[q+s*5]), getpz(x[q+s*6]), r);
+            for (int k = 0; k < 7; k++) setpz(z[q+s*k], r[k]);
+        }
+    }
+
+    void invcore7(const int n, const int s,
+                  complex_vector x, complex_vector y, const_complex_vector W) noexcept
+    {
+        const int N  = n*s;
+        const int m  = n/7;
+        const int N1 = N/7;
+        for (int p = 0; p < m; p++) {
+            const int sp = s*p;
+            const cpx w1p = getpz(W[N-1*sp]);
+            const cpx w2p = getpz(W[N-2*sp]);
+            const cpx w3p = getpz(W[N-3*sp]);
+            const cpx w4p = getpz(W[N-4*sp]);
+            const cpx w5p = getpz(W[N-5*sp]);
+            const cpx w6p = getpz(W[N-6*sp]);
+            for (int q = 0; q < s; q++) {
+                const int q_sp = q + sp;
+                xmm r[7];
+                bfly7<1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), getpz(x[q_sp+N1*3]),
+                          getpz(x[q_sp+N1*4]), getpz(x[q_sp+N1*5]), getpz(x[q_sp+N1*6]), r);
+                const int q_s7p = q + sp*7;
+                setpz(y[q_s7p+s*0], r[0]);
+                setpz(y[q_s7p+s*1], cpx(r[1])*w1p);
+                setpz(y[q_s7p+s*2], cpx(r[2])*w2p);
+                setpz(y[q_s7p+s*3], cpx(r[3])*w3p);
+                setpz(y[q_s7p+s*4], cpx(r[4])*w4p);
+                setpz(y[q_s7p+s*5], cpx(r[5])*w5p);
+                setpz(y[q_s7p+s*6], cpx(r[6])*w6p);
+            }
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // Any Size IFFT except Radix-2,3,5,7
     ///////////////////////////////////////////////////////////////////////////////
 
     void invfftany(const int r, const int n, const int s, const bool eo,
@@ -1156,6 +1304,14 @@ constexpr int OMP_THRESHOLD = 1<<15;
             else {
                 invcore3(n, s, x, y, W);
                 invfft(n/3, 3*s, !eo, y, x, W);
+            }
+        }
+        else if (n%7 == 0) {
+            if (n == 7)
+                invend7(s, eo, x, y);
+            else {
+                invcore7(n, s, x, y, W);
+                invfft(n/7, 7*s, !eo, y, x, W);
             }
         }
         else invfftany(7, n, s, eo, x, y, W);
@@ -1637,7 +1793,53 @@ constexpr int OMP_THRESHOLD = 1<<15;
     }
 
     ///////////////////////////////////////////////////////////////////////////////
-    // Any Size FFT except Radix-2,3,5 with OpenMP
+    void fwdend7p(const int s, const bool eo,
+                  complex_vector x, complex_vector y) noexcept
+    {
+        complex_vector z = eo ? y : x;
+#pragma omp for schedule(static) nowait
+        for (int q = 0; q < s; q++) {
+            xmm r[7];
+            bfly7<-1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), getpz(x[q+s*3]),
+                      getpz(x[q+s*4]), getpz(x[q+s*5]), getpz(x[q+s*6]), r);
+            for (int k = 0; k < 7; k++) setpz(z[q+s*k], r[k]);
+        }
+    }
+
+    void fwdcore7p(const int n, const int s,
+                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
+    {
+        const int N  = n*s;
+        const int ms = N/7;
+        const int N1 = N/7;
+#pragma omp for schedule(static)
+        for (int i = 0; i < ms; i++) {
+            const int p = i / s;
+            const int q = i % s;
+            const int sp = s*p;
+            const cpx w1p = getpz(W[1*sp]);
+            const cpx w2p = getpz(W[2*sp]);
+            const cpx w3p = getpz(W[3*sp]);
+            const cpx w4p = getpz(W[4*sp]);
+            const cpx w5p = getpz(W[5*sp]);
+            const cpx w6p = getpz(W[6*sp]);
+            const int q_sp = q + sp;
+            xmm r[7];
+            bfly7<-1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), getpz(x[q_sp+N1*3]),
+                      getpz(x[q_sp+N1*4]), getpz(x[q_sp+N1*5]), getpz(x[q_sp+N1*6]), r);
+            const int q_s7p = q + sp*7;
+            setpz(y[q_s7p+s*0], r[0]);
+            setpz(y[q_s7p+s*1], cpx(r[1])*w1p);
+            setpz(y[q_s7p+s*2], cpx(r[2])*w2p);
+            setpz(y[q_s7p+s*3], cpx(r[3])*w3p);
+            setpz(y[q_s7p+s*4], cpx(r[4])*w4p);
+            setpz(y[q_s7p+s*5], cpx(r[5])*w5p);
+            setpz(y[q_s7p+s*6], cpx(r[6])*w6p);
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // Any Size FFT except Radix-2,3,5,7 with OpenMP
     ///////////////////////////////////////////////////////////////////////////////
 
     void fwdfftanyp(const int r, const int n, const int s, const bool eo,
@@ -1744,6 +1946,14 @@ constexpr int OMP_THRESHOLD = 1<<15;
             else {
                 fwdcore3p(n, s, x, y, W);
                 fwdfftp(n/3, 3*s, !eo, y, x, W);
+            }
+        }
+        else if (n%7 == 0) {
+            if (n == 7)
+                fwdend7p(s, eo, x, y);
+            else {
+                fwdcore7p(n, s, x, y, W);
+                fwdfftp(n/7, 7*s, !eo, y, x, W);
             }
         }
         else fwdfftanyp(7, n, s, eo, x, y, W);
@@ -2225,7 +2435,53 @@ constexpr int OMP_THRESHOLD = 1<<15;
     }
 
     ///////////////////////////////////////////////////////////////////////////////
-    // Any Size IFFT except Radix-2,3,5 with OpenMP
+    void invend7p(const int s, const bool eo,
+                  complex_vector x, complex_vector y) noexcept
+    {
+        complex_vector z = eo ? y : x;
+#pragma omp for schedule(static) nowait
+        for (int q = 0; q < s; q++) {
+            xmm r[7];
+            bfly7<1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), getpz(x[q+s*3]),
+                      getpz(x[q+s*4]), getpz(x[q+s*5]), getpz(x[q+s*6]), r);
+            for (int k = 0; k < 7; k++) setpz(z[q+s*k], r[k]);
+        }
+    }
+
+    void invcore7p(const int n, const int s,
+                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
+    {
+        const int N  = n*s;
+        const int ms = N/7;
+        const int N1 = N/7;
+#pragma omp for schedule(static)
+        for (int i = 0; i < ms; i++) {
+            const int p = i / s;
+            const int q = i % s;
+            const int sp = s*p;
+            const cpx w1p = getpz(W[N-1*sp]);
+            const cpx w2p = getpz(W[N-2*sp]);
+            const cpx w3p = getpz(W[N-3*sp]);
+            const cpx w4p = getpz(W[N-4*sp]);
+            const cpx w5p = getpz(W[N-5*sp]);
+            const cpx w6p = getpz(W[N-6*sp]);
+            const int q_sp = q + sp;
+            xmm r[7];
+            bfly7<1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), getpz(x[q_sp+N1*3]),
+                      getpz(x[q_sp+N1*4]), getpz(x[q_sp+N1*5]), getpz(x[q_sp+N1*6]), r);
+            const int q_s7p = q + sp*7;
+            setpz(y[q_s7p+s*0], r[0]);
+            setpz(y[q_s7p+s*1], cpx(r[1])*w1p);
+            setpz(y[q_s7p+s*2], cpx(r[2])*w2p);
+            setpz(y[q_s7p+s*3], cpx(r[3])*w3p);
+            setpz(y[q_s7p+s*4], cpx(r[4])*w4p);
+            setpz(y[q_s7p+s*5], cpx(r[5])*w5p);
+            setpz(y[q_s7p+s*6], cpx(r[6])*w6p);
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // Any Size IFFT except Radix-2,3,5,7 with OpenMP
     ///////////////////////////////////////////////////////////////////////////////
 
     void invfftanyp(const int r, const int n, const int s, const bool eo,
@@ -2332,6 +2588,14 @@ constexpr int OMP_THRESHOLD = 1<<15;
             else {
                 invcore3p(n, s, x, y, W);
                 invfftp(n/3, 3*s, !eo, y, x, W);
+            }
+        }
+        else if (n%7 == 0) {
+            if (n == 7)
+                invend7p(s, eo, x, y);
+            else {
+                invcore7p(n, s, x, y, W);
+                invfftp(n/7, 7*s, !eo, y, x, W);
             }
         }
         else invfftanyp(7, n, s, eo, x, y, W);

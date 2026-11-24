@@ -29,6 +29,10 @@ Milestone 1b: Fixes and speed found by the benchmarks
 *   [ ] **R1.5** Lengths with factors 3, 5 and 7 are 2x to 11x slower than FFTW
     (worst: N=10,080). Add a radix-7 butterfly and improve the mixed radix
     steps ([#18](https://github.com/DEWETRON/otfft/issues/18)).
+    Done: the radix-7 butterfly (D15; a factor 7 is 1.9x to 5.5x faster).
+    Still open: faster radix 3 and 5 butterflies (symmetric form, as for 7),
+    which is where the rest of the gap to FFTW is (2.8x to 3.5x at N = 480,
+    1,000, 3,000 on the Ryzen); then measure with FFTW again.
 *   [ ] **R1.6** OpenMP: do not thread below the break-even size (N=16,384 is
     2.5x slower with 12 threads) and scale better above it (1.8x at 4M points,
     [#19](https://github.com/DEWETRON/otfft/issues/19)).
