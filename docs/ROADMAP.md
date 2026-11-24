@@ -19,10 +19,13 @@ Milestone 1: Foundations
 Milestone 1b: Fixes and speed found by the benchmarks
 -----------------------------------------------------
 
-*   [ ] **R1.4** Prime lengths with `createComplexFFT`: wrong result from a
+*   [x] **R1.4** Prime lengths with `createComplexFFT`: wrong result from a
     prime factor of 46,341 (int overflow, [#16](https://github.com/DEWETRON/otfft/issues/16))
     and O(N^2) speed ([#17](https://github.com/DEWETRON/otfft/issues/17)). Fix, or route to
     Bluestein, and add a unit test for prime lengths.
+    Done: lengths with a prime factor above 100 use Bluestein (D13,
+    `unit_tests/otfft_prime_test.cpp`). Still open: the real FFT and DCT with
+    such a half length (spec RFFT-6).
 *   [ ] **R1.5** Lengths with factors 3, 5 and 7 are 2x to 11x slower than FFTW
     (worst: N=10,080). Add a radix-7 butterfly and improve the mixed radix
     steps ([#18](https://github.com/DEWETRON/otfft/issues/18)).

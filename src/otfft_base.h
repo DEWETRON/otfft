@@ -55,6 +55,8 @@ private:
     FFT0 fft;
     simd_array<complex_t> work;
     complex_t* y;
+    // set instead of fft and work for lengths with a large prime factor (see FFT::setup)
+    std::unique_ptr<ComplexFFT> bluestein;
 };
 
 /******************************************************************************

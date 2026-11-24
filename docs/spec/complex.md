@@ -27,6 +27,13 @@ Rules
 
 *   **CFFT-5** `[done]` Any length N works, power of two or not (mixed radix).
     (`otfft_transform_test`, `otfft_optimization_test: TestComplex`)
+*   **CFFT-7** `[done]` A length with a prime factor above 100 (for example a
+    prime N) is computed with Bluestein's algorithm, also after `setup(n)` on
+    an existing object, so it takes O(N log N) time and is correct for any N
+    (issues #16 and #17). Results and normalisation are the same as for the
+    other lengths. (`otfft_prime_test: TestComplexPrimeSmall,
+    TestComplexLargePrimeFactor, TestComplexPrimeAboveIntOverflow,
+    TestComplexPrimeIsFast, TestComplexSetupChangesPath`)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)
@@ -41,6 +48,7 @@ Decided
 -------
 
 *   D4: keep upstream's normalisation names.
+*   D13: lengths with a prime factor above 100 use Bluestein.
 
 Questions
 ---------

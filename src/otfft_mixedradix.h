@@ -510,10 +510,12 @@ constexpr int OMP_THRESHOLD = 1<<15;
             for (int q = 0; q < s; q++) {
                 for (int i = 0; i < k; i++) {
                     cpx z = zero;
+                    int ij = 0;
                     for (int j = 0; j < k; j++) {
                         const cpx a   = getpz(x[q+s*j]);
-                        const cpx wij = getpz(W[s*((i*j)%k)]);
+                        const cpx wij = getpz(W[s*ij]);
                         z = z + a*wij;
+                        ij += i; if (ij >= k) ij -= k;
                     }
                     setpz(y[q+s*i], z);
                 }
@@ -530,10 +532,12 @@ constexpr int OMP_THRESHOLD = 1<<15;
                     const int q_spk = q + sp*k;
                     for (int i = 0; i < k; i++) {
                         cpx z = zero;
+                        int ij = 0;
                         for (int j = 0; j < k; j++) {
                             const cpx a   = getpz(x[q_sp+ms*j]);
-                            const cpx wij = getpz(W[ms*((i*j)%k)]);
+                            const cpx wij = getpz(W[ms*ij]);
                             z = z + a*wij;
+                            ij += i; if (ij >= k) ij -= k;
                         }
                         const cpx wip = getpz(W[i*sp]);
                         setpz(y[q_spk+s*i], z * wip);
@@ -1067,10 +1071,12 @@ constexpr int OMP_THRESHOLD = 1<<15;
             for (int q = 0; q < s; q++) {
                 for (int i = 0; i < k; i++) {
                     cpx z = zero;
+                    int ij = 0;
                     for (int j = 0; j < k; j++) {
                         const cpx a   = getpz(x[q+s*j]);
-                        const cpx wij = getpz(W[N-s*((i*j)%k)]);
+                        const cpx wij = getpz(W[N-s*ij]);
                         z = z + a*wij;
+                        ij += i; if (ij >= k) ij -= k;
                     }
                     setpz(y[q+s*i], z);
                 }
@@ -1087,10 +1093,12 @@ constexpr int OMP_THRESHOLD = 1<<15;
                     const int q_spk = q + sp*k;
                     for (int i = 0; i < k; i++) {
                         cpx z = zero;
+                        int ij = 0;
                         for (int j = 0; j < k; j++) {
                             const cpx a   = getpz(x[q_sp+ms*j]);
-                            const cpx wij = getpz(W[N-ms*((i*j)%k)]);
+                            const cpx wij = getpz(W[N-ms*ij]);
                             z = z + a*wij;
+                            ij += i; if (ij >= k) ij -= k;
                         }
                         const cpx wip = getpz(W[N-i*sp]);
                         setpz(y[q_spk+s*i], z * wip);
@@ -1647,10 +1655,12 @@ constexpr int OMP_THRESHOLD = 1<<15;
             for (int q = 0; q < s; q++) {
                 for (int i = 0; i < k; i++) {
                     cpx z = zero;
+                    int ij = 0;
                     for (int j = 0; j < k; j++) {
                         const cpx a   = getpz(x[q+s*j]);
-                        const cpx wij = getpz(W[s*((i*j)%k)]);
+                        const cpx wij = getpz(W[s*ij]);
                         z = z + a*wij;
+                        ij += i; if (ij >= k) ij -= k;
                     }
                     setpz(y[q+s*i], z);
                 }
@@ -1672,10 +1682,12 @@ constexpr int OMP_THRESHOLD = 1<<15;
                 const int q_spk = q + sp*k;
                 for (int i = 0; i < k; i++) {
                     cpx z = zero;
+                    int ij = 0;
                     for (int j = 0; j < k; j++) {
                         const cpx a   = getpz(x[q_sp+ms*j]);
-                        const cpx wij = getpz(W[ms*((i*j)%k)]);
+                        const cpx wij = getpz(W[ms*ij]);
                         z = z + a*wij;
+                        ij += i; if (ij >= k) ij -= k;
                     }
                     const cpx wip = getpz(W[i*sp]);
                     setpz(y[q_spk+s*i], z * wip);
@@ -2231,10 +2243,12 @@ constexpr int OMP_THRESHOLD = 1<<15;
             for (int q = 0; q < s; q++) {
                 for (int i = 0; i < k; i++) {
                     cpx z = zero;
+                    int ij = 0;
                     for (int j = 0; j < k; j++) {
                         const cpx a   = getpz(x[q+s*j]);
-                        const cpx wij = getpz(W[N-s*((i*j)%k)]);
+                        const cpx wij = getpz(W[N-s*ij]);
                         z = z + a*wij;
+                        ij += i; if (ij >= k) ij -= k;
                     }
                     setpz(y[q+s*i], z);
                 }
@@ -2256,10 +2270,12 @@ constexpr int OMP_THRESHOLD = 1<<15;
                 const int q_spk = q + sp*k;
                 for (int i = 0; i < k; i++) {
                     cpx z = zero;
+                    int ij = 0;
                     for (int j = 0; j < k; j++) {
                         const cpx a   = getpz(x[q_sp+ms*j]);
-                        const cpx wij = getpz(W[N-ms*((i*j)%k)]);
+                        const cpx wij = getpz(W[N-ms*ij]);
                         z = z + a*wij;
+                        ij += i; if (ij >= k) ij -= k;
                     }
                     const cpx wip = getpz(W[N-i*sp]);
                     setpz(y[q_spk+s*i], z * wip);
