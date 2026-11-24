@@ -941,7 +941,9 @@ distribution package (SSE2/AVX), not the AVX2 build used for the 3900X
 numbers, so the FFTW columns are not comparable with the earlier ones.
 
 Raw results: `docs/benchmark-data/2026-11-24-ryzen-linux/` (`bench-t1.*`,
-`bench-t12.*` from `otfft_bench --kinds complex`) and
+`bench-t12.*` from `otfft_bench --kinds complex`; the `.log` files are from a
+second run with the same command, whose results agree with the CSVs within 7%
+at the sizes compared) and
 `docs/benchmark-data/2026-11-24-ryzen-linux/tune/`
 (`tune-avx2-t1-r1..r3`, `tune-avx-t1-r1`, `tune-avx2-t12-r1`, each as `.log`
 with the full table and `.txt` with the suggested `case` lines).
