@@ -1,0 +1,9 @@
+library,kind,category,n,threads,median_ns,min_ns,mflops,plan_us,rel_error,scale,status
+OTFFT-upstream,roundtrip,pow2all,131072,12,1442731.0,1432786.5,15444.5,2280.1,3.11e-15,1,ok
+OTFFT-upstream,roundtrip,pow2all,262144,12,2877373.0,2867872.0,16399.0,3864.0,3.77e-15,1,ok
+OTFFT-upstream,roundtrip,pow2all,524288,12,5719684.0,5661504.0,17416.1,8016.9,3.66e-15,1,ok
+OTFFT-upstream,roundtrip,pow2all,1048576,12,10482782.0,10340871.0,20005.7,18176.3,4e-15,1,ok
+OTFFT-upstream,roundtrip,pow2all,2097152,12,28185429.0,27347174.0,15625.2,37730.9,2.22e-15,1,ok
+OTFFT-upstream,roundtrip,pow2all,4194304,12,90685008.0,89978612.0,10175.3,73235.0,4.33e-15,1,ok
+OTFFT-upstream,roundtrip,pow2all,8388608,12,182311862.0,181787058.0,10582.9,142544.7,4.55e-15,1,ok
+OTFFT-upstream,roundtrip,pow2all,16777216,12,365848633.0,364532874.0,11006.0,283044.4,5.22e-15,1,ok

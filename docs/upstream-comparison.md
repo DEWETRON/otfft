@@ -171,4 +171,18 @@ Consequences
 *   The prime and factor-7 problems are in upstream's code too and should also
     be reported to the author.
 
+Measured effect
+---------------
+
+The differences above were measured on 2026-11-24 by building upstream 11.6e
+and running it through the same harness (`docs/benchmarks.md`, "Same-session
+comparison with upstream 11.6e"). Up to N=16,384 the two versions agree within a
+few percent. At larger sizes the fork loses, by a reproducible factor: complex
+N=65,536 to 524,288 with one thread (0.5 to 0.6 of upstream), real and DCT with
+12 threads from N=262,144 (0.5 to 0.8). With 12 threads the fork is faster for
+complex (1.1 to 1.4). This matches the source differences (size table, `exp`
+kernels, OpenMP thresholds) but which of them causes which gap has not been
+isolated. Upstream was also not faster than FFTW on this machine, so porting
+its changes closes the gap to upstream, not necessarily the gap to FFTW.
+
 Follow-up work is in `docs/ROADMAP.md` (R1.8 to R1.12).

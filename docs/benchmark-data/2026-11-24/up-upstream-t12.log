@@ -1,0 +1,55 @@
+# cpu: AMD Ryzen 9 3900X 12-Core Processor
+# otfft: upstream sources (not this repository)
+# governor: schedutil
+# compiler: 15.2.0
+# optimised build: yes
+# fftw: fftw-3.3.10-sse2-avx-avx2-avx2_128
+# threads: 12, samples: 11, target batch: 2.0 ms
+# done complex n=16
+# done complex n=64
+# done complex n=256
+# done complex n=1024
+# done complex n=4096
+# done complex n=16384
+# done complex n=65536
+# done complex n=262144
+# done complex n=1048576
+# done complex n=4194304
+# done complex n=480
+# done complex n=1000
+# done complex n=3000
+# done complex n=10080
+# done complex n=100000
+# done complex n=1000000
+# done real n=16
+# done real n=64
+# done real n=256
+# done real n=1024
+# done real n=4096
+# done real n=16384
+# done real n=65536
+# done real n=262144
+# done real n=1048576
+# done real n=4194304
+# done real n=480
+# done real n=1000
+# done real n=3000
+# done real n=10080
+# done real n=100000
+# done real n=1000000
+# done dct n=16
+# done dct n=64
+# done dct n=256
+# done dct n=1024
+# done dct n=4096
+# done dct n=16384
+# done dct n=65536
+# done dct n=262144
+# done dct n=1048576
+# done dct n=4194304
+# done dct n=480
+# done dct n=1000
+# done dct n=3000
+# done dct n=10080
+# done dct n=100000
+# done dct n=1000000
