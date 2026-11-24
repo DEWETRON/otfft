@@ -14,6 +14,7 @@
 #include "otfft_types.h"
 
 #include <memory>
+#include <string>
 #include <cstdlib>
 #include <cstddef>
 #include <cstdint>
@@ -199,6 +200,23 @@ namespace OTFFT
      *
      * NOTE: The Bluestein's ComplexFFT supports sequence length of any natural number of 2^28 or less.
      */
+    /**
+     * @brief Replace the built-in per-length algorithm choice of the complex FFT by a tuning file.
+     *
+     * The file lists, for a backend (sse2, avx, avx2), a table (serial or threaded) and a length
+     * 2^N, the algorithm to use. Lengths it does not list keep the built-in choice. The file
+     * replaces any file loaded before. If it cannot be read or has an error nothing changes,
+     * false is returned and `error` says why. Only transform objects created or set up after
+     * the call use it. Call it before creating transforms; it is safe to call while other
+     * threads create them, but they then see either the old or the new table.
+     */
+    bool loadTuningFile(const std::string& path, std::string& error);
+
+    /**
+     * @brief Drop a loaded tuning file: the built-in algorithm choice applies again.
+     */
+    void resetTuning();
+
     namespace Factory
     {
         ComplexFFTPtr createComplexFFT(int n = 0, OptimizationType t = OptimizationType::OPTIMIZED_FFT_AUTO);

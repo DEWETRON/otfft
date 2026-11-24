@@ -355,3 +355,26 @@ D21: keep the AVX2 backend, build it with FMA everywhere
     (no way to fake CPUID); `otfft_backend_test` checks the build flags only.
 *   **Revisit when:** R2.1 adds AVX-512 (the roadmap item asks for a recheck), or the Ryzen shows
     no gain.
+
+D22: run-time tuning file for the algorithm tables
+--------------------------------------------------
+*   **What:** `OTFFT::loadTuningFile(path, error)` and `OTFFT::resetTuning()` in `inc/otfft.h`.
+    A text file (`otfft-tuning 1`, entries `<backend> <serial|threaded> <log2 N> <algorithm>`)
+    overrides the built-in tables of `src/otfft_algo.cpp` for the lengths it lists. The store
+    is in the common library (`src/otfft_tuning.cpp`), shared by the three backends, and
+    guarded by a mutex; `selectAlgorithm` asks it first. Roadmap R1.8, spec FAC-9 to FAC-13.
+*   **Why:** the best algorithm differs by machine and compiler (Intel notebook with MSVC, Ryzen
+    9 9950X and 3900X with GCC: DIF8 against DIF4 at 2^17 and 2^18, `docs/benchmarks.md`), and
+    one built-in table can only be the compromise with the smallest worst slowdown. A file
+    lets a machine use its own optimum without a rebuild; the built-in table stays the default.
+*   **Rejected:** a tuner inside the library that measures at first use (slow, noisy by a few
+    percent, results change between runs); generating source for compilation as upstream's
+    `ffttune` does (needs a rebuild per machine); merging a new file into the old one (the
+    result would depend on the order of calls); accepting algorithm numbers (names are
+    readable and cannot be mistaken for the table's numbering).
+*   **Limit:** the file is not checked against the machine (CPU, compiler, thread count), so a
+    file from another machine is used as it is. `ffttune --out` still writes `case` lines, not
+    this format. No environment variable loads a file. The built-in tables are not changed.
+    The tables are per backend and per serial/threaded, not per thread count.
+*   **Revisit when:** `ffttune` writes the format (the next step of R1.8), or a wrong file from
+    another machine causes trouble (then record the CPU and compiler in the file and check them).

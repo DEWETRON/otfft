@@ -25,6 +25,7 @@ set(UNIT_TEST_SOURCES
   otfft_radix7_test.cpp
   otfft_sixstep_test.cpp
   otfft_transform_test.cpp
+  otfft_tuning_test.cpp
 )
 
 add_executable(${TEST_NAME}
@@ -34,6 +35,11 @@ add_executable(${TEST_NAME}
 
 target_include_directories(${TEST_NAME} SYSTEM PRIVATE
   ${PROJECT_SOURCE_DIR}/third_party
+)
+
+# otfft_tuning_test.cpp reads the internal lookup of the loaded tuning (D22)
+target_include_directories(${TEST_NAME} PRIVATE
+  ${PROJECT_SOURCE_DIR}/src
 )
 
 target_link_libraries(${TEST_NAME}
