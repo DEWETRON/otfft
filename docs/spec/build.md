@@ -26,11 +26,20 @@ Rules
     `src/otfft_algo.cpp`. It changes no library file; applying the lines is a
     separate change. (`ffttune.smoke` in `ctest`; CI does not build the tools.)
 
+*   **BLD-8** `[done]` `-DOTFFT_BUILD_EXAMPLES=ON` builds the programs in
+    `examples/` (`complex_fft`, `real_fft`, `dct`, `bluestein`). The default is
+    ON when otfft is the top-level project and OFF when it is added with
+    `add_subdirectory`. Each program prints its results, compares them with a
+    direct formula or a round trip, and returns 0 only if all checks pass.
+    `ctest` runs them as `example.<name>` and also requires the line
+    `<name>: ok`, so CI builds and runs them on Linux and Windows.
+
 Decided
 -------
 
 *   D3: one library per backend, chosen at run time.
 *   D12: `ffttune` prints the algorithm table, it does not generate library files.
+*   D18: the examples check themselves and run under `ctest`.
 
 Questions
 ---------

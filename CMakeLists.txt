@@ -390,3 +390,13 @@ option(OTFFT_BUILD_TOOLS "Build the tools (ffttune: find the fastest algorithm p
 if (OTFFT_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
+
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  set(OTFFT_EXAMPLES_DEFAULT ON)
+else()
+  set(OTFFT_EXAMPLES_DEFAULT OFF)
+endif()
+option(OTFFT_BUILD_EXAMPLES "Build the examples (small programs using the public API; ON when otfft is the top-level project)" ${OTFFT_EXAMPLES_DEFAULT})
+if (OTFFT_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()

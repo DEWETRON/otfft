@@ -262,3 +262,21 @@ D17: threading thresholds at the measured break-even
 *   **Revisit when:** the threaded table is retuned (R1.8), the Ryzen result is in,
     or a run-time calibration of the break-even is added.
 
+D18: examples check their own result and run under ctest
+--------------------------------------------------------
+*   **What:** `examples/` has one small program per transform (complex, real,
+    DCT, Bluestein). Each one compares its output with a direct formula or a
+    round trip, prints the numbers, and returns 0 only if the checks pass.
+    `ctest` runs them (`example.<name>`). `OTFFT_BUILD_EXAMPLES` is ON for the
+    top-level project and OFF in a subproject. Roadmap R1.3, spec BLD-8.
+*   **Why:** an example that nobody runs stops compiling or stops being true
+    (for instance the real FFT output length N, not N/2+1, or the scaling of
+    `fwd` and `inv`). Running them in the CI that already runs `ctest` costs
+    about 10 seconds and needs no new job.
+*   **Rejected:** examples that only print (nothing fails when the API
+    changes); a separate CI job (no gain); the examples as doctest cases (they
+    would not show what a user program looks like).
+*   **Limit:** the checks are tolerance checks, not speed checks. The
+    examples use the factory API only, with C++11, like the public header.
+*   **Revisit when:** a subproject example (a CMake project that uses
+    `add_subdirectory(otfft)`) is wanted, or examples for a new backend (R2.1).

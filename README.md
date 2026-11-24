@@ -32,7 +32,7 @@ original classes (`OTFFT::FFT`, `RFFT`, `DCT`, `Bluestein`, `FFT0`, `DCT0`)
 are internal here; use the factory functions below.
 
 Planned work is in [docs/ROADMAP.md](docs/ROADMAP.md): newer AMD64 extensions,
-ARM64, examples, and fixes for the problems found by the benchmarks
+ARM64, and fixes for the problems found by the benchmarks
 (issues [#16](https://github.com/DEWETRON/otfft/issues/16) to
 [#19](https://github.com/DEWETRON/otfft/issues/19)).
 
@@ -51,6 +51,7 @@ Options:
 | --- | --- | --- |
 | `OTFFT_BUILD_TESTS` | ON | build the unit tests (doctest is included in `third_party/`) |
 | `OTFFT_BUILD_BENCHMARKS` | OFF | build `otfft_bench`; finds FFTW with pkg-config if installed |
+| `OTFFT_BUILD_EXAMPLES` | ON (OFF when otfft is a subproject) | build the programs in `examples/`, which `ctest` also runs |
 | `OTFFT_BUILD_TOOLS` | OFF | build `ffttune`, which finds the fastest algorithm for each power-of-two length on this machine |
 
 To use the library from another CMake project, add the directory with
@@ -58,6 +59,10 @@ To use the library from another CMake project, add the directory with
 `#include "otfft.h"`.
 
 # Using OTFFT
+Complete programs for each transform are in [examples/](examples/): `complex_fft.cpp`,
+`real_fft.cpp`, `dct.cpp` and `bluestein.cpp`. They are built with the library and
+check their own results.
+
 All transforms are created by `OTFFT::Factory` and returned as smart pointers.
 The length is given on creation, or later with `setup(n)`. A transform object
 holds an internal work buffer: **use one object per thread**, never one object
