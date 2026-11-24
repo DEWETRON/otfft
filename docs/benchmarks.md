@@ -29,8 +29,10 @@ Summary
     slower for N=16,384 (0.4x). FFTW scales better and is 1.2x to 4.4x ahead of
     OTFFT with 12 threads for N >= 16,384.
 *   **Upstream claim.** The OTFFT author's page says OTFFT beats FFTW at every length from 2^1
-    to 2^24. A round trip like upstream's does not reproduce that here: see "Comparison
-    with the upstream benchmark".
+    to 2^24. That is not reproduced here, with this fork or with upstream 11.6e
+    itself, built and run in the same session (see "Same-session comparison
+    with upstream 11.6e"). On average the fork is within 5% of upstream below
+    N=65,536 and differs by a factor of 0.5 to 1.6 at some larger sizes.
 *   **Compilers.** GCC 15.2 and Clang 21.1.8 give the same picture; the real FFT and DCT
     are 4 to 12 percent slower with Clang and Bluestein 15 to 43 percent. See "Compiler comparison".
 *   **Planning.** OTFFT plans in 8 microseconds to 100 ms. FFTW with
@@ -488,12 +490,11 @@ whereas upstream's FFTW times for those sizes (for example 0.64 microseconds at
 *   The forward-only tables earlier in this document agree with the round trip
     results. Their OTFFT numbers include a copy of the input, which the round
     trip avoids, and the picture is about the same.
-*   Possible reasons, **none of which is verified**: a different CPU (Zen 2 against
-    a 2016 Intel core), compiler (GCC 15.2 against Clang 8) and FFTW version
-    (3.3.10 against 3.3.8); this fork's merged OTFFT is not upstream 11.6 (see
-    below); different build flags; and timing noise on a shared machine. A
-    run on the author's hardware class (an Intel core with AVX2) would tell
-    which of these matters.
+*   Possible reasons: a different CPU (Zen 2 against a 2016 Intel core), compiler
+    (GCC 15.2 against Clang 8) and FFTW version (3.3.10 against 3.3.8). Upstream's
+    own code was run on this machine too, see the next section: it does not beat
+    FFTW here either, so the difference to the author's page is not caused by
+    this fork's code.
 *   Upstream's latest release is 11.6e (2023-12-21). This fork's headers still
     say version 11.4xv and the README says changes from 11.5 are merged, so the
     fork is at best at 11.5.
@@ -592,6 +593,82 @@ built before `-fsignaling-nans` was restricted to GCC (PR #22); Clang ignored
 that flag, so the generated code is the same. The problems of #16 to #19 occur
 with both compilers.
 
+Same-session comparison with upstream 11.6e
+-------------------------------------------
+
+Upstream OTFFT 11.6e was downloaded, built as released (its own generated
+tables, `-O3 -march=native -fopenmp`, GCC 15.2) and run through the same harness
+(`OTFFT_UPSTREAM_DIR`, see "Reproduce"), on the same machine and in the same
+session as this fork and FFTW. All figures are the fork's MFLOPS divided by
+upstream's, so below 1.0 the fork is slower. Upstream's `ffttune` was not run.
+
+| Transform | 1 thread, N up to 16,384 | 12 threads, N up to 16,384 |
+| --- | ---: | ---: |
+| Complex | 1.00 | 0.95 |
+| Real | 0.98 | 1.00 |
+| DCT | 0.95 | 0.96 |
+| Round trip | 0.97 | 0.95 |
+
+*Geometric mean over 10 sizes (14 for the round trip); a single run each. At
+1 thread the range over the sizes is 0.92 to 1.12, so this fork is equal to
+upstream for small and medium lengths, give or take a few percent. At 12
+threads complex N=4,096 is 0.64.*
+
+For N >= 65,536 the large sizes were run three times each (`large-*` files in
+the data directory; the min and max over the three runs are close, so these
+differences are reproducible, not noise). Median ratios:
+
+| N | Complex 1 thr | Complex 12 thr | Real 1 thr | Real 12 thr | DCT 1 thr | DCT 12 thr |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 65,536 | 0.53 (0.48 to 2.68) | 1.10 | 0.94 | 0.96 | 0.89 | 1.00 |
+| 262,144 | 0.63 | 1.36 | 1.19 | 0.79 | 1.08 | 0.84 |
+| 1,048,576 | 0.92 | 1.44 | 0.78 | 0.49 | 0.82 | 0.59 |
+| 4,194,304 | 1.09 | 1.25 | 0.98 | 0.60 | 1.03 | 0.72 |
+
+| N | Round trip 1 thr | Round trip 12 thr |
+| ---: | ---: | ---: |
+| 131,072 | 1.23 | 0.72 |
+| 262,144 | 0.61 | 1.63 |
+| 524,288 | 0.62 | 0.36 |
+| 1,048,576 | 0.90 | 1.63 |
+| 2,097,152 | 1.00 | 0.46 |
+| 4,194,304 | 1.07 | 1.32 |
+| 8,388,608 | 0.96 | 0.55 |
+| 16,777,216 | 0.91 | 1.03 |
+
+**What this shows**
+
+*   **Speed relative to FFTW.** Upstream 11.6e is not faster than FFTW here
+    either. Its geometric mean over the sizes of the main run, as a fraction of
+    FFTW-measure's speed with one thread, is 0.55 for complex, 0.59 for real and
+    1.34 for DCT; the fork's is 0.52, 0.58 and 1.37. The author's claim
+    therefore depends on the machine, compiler or FFTW version, not on code
+    that this fork lost. The compiler alone is not the reason (the fork gives
+    about the same with Clang, see "Compiler comparison").
+*   **No regression for small and medium N.** Up to N=16,384 the fork and
+    upstream agree within a few percent, apart from complex N=4,096 with 12
+    threads (0.64) and DCT, which is about 5% behind.
+*   **Single-thread large complex sizes.** The fork is slower at N=65,536
+    (0.53) and from 262,144 to 524,288 (0.6). These are sizes where upstream's
+    per-size algorithm table differs (15 of 24 entries, see
+    `docs/upstream-comparison.md`) and where the `exp` kernels start (2^18).
+    Not verified which of the two is responsible.
+*   **12 threads.** The fork is faster for complex at all large sizes (1.1 to
+    1.4) but 20% to 50% slower for real and DCT from 262,144 up. The round trip
+    swings between 0.36 and 1.63 with the exponent, alternating odd and even.
+    This points to different algorithms or thresholds being chosen per size in
+    the two versions (upstream's OpenMP changes, roadmap R1.10), which also
+    bears on [#19](https://github.com/DEWETRON/otfft/issues/19).
+*   **Conclusion.** The fork is not generally behind upstream, but it loses
+    clearly at some large sizes. Roadmap R1.8 to R1.10 are the right fix and
+    now have a measured target: complex N=65,536 to 524,288 at one thread
+    and real and DCT at 12 threads from N=262,144.
+
+Caveats of this comparison: one machine, GCC only for upstream, upstream's tuner not run;
+the main run is a single run, so single differences below about 10% at N <=
+16,384 are not meaningful. FFTW-measure ran with the same 10 s planning limit
+as before.
+
 Problems found
 --------------
 
@@ -647,8 +724,13 @@ python3 benchmarks/report.py bench-t1.csv bench-t12.csv > tables.md
 
 FFTW is found with pkg-config (`libfftw3-dev` on Debian and Ubuntu); its
 OpenMP threading library `libfftw3_omp` is used when it is found next to it.
-Without FFTW the benchmark runs the other libraries. Options: `--kinds complex,real,dct,roundtrip`,
+Without FFTW the benchmark runs the other libraries. To compare with an unpacked
+upstream OTFFT release, configure with `-DOTFFT_UPSTREAM_DIR=<path to otfft-11.6e>`
+and run `otfft_bench_upstream` with the same options; `benchmarks/compare_upstream.py`
+turns pairs of CSV files into the ratio tables above. `--min-n N` skips
+smaller sizes. Options: `--kinds complex,real,dct,roundtrip`,
 `--sizes pow2,pow2all,smooth,prime`, `--lib NAME`, `--samples S`, `--quick`.
 
 The raw results and logs of this run are in
-`docs/benchmark-data/2026-11-23/`.
+`docs/benchmark-data/2026-11-23/`; the upstream comparison is in
+`docs/benchmark-data/2026-11-24/` (`up-*` main runs, `large-*` repeats).

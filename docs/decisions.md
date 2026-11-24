@@ -95,3 +95,16 @@ D10: Benchmark against FFTW, PocketFFT and KissFFT
     vendored.
 *   **Not in CI:** shared runners are too noisy; CI only builds it if asked.
 *   **Revisit when:** we want trend tracking, or a quieter benchmark machine.
+
+D11: Benchmark upstream OTFFT through an optional CMake variable
+----------------------------------------------------------------
+*   **What:** `-DOTFFT_UPSTREAM_DIR=<dir>` builds the sources of an upstream
+    OTFFT release as a separate library and a second tool,
+    `otfft_bench_upstream`, using the same harness. `benchmarks/compare_upstream.py`
+    compares two result files.
+*   **Why:** the OTFFT author's published numbers could not be matched, and only
+    a same-machine, same-session run of upstream code shows whether this fork
+    lost speed. Result: `docs/benchmarks.md`.
+*   **Limit:** upstream sources are not vendored; the option is off by default and the
+    caller supplies the directory.
+*   **Revisit when:** the fork is resynchronised with upstream (R1.8 to R1.11).

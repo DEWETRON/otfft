@@ -149,6 +149,7 @@ public:
 
 // ----- OTFFT --------------------------------------------------------------
 
+#ifndef OTFFT_UPSTREAM
 class OtfftAdapter : public Adapter
 {
 public:
@@ -256,6 +257,127 @@ private:
     OTFFT::RealFFTPtr m_rfft{nullptr};
     OTFFT::RealDCTPtr m_dct{nullptr};
 };
+#else
+// Upstream OTFFT (for example 11.6e), compiled in its own executable because it
+// uses the same namespace as this repository's OTFFT. Same calls, same method.
+class UpstreamAdapter : public Adapter
+{
+public:
+    UpstreamAdapter(std::string label, bool bluestein) : m_label(std::move(label)), m_bluestein(bluestein) {}
+
+    std::string name() const override { return m_label; }
+
+    bool supports(Kind k, std::size_t n) const override
+    {
+        if (m_bluestein && (k != Kind::Complex || (n & (n - 1)) == 0))
+        {
+            return false;
+        }
+        if (k != Kind::Complex && k != Kind::RoundTrip && (n % 2) != 0)
+        {
+            return false;
+        }
+        return n >= 2;
+    }
+
+    void setup(Kind k, std::size_t n) override
+    {
+        m_kind = k;
+        m_n = n;
+        switch (k)
+        {
+        case Kind::Complex:
+        case Kind::RoundTrip:
+            if (m_bluestein)
+            {
+                m_bst.reset(new OTFFT::Bluestein(static_cast<int>(n)));
+            }
+            else
+            {
+                m_fft.reset(new OTFFT::FFT(static_cast<int>(n)));
+            }
+            m_in.reset(2 * n);
+            m_work.reset(2 * n);
+            break;
+        case Kind::Real:
+            m_rfft.reset(new OTFFT::RFFT(static_cast<int>(n)));
+            m_in.reset(n);
+            m_work.reset(2 * (n + 2));
+            break;
+        case Kind::DCT:
+            m_dct.reset(new OTFFT::DCT(static_cast<int>(n)));
+            m_in.reset(n);
+            m_work.reset(n);
+            break;
+        }
+    }
+
+    void teardown() override
+    {
+        m_fft.reset();
+        m_bst.reset();
+        m_rfft.reset();
+        m_dct.reset();
+    }
+
+    void load(const double* in) override
+    {
+        std::memcpy(m_in.get(), in, inputDoubles(m_kind, m_n) * sizeof(double));
+        if (m_kind == Kind::RoundTrip)
+        {
+            std::memcpy(m_work.get(), in, 2 * m_n * sizeof(double));
+        }
+    }
+
+    void run() override
+    {
+        OTFFT::complex_t* cw = reinterpret_cast<OTFFT::complex_t*>(m_work.get());
+        switch (m_kind)
+        {
+        case Kind::RoundTrip:
+            m_fft->fwd(cw); // scales by 1/N, inv does not: data comes back unchanged
+            m_fft->inv(cw);
+            break;
+        case Kind::Complex:
+            std::memcpy(m_work.get(), m_in.get(), 2 * m_n * sizeof(double));
+            if (m_bluestein)
+            {
+                m_bst->fwd0(cw);
+            }
+            else
+            {
+                m_fft->fwd0(cw);
+            }
+            break;
+        case Kind::Real:
+            m_rfft->fwd0(m_in.get(), cw);
+            break;
+        case Kind::DCT:
+            std::memcpy(m_work.get(), m_in.get(), m_n * sizeof(double));
+            m_dct->fwd0(m_work.get());
+            break;
+        }
+    }
+
+    void result(double* out) override
+    {
+        std::memcpy(out, m_work.get(), outputDoubles(m_kind, m_n) * sizeof(double));
+    }
+
+    int effectiveThreads(int requested) const override { return requested; }
+
+private:
+    std::string m_label;
+    bool m_bluestein;
+    Kind m_kind = Kind::Complex;
+    std::size_t m_n = 0;
+    AlignedBuf<double> m_in, m_work;
+    std::unique_ptr<OTFFT::FFT> m_fft;
+    std::unique_ptr<OTFFT::Bluestein> m_bst;
+    std::unique_ptr<OTFFT::RFFT> m_rfft;
+    std::unique_ptr<OTFFT::DCT> m_dct;
+};
+#endif
 
 // ----- PocketFFT (also the reference) ---------------------------------------
 
@@ -543,6 +665,7 @@ struct Options
     double maxRunMs = 2000.0;
     std::string csvPath;
     bool quick = false;
+    std::size_t minN = 0;
 };
 
 struct Size
@@ -587,12 +710,17 @@ std::vector<Size> sizesFor(const Options& o)
             v.push_back({"prime", n});
         }
     }
+    v.erase(std::remove_if(v.begin(), v.end(), [&](const Size& z) { return z.n < o.minN; }), v.end());
     return v;
 }
 
 std::vector<std::unique_ptr<Adapter>> makeAdapters(const Options& o)
 {
     std::vector<std::unique_ptr<Adapter>> a;
+#ifdef OTFFT_UPSTREAM
+    a.emplace_back(new UpstreamAdapter("OTFFT-upstream", false));
+    a.emplace_back(new UpstreamAdapter("OTFFT-upstream-bluestein", true));
+#else
     a.emplace_back(new OtfftAdapter("OTFFT", OTFFT::OptimizationType::OPTIMIZED_FFT_AUTO, false, true));
 #ifdef OTFFT_WITH_SSE2
     a.emplace_back(new OtfftAdapter("OTFFT-sse2", OTFFT::OptimizationType::OPTIMIZED_FFT_SSE2, false, true));
@@ -604,6 +732,7 @@ std::vector<std::unique_ptr<Adapter>> makeAdapters(const Options& o)
     a.emplace_back(new OtfftAdapter("OTFFT-avx2", OTFFT::OptimizationType::OPTIMIZED_FFT_AVX2, false, true));
 #endif
     a.emplace_back(new OtfftAdapter("OTFFT-bluestein", OTFFT::OptimizationType::OPTIMIZED_FFT_AUTO, true, true));
+#endif
 #ifdef HAVE_FFTW
     a.emplace_back(new FftwAdapter("FFTW-measure", FFTW_MEASURE, true));
     a.emplace_back(new FftwAdapter("FFTW-estimate", FFTW_ESTIMATE, true));
@@ -679,6 +808,9 @@ std::string readFirstLine(const char* path)
 void printEnvironment(const Options& o)
 {
     std::fprintf(stderr, "# cpu: %s\n", cpuModel().c_str());
+#ifdef OTFFT_UPSTREAM
+    std::fprintf(stderr, "# otfft: upstream sources (not this repository)\n");
+#endif
     std::fprintf(stderr, "# governor: %s\n",
                  readFirstLine("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor").c_str());
 #ifdef __VERSION__
@@ -723,6 +855,7 @@ bool parseArgs(int argc, char** argv, Options& o)
         else if (a == "--samples") o.samples = std::max(3, std::atoi(next().c_str()));
         else if (a == "--target-ms") o.targetMs = std::atof(next().c_str());
         else if (a == "--max-run-ms") o.maxRunMs = std::atof(next().c_str());
+        else if (a == "--min-n") o.minN = std::strtoull(next().c_str(), nullptr, 10);
         else if (a == "--quick") { o.quick = true; o.samples = 5; o.targetMs = 1.0; }
         else if (a == "--sizes") o.categories = split(next(), ',');
         else if (a == "--kinds")
@@ -742,7 +875,7 @@ bool parseArgs(int argc, char** argv, Options& o)
             std::fprintf(stderr,
                          "usage: otfft_bench [--kinds complex,real,dct,roundtrip] [--sizes pow2,pow2all,smooth,prime]\n"
                          "                   [--lib NAME] [--threads T] [--samples S] [--target-ms MS]\n                   [--max-run-ms MS]\n"
-                         "                   [--csv FILE] [--quick]\n");
+                         "                   [--csv FILE] [--quick] [--min-n N]\n");
             return false;
         }
     }
