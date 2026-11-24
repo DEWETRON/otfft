@@ -6,6 +6,7 @@ set(TEST_NAME otfft.${UNIT_TEST_SUFFIX})
 set(UNIT_TEST_HEADERS
   otfft_test_checks.h
   otfft_test_utils.h
+  otfft_class_check.h
   otfft_dft_check.h
 )
 
@@ -21,6 +22,7 @@ set(UNIT_TEST_SOURCES
   otfft_prime_test.cpp
   otfft_radix35_test.cpp
   otfft_radix7_test.cpp
+  otfft_sixstep_test.cpp
   otfft_transform_test.cpp
 )
 

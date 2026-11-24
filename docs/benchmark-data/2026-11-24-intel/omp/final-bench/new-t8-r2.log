@@ -1,0 +1,16 @@
+# cpu: unknown
+# governor: 
+# optimised build: NO (results are not meaningful)
+# threads: 8, samples: 11, target batch: 2.0 ms
+# done complex n=65536
+# done complex n=262144
+# done complex n=1048576
+# done complex n=4194304
+# done real n=65536
+# done real n=262144
+# done real n=1048576
+# done real n=4194304
+# done dct n=65536
+# done dct n=262144
+# done dct n=1048576
+# done dct n=4194304

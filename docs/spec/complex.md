@@ -64,6 +64,14 @@ Rules
     same as for the table path: all six transform functions (`fwd`, `fwd0`, `fwdu`, `inv`,
     `invu`, `invn`) match the direct sum for lengths 2^18 to 2^21 with one and with four
     threads. (`otfft_exp_test: TestExpKernelsOneThread, TestExpKernelsFourThreads`)
+*   **CFFT-13** `[done]` The SixStep class (six-step code for even log2 N, eight-step code
+    for odd) gives the same result with any thread count, for every length from 2^12 to 2^22,
+    on every backend and for all six transform functions, in all of its OpenMP variants: one
+    thread below 2^14 (six-step) or 2^13 (eight-step), a static schedule from 2^14, a guided
+    schedule from 2^18, `omp sections` for the eight-step code from 2^13 and one parallel
+    region around the whole step from 2^19 (D20). (`otfft_sixstep_test:
+    TestSixStepOneThread, TestSixStepThreeThreads, TestSixStepEightThreads`; with 3 and 8
+    threads the eight sections and the guided chunks split unevenly.)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)

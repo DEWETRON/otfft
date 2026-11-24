@@ -1,0 +1,21 @@
+OpenMP structure of the eight-step and six-step code (roadmap R1.10, decision D20), Intel Core Ultra 7 268V
+(8 cores), Windows 11, MSVC, 2026-11-24.
+
+old = master before the change (merge of PR #37), new = branch omp-11-6e. Runs alternate old and new.
+
+ffttune-old/, ffttune-new/       : first full comparison. ffttune --backend avx2 --threads T --min-log 14 --max-log 23,
+                                   T = 4 and 8, three runs each (t<T>-r<run>.log). "new" has the guided schedule from
+                                   2^16 (upstream's threshold).
+bench/                           : otfft_bench --kinds complex,real,dct --sizes pow2 --min-n 65536 --lib OTFFT
+                                   --threads 8, three runs each, same builds as above.
+final-ffttune-old/, final-ffttune-new/ : repeat for 2^16 to 2^18 with the final build (guided threshold 2^17), T = 4 and 8.
+final-bench/                     : repeat of bench/ with the final build.
+
+Extra check (output of the command, not stored as files): 15 alternating pairs of
+  otfft_bench --kinds complex,real,dct --sizes pow2 --min-n 65536 --lib OTFFT --threads 8 --quick
+final build against master, medians (MFLOPS, ratio new/old):
+  N = 65,536    complex 14174 -> 16193 (1.14)   dct 8281 -> 8351 (1.01)   real 10077 -> 10172 (1.01)
+  N = 1,048,576 complex 15421 -> 17613 (1.14)   dct 7122 -> 9695 (1.36)   real  9723 -> 14327 (1.47)
+Run-to-run ranges at 65,536 are 8787 to 17776 for complex: three-run medians there can differ by 10 to 15%.
+
+The logs show the time of one forward + one inverse transform in microseconds per algorithm and length.

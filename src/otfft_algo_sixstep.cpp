@@ -118,7 +118,7 @@ namespace OTFFT_NAMESPACE
            {
                const int m = n / 8;
                const double theta = -2*M_PI/n;
-               if (m < OMP_THRESHOLD) {
+               if (m < OMP_THRESHOLD1) {
                    for (int p = 0; p < m; p++) {
                        w[p] = expj(theta * p);
                    }
@@ -136,7 +136,7 @@ namespace OTFFT_NAMESPACE
                const int N = n*n;
                const int m = n/2;
                const double theta = -2*M_PI/N;
-               if (N < OMP_THRESHOLD) {
+               if (N < OMP_THRESHOLD1) {
                    for (int p = 0; p < n; p += 2) {
                        for (int k = p; k < n; k += 2) {
                            const int u = p/2;

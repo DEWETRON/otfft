@@ -24,9 +24,17 @@ namespace OTFFT_FourStep = OTFFT_AVXDIF16;
 namespace OTFFT_SixStep { /////////////////////////////////////////////////////
 
 #ifdef DO_SINGLE_THREAD
-    constexpr int OMP_THRESHOLD = 1<<30;
+    constexpr int OMP_THRESHOLD1 = 1<<30;
+    constexpr int OMP_THRESHOLD2 = 1<<30;
 #else
-    constexpr int OMP_THRESHOLD = 1<<14;
+    // Below OMP_THRESHOLD1 one thread (part1); from there on several threads with a static
+    // schedule (part2); from OMP_THRESHOLD2 with a guided schedule (part3), because the
+    // loops over the triangle of block pairs have unequal work per iteration. Upstream 11.6e
+    // starts the guided schedule at 2^16; at N = 2^16 it was 0.7x to 0.8x of the static speed
+    // on a Core Ultra 7 268V with 4 and 8 threads, so it starts above that (D20). Since the
+    // square code runs for even log2 N only, 2^17 means "from 2^18".
+    constexpr int OMP_THRESHOLD1 = 1<<14;
+    constexpr int OMP_THRESHOLD2 = 1<<17;
 #endif
 
 template <int log_N, int mode, bool sng = false> struct fwdffts
@@ -116,13 +124,18 @@ template <int log_N, int mode, bool sng = false> struct fwdffts
         void operator()(const_index_vector iv,
                 complex_vector x, complex_vector y, weight_t W, weight_t Ws) const noexcept
         {
-            if (N < OMP_THRESHOLD || sng) {
+            if (N < OMP_THRESHOLD1 || sng) {
                 part1(iv, x, y, W, Ws);
+            }
+            else if (N < OMP_THRESHOLD2)
+            {
+#pragma omp parallel
+                part2(iv, x, y, W, Ws);
             }
             else
             {
 #pragma omp parallel
-                part2(iv, x, y, W, Ws);
+                part3(iv, x, y, W, Ws);
             }
         }
 
@@ -157,29 +170,62 @@ template <int log_N, int mode, bool sng = false> struct fwdffts
     static void part2(const_index_vector iv,
             complex_vector x, complex_vector y, weight_t W, weight_t Ws) noexcept
     {
-#pragma omp for
+#pragma omp for schedule(static)
         for (int i = 0; i < L; i++) {
             const int k = iv[i].row;
             const int p = iv[i].col;
             transpose_kernel(k, p, x);
         }
-#pragma omp for
+#pragma omp for schedule(static)
         for (int p = 0; p < n; p++) {
             const int pn = p*n;
             OTFFT_FourStep::fwdfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
         }
-#pragma omp for
+#pragma omp for schedule(static)
         for (int i = 0; i < L; i++) {
             const int k = iv[i].col;
             const int p = iv[i].row;
             mult_twiddle_factor_kernel(i, p, k, x, W);
         }
-#pragma omp for
+#pragma omp for schedule(static)
         for (int k = 0; k < n; k++) {
             const int kn = k*n;
             OTFFT_FourStep::fwdfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
         }
-#pragma omp for
+#pragma omp for schedule(static)
+        for (int i = 0; i < L; i++) {
+            const int k = iv[i].row;
+            const int p = iv[i].col;
+            transpose_kernel(k, p, x);
+        }
+    }
+
+    static void part3(const_index_vector iv,
+            complex_vector x, complex_vector y, weight_t W, weight_t Ws) noexcept
+    {
+#pragma omp for schedule(guided)
+        for (int i = 0; i < L; i++) {
+            const int k = iv[i].row;
+            const int p = iv[i].col;
+            transpose_kernel(k, p, x);
+        }
+#pragma omp for schedule(guided)
+        for (int p = 0; p < n; p++) {
+            const int pn = p*n;
+            OTFFT_FourStep::fwdfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
+        }
+#pragma omp for schedule(guided)
+        for (int i = 0; i < L; i++) {
+            const int k = iv[i].col;
+            const int p = iv[i].row;
+            mult_twiddle_factor_kernel(i, p, k, x, W);
+        }
+#pragma omp for schedule(guided)
+        for (int k = 0; k < n; k++) {
+            const int kn = k*n;
+            OTFFT_FourStep::fwdfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
+        }
+#pragma omp for schedule(guided)
         for (int i = 0; i < L; i++) {
             const int k = iv[i].row;
             const int p = iv[i].col;
@@ -254,13 +300,18 @@ template <int log_N, int mode, bool sng = false> struct invffts
     void operator()(const_index_vector iv,
             complex_vector x, complex_vector y, weight_t W, weight_t Ws) const noexcept
     {
-        if (N < OMP_THRESHOLD || sng) {
+        if (N < OMP_THRESHOLD1 || sng) {
             part1(iv, x, y, W, Ws);
+        }
+        else if (N < OMP_THRESHOLD2)
+        {
+#pragma omp parallel
+            part2(iv, x, y, W, Ws);
         }
         else
         {
 #pragma omp parallel
-            part2(iv, x, y, W, Ws);
+            part3(iv, x, y, W, Ws);
         }
     }
 
@@ -295,29 +346,62 @@ template <int log_N, int mode, bool sng = false> struct invffts
     static void part2(const_index_vector iv,
             complex_vector x, complex_vector y, weight_t W, weight_t Ws) noexcept
     {
-#pragma omp for
+#pragma omp for schedule(static)
         for (int i = 0; i < L; i++) {
             const int k = iv[i].row;
             const int p = iv[i].col;
             transpose_kernel(k, p, x);
         }
-#pragma omp for
+#pragma omp for schedule(static)
         for (int p = 0; p < n; p++) {
             const int pn = p*n;
             OTFFT_FourStep::invfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
         }
-#pragma omp for
+#pragma omp for schedule(static)
         for (int i = 0; i < L; i++) {
             const int k = iv[i].col;
             const int p = iv[i].row;
             mult_twiddle_factor_kernel(i, p, k, x, W);
         }
-#pragma omp for
+#pragma omp for schedule(static)
         for (int k = 0; k < n; k++) {
             const int kn = k*n;
             OTFFT_FourStep::invfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
         }
-#pragma omp for
+#pragma omp for schedule(static)
+        for (int i = 0; i < L; i++) {
+            const int k = iv[i].row;
+            const int p = iv[i].col;
+            transpose_kernel(k, p, x);
+        }
+    }
+
+    static void part3(const_index_vector iv,
+            complex_vector x, complex_vector y, weight_t W, weight_t Ws) noexcept
+    {
+#pragma omp for schedule(guided)
+        for (int i = 0; i < L; i++) {
+            const int k = iv[i].row;
+            const int p = iv[i].col;
+            transpose_kernel(k, p, x);
+        }
+#pragma omp for schedule(guided)
+        for (int p = 0; p < n; p++) {
+            const int pn = p*n;
+            OTFFT_FourStep::invfft<n,1,0,scale_1>()(x + pn, y + pn, Ws);
+        }
+#pragma omp for schedule(guided)
+        for (int i = 0; i < L; i++) {
+            const int k = iv[i].col;
+            const int p = iv[i].row;
+            mult_twiddle_factor_kernel(i, p, k, x, W);
+        }
+#pragma omp for schedule(guided)
+        for (int k = 0; k < n; k++) {
+            const int kn = k*n;
+            OTFFT_FourStep::invfft<n,1,0,scale_1>()(x + kn, y + kn, Ws);
+        }
+#pragma omp for schedule(guided)
         for (int i = 0; i < L; i++) {
             const int k = iv[i].row;
             const int p = iv[i].col;
