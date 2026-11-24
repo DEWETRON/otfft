@@ -37,9 +37,11 @@ Milestone 1b: Fixes and speed found by the benchmarks
     faster, powers of 3 are unchanged). Measured against FFTW 3.3.10 (GCC, WSL2,
     Intel notebook): lengths with 3, 5 and 7 are now 1.9x to 2.2x slower than
     FFTW (N = 480, 1,000, 3,000, 10,080, 100,000; before 2.8x to 3.2x), so the
-    "2x to 11x" of this item is now about 2x. Still open: close the rest of the
-    gap (pass structure, radix 9, AVX versions of the passes; not analysed yet)
-    and repeat the FFTW comparison on the Ryzen.
+    "2x to 11x" of this item is now about 2x. The FFTW comparison on the Ryzen 9
+    3900X (`docs/benchmarks.md`, "Lengths with factors 3, 5 and 7 against FFTW"):
+    1.6x to 2.3x behind FFTW, N = 10,080 from 11.3x to 1.8x. Still open: close the
+    rest of the gap (pass structure, radix 9, AVX versions of the passes; not
+    analysed yet).
 *   [ ] **R1.6** OpenMP: do not thread below the break-even size (N=16,384 is
     2.5x slower with 12 threads) and scale better above it (1.8x at 4M points,
     [#19](https://github.com/DEWETRON/otfft/issues/19)).

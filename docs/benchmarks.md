@@ -1201,6 +1201,55 @@ Raw results: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/threaded/`
 `all-t12-tuned-rN.csv`; `ab-t12-*` for every second power of two; `ctl4m-*`, `ctl2-*` and
 `ctl-irrelevant-tuning.txt` for the noise controls; `*.load` for the machine state).
 
+Lengths with factors 3, 5 and 7 against FFTW on the Ryzen 9 3900X (R1.5, issue #18)
+------------------------------------------------------------------------------------
+
+The repeat of the FFTW comparison of roadmap item R1.5 and issue #18 on the machine where the
+issue was measured, after the radix-7 butterfly (D15) and the symmetric radix-3 and radix-5
+butterflies (D16). Measured on 2026-11-24 (GCC 15.2.0, Release, `schedutil` governor, one
+thread, complex FFT, AVX2 backend of OTFFT) after the other work on the machine had finished:
+in every load check the busiest process besides the benchmark was `gnome-shell` at about 6%.
+**Nothing was changed in the library.**
+
+`otfft_bench --kinds complex --sizes smooth --lib NAME --threads 1`, with `OTFFT-avx2` and
+`FFTW-measure` (FFTW 3.3.10, distribution package `sse2-avx`, `FFTW_MEASURE`) run alternately,
+three rounds. Median of the 3 rounds; MFLOPS is the benchmark's equivalent rate
+(5 N log2 N / time), higher is better. "Before" is the table of issue #18, measured with the
+library before the changes and FFTW 3.3.8 (AVX2 build) on this CPU.
+
+| N | Factors | OTFFT now (MFLOPS) | FFTW now (MFLOPS) | OTFFT before | FFTW before | FFTW over OTFFT now | before | OTFFT time over PocketFFT now | Per round (OTFFT time over FFTW) |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 480 | 2^5 3 5 | 13,675 | 28,580 | 10,676 | 30,314 | 2.09x | 2.84x | 0.45x | 2.14, 2.00, 2.05 |
+| 1,000 | 2^3 5^3 | 11,840 | 25,438 | 8,036 | 25,948 | 2.15x | 3.23x | 0.56x | 2.10, 2.07, 2.16 |
+| 3,000 | 2^3 3 5^3 | 11,332 | 26,177 | 7,816 | 27,562 | 2.31x | 3.53x | 0.62x | 2.33, 2.21, 2.30 |
+| 10,080 | 2^5 3^2 5 7 | 12,635 | 22,753 | 2,271 | 25,754 | 1.80x | 11.34x | 0.31x | 1.84, 1.69, 1.80 |
+| 100,000 | 2^5 5^5 | 10,950 | 21,820 | 6,452 | 21,674 | 1.99x | 3.36x | 0.42x | 1.99, 2.02, 1.99 |
+| 1,000,000 | 2^6 5^6 | 6,000 | 9,509 | 4,959 | 9,625 | 1.58x | 1.94x | 0.54x | 1.58, 1.58, 1.59 |
+
+What this shows:
+
+*   **The gap to FFTW is now 1.6x to 2.3x, before 1.9x to 11.3x.** The worst case of the issue,
+    N = 10,080 with a factor 7, went from 2,271 to 12,635 MFLOPS (5.6x faster) and from 11.3x
+    to 1.8x behind FFTW. Lengths with factors 3 and 5 only gained 1.3x to 1.7x
+    (480 to 100,000) and N = 1,000,000 1.2x.
+*   **The rounds agree** within 0.1x to 0.15x per length (0.15x at N = 10,080).
+*   **OTFFT is now faster than PocketFFT at every length here** (0.31x to 0.62x of its time);
+    in the issue PocketFFT was 3.4x faster than OTFFT at N = 10,080.
+*   **The gap that remains is the same on the Intel notebook** (1.9x to 2.2x, R1.5) and on this
+    CPU (1.6x to 2.3x), so it does not look specific to one machine or compiler.
+    Not analysed: where the remaining time goes (pass structure, radix 9, AVX versions of the
+    passes).
+
+Limits: one CPU, one thread, one compiler, one backend (AVX2). The FFTW of the issue was another
+build (3.3.8, AVX2) than the one used now (3.3.10, `sse2-avx` package); FFTW's own rates
+differ by up to 12% between the two (N = 10,080: 25,754 and 22,753), so the "before" and "now"
+ratios are not exactly comparable. The OTFFT "before" numbers are from the benchmark table of
+the issue, not repeated with the old library. Six lengths only; the lengths with factors 11 and
+13 and other large primes below 101 were not run.
+
+Raw results: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/mixed-radix/`
+(`smooth-OTFFT-avx2-rN` and `smooth-FFTW-measure-rN`, each as `.csv`, `.log` and `.load`).
+
 Algorithm table change: effect on the Intel notebook
 ----------------------------------------------------
 
