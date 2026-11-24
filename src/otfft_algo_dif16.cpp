@@ -50,11 +50,12 @@ namespace OTFFT_NAMESPACE
                     W = &weight;
                     init_Wt(16, N, W);
                 }
-                else {
+                else if (N < EXP_THRESHOLD) {
                     weight.setup(N/16);
                     W = &weight;
                     init_Wr1(16, N, W);
                 }
+                else W = 0;
             }
 
             ///////////////////////////////////////////////////////////////////////////
@@ -106,7 +107,8 @@ namespace OTFFT_NAMESPACE
                 case 24: fwdfft<(1<<24),1,0,mode>()(x, y, W); break;
                 }
             }
-            else OTFFT_AVXDIF16omp::fwd(log_N, x, y, W);
+            else if (N < EXP_THRESHOLD) OTFFT_AVXDIF16omp::fwd(log_N, x, y, W);
+            else OTFFT_AVXDIF16exp::fwd(log_N, x, y);
         }
 
         void FFT0::fwd0(complex_vector x, complex_vector y) const noexcept
@@ -141,7 +143,8 @@ namespace OTFFT_NAMESPACE
                 case 24: fwdfft<(1<<24),1,0,mode>()(x, y, W); break;
                 }
             }
-            else OTFFT_AVXDIF16omp::fwd0(log_N, x, y, W);
+            else if (N < EXP_THRESHOLD) OTFFT_AVXDIF16omp::fwd0(log_N, x, y, W);
+            else OTFFT_AVXDIF16exp::fwd0(log_N, x, y);
         }
 
         void FFT0::fwdu(complex_vector x, complex_vector y) const noexcept
@@ -176,7 +179,8 @@ namespace OTFFT_NAMESPACE
                 case 24: fwdfft<(1<<24),1,0,mode>()(x, y, W); break;
                 }
             }
-            else OTFFT_AVXDIF16omp::fwdu(log_N, x, y, W);
+            else if (N < EXP_THRESHOLD) OTFFT_AVXDIF16omp::fwdu(log_N, x, y, W);
+            else OTFFT_AVXDIF16exp::fwdu(log_N, x, y);
         }
 
         inline void FFT0::fwdn(complex_vector x, complex_vector y) const noexcept
@@ -218,7 +222,8 @@ namespace OTFFT_NAMESPACE
                 case 24: invfft<(1<<24),1,0,mode>()(x, y, W); break;
                 }
             }
-            else OTFFT_AVXDIF16omp::inv(log_N, x, y, W);
+            else if (N < EXP_THRESHOLD) OTFFT_AVXDIF16omp::inv(log_N, x, y, W);
+            else OTFFT_AVXDIF16exp::inv(log_N, x, y);
         }
 
         inline void FFT0::inv0(complex_vector x, complex_vector y) const noexcept
@@ -258,7 +263,8 @@ namespace OTFFT_NAMESPACE
                 case 24: invfft<(1<<24),1,0,mode>()(x, y, W); break;
                 }
             }
-            else OTFFT_AVXDIF16omp::invu(log_N, x, y, W);
+            else if (N < EXP_THRESHOLD) OTFFT_AVXDIF16omp::invu(log_N, x, y, W);
+            else OTFFT_AVXDIF16exp::invu(log_N, x, y);
         }
 
         void FFT0::invn(complex_vector x, complex_vector y) const noexcept
@@ -293,7 +299,8 @@ namespace OTFFT_NAMESPACE
                 case 24: invfft<(1<<24),1,0,mode>()(x, y, W); break;
                 }
             }
-            else OTFFT_AVXDIF16omp::invn(log_N, x, y, W);
+            else if (N < EXP_THRESHOLD) OTFFT_AVXDIF16omp::invn(log_N, x, y, W);
+            else OTFFT_AVXDIF16exp::invn(log_N, x, y);
         }
     }
 }

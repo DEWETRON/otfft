@@ -280,3 +280,27 @@ D18: examples check their own result and run under ctest
     examples use the factory API only, with C++11, like the public header.
 *   **Revisit when:** a subproject example (a CMake project that uses
     `add_subdirectory(otfft)`) is wanted, or examples for a new backend (R2.1).
+
+D19: exp kernels for the large radix-8 and radix-16 transforms
+---------------------------------------------------------------
+*   **What:** from N = 2^18 (`EXP_THRESHOLD`, as upstream) the classes DIF8, DIT8, DIF16
+    and DIT16 call the exp kernels in `src/otfft_avx{dif,dit}{8,16}exp.h`, ported from
+    upstream 11.6e. They compute the twiddle factors in registers (`expj`) and keep no
+    weight table (`W = 0` from 2^18). The headers are the upstream ones in the fork's
+    namespace, with the entry points `inline`; the body is not re-indented, to keep the
+    diff to upstream small. Roadmap R1.9, spec CFFT-12.
+*   **Why:** the roadmap asks for them, and the large-N transforms read a table of N/8 to
+    N complex numbers from memory in the old path. Measured on the Intel notebook the
+    effect is within -7% to +13% for the best class, so the reason to keep them is
+    upstream parity and the Ryzen result, not a shown gain (`docs/benchmarks.md`,
+    "Exp kernels (R1.9)").
+*   **Rejected:** porting `init_Wq` and `init_Wr` (named in the roadmap item; upstream
+    11.6e never calls them); changing the algorithm table in the same step (the noise at
+    one machine is 5% to 20%, and MSVC and GCC disagree about the best class, so a table
+    from this data would be a guess); a different `EXP_THRESHOLD` per class (the same
+    data does not say where each class gains: DIF16 gains with GCC and loses with MSVC).
+*   **Limit:** no gain shown on the Intel notebook (neutral to +13%); not run on the
+    Ryzen. Under GCC the unchanged table now picks DIF8 for 2^18 to 2^21, which is 5% to
+    12% slower than before for that class while DIF16 and DIT16 became up to 35% faster.
+*   **Revisit when:** the Ryzen result is in; then retune the table (R1.8) and decide a
+    threshold per class.

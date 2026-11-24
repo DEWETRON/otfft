@@ -1378,6 +1378,75 @@ transforms; old / new:
     break-even depends on the thread count and the CPU (cross-CCD cost on the
     Ryzen). A run-time calibration would be the general solution.
 
+Exp kernels (R1.9): effect on the Intel notebook
+------------------------------------------------
+
+Roadmap R1.9, decision D19. From N = 2^18 the classes DIF8, DIT8, DIF16 and DIT16 use
+the "exp" kernels ported from upstream 11.6e (`src/otfft_avx{dif,dit}{8,16}exp.h`):
+they compute the twiddle factors in registers and read no weight table. Below 2^18
+nothing changed (the same code runs), so the sizes 2^15 to 2^17 in the tables show the
+noise of the measurement. `init_Wq` and `init_Wr`, named in the roadmap item, are not
+used anywhere in upstream 11.6e (only defined in `otfft_misc.h`), so they were not ported.
+
+Method: `ffttune --backend avx2 --threads 1 --min-log 15 --max-log 22`, one library built
+from `master` before the change and one with the exp kernels, run alternately, three runs
+each, median of the three. The cells are the time of the old build divided by the time of
+the new build for the same class (above 1: the new build is faster). Intel Core Ultra 7
+268V, MSVC on Windows 11 and GCC 15.2 in WSL2 (`taskset -c 2`, one core). Raw logs in
+`docs/benchmark-data/2026-11-24-intel/exp/`.
+
+**Per class, 1 thread, old time / new time**
+
+| log2 N | DIF8 MSVC | DIF8 GCC | DIT8 MSVC | DIT8 GCC | DIF16 MSVC | DIF16 GCC | DIT16 MSVC | DIT16 GCC |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 18 | 1.10 | 0.90 | 1.27 | 0.81 | 0.87 | 1.05 | 1.26 | 1.05 |
+| 19 | 1.11 | 0.88 | 0.99 | 0.91 | 0.75 | 1.35 | 1.20 | 1.17 |
+| 20 | 1.06 | 0.95 | 1.05 | 0.96 | 0.81 | 1.28 | 1.08 | 1.15 |
+| 21 | 1.13 | 0.92 | 1.17 | 0.96 | 1.01 | 1.35 | 1.28 | 1.21 |
+| 22 | 1.09 | 0.92 | 1.10 | 0.95 | 0.94 | 1.33 | 1.16 | 1.18 |
+| noise (2^15 to 2^17, same code) | 0.94 to 1.05 | 0.79 to 1.10 | 0.96 to 0.97 | 0.97 to 1.12 | 0.93 to 0.99 | 0.98 to 1.20 | 0.92 to 1.04 | 0.95 to 1.02 |
+
+**Best class per length (the one `ffttune` would pick), 1 thread**
+
+| log2 N | MSVC old best | MSVC new best | MSVC ratio | GCC old best | GCC new best | GCC ratio |
+| ---: | --- | --- | ---: | --- | --- | ---: |
+| 18 | DIF8 | DIF8 | 1.10 | DIT8 | DIT16 | 0.93 |
+| 19 | DIF16 | DIF8 | 1.01 | DIT8 | DIT16 | 1.03 |
+| 20 | DIF8 | DIF8 | 1.06 | DIT8 | DIT16 | 1.03 |
+| 21 | DIF8 | DIF8 | 1.13 | DIF8 | DIT8 | 0.93 |
+| 22 | DIF8 | DIF8 | 1.09 | DIT8 | DIT16 | 1.08 |
+
+With 8 threads (MSVC, `ffttune --threads 8`) the best class is 1.36x faster at 2^18, 1.09x
+at 2^19, 1.02x at 2^20, 0.99x at 2^21 and 0.97x at 2^22.
+
+What this shows:
+
+*   The exp kernels are correct (`otfft_exp_test`, all backends, all six functions) and
+    **do not change the speed of the best class by more than the noise** on this CPU:
+    0.93 to 1.13 with one thread, depending on the compiler.
+*   The effect depends on the class and on the compiler. DIT16 is faster on both
+    compilers (1.05 to 1.28). DIF16 is faster with GCC (1.05 to 1.35) and slower with MSVC
+    at 2^18 to 2^20 (0.75 to 0.87). DIF8 and DIT8 are faster with MSVC (up to 1.27) and a
+    little slower with GCC (0.81 to 0.96).
+*   The large gain that upstream's table showed for N = 2^16 to 2^20 (+28% to +94%, see
+    `docs/upstream-comparison.md`) came from the algorithm table (R1.8), not from the exp
+    kernels. The upstream table picks DIF16 for most lengths above 2^15; with the exp kernels that choice is
+    where GCC gains most here.
+
+Limits:
+
+*   One CPU. The target of the item is the Ryzen (GCC), where the fork is 1.6x to 3x behind
+    FFTW at large N; it was not run there. A prompt for that run is in the pull request.
+*   The algorithm table was **not** changed. Under GCC the table (DIF8 for 2^18 to 2^21,
+    tuned with the old kernels) now picks a class that is 5% to 12% slower than DIF16 or
+    DIT16 at 2^19 to 2^22; the table has to be tuned again for the new kernels (R1.8) on
+    more than one machine and compiler. At 2^15 to 2^17 the noise reached 0.79 to 1.20, so
+    differences below about 20% in single cells are not reliable.
+*   Three runs per cell, no end-to-end measurement through `createComplexFFT` with the
+    library table and no run with the real FFT, DCT or Bluestein code that use these classes.
+*   The exp kernels start an OpenMP parallel region on every call, also with one thread.
+    The cost of that was not separated from the effect of the kernels.
+
 Problems found
 --------------
 
@@ -1405,6 +1474,8 @@ Problems found
     D17): the class thresholds are at the measured break-even now and the
     serial table is used below 2^15 with several threads; the scaling above is
     not improved yet. See "Thread break-even and the OpenMP thresholds".
+    The exp kernels of roadmap R1.9 (large N) are ported; on the Intel notebook they
+    change the best class by 0.93x to 1.13x, see "Exp kernels (R1.9)".
 4.  **AVX2.** No gain over AVX in these tests, so the AVX2 backend adds
     build time for no measured benefit.
 5.  **DCT scale.** OTFFT's DCT-II output is 0.5 times FFTW's and PocketFFT's

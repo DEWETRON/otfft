@@ -1,0 +1,21 @@
+# ffttune: backend avx2, 1 thread(s), median of 9 batches of about 20 ms
+# time in microseconds of one forward plus one inverse transform; '-' = wrong result
+ log2N       DIF4       DIT4       DIF8       DIT8      DIF16      DIT16    SixStep  fastest
+    15        307        487        394        488        446        489        395  1 (DIF4)
+    16       1646       1601       1248       1912       1048       1235        938  7 (SixStep)
+    17       2156       2688       1855       3262       2224       3011       2209  3 (DIF8)
+    18       4678       5423       3886       6992       4497       7587       5329  3 (DIF8)
+    19      12960      20123      12877      16211      15203      17992      10467  7 (SixStep)
+    20      24966      29526      19801      21536      21667      27751      30847  3 (DIF8)
+    21      49807      52679      63452      58808      80630      94622      51158  1 (DIF4) tie within 5%
+    22     102267     112929      94876     105852     113369     127662     216831  3 (DIF8)
+
+# suggested lines for the switch in FFT0::setup (src/otfft_algo.cpp):
+case 15: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 16: obj = FFT7::instance(); obj->setup2(log_N); break;
+case 17: obj = FFT3::instance(); obj->setup2(log_N); break;
+case 18: obj = FFT3::instance(); obj->setup2(log_N); break;
+case 19: obj = FFT7::instance(); obj->setup2(log_N); break;
+case 20: obj = FFT3::instance(); obj->setup2(log_N); break;
+case 21: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 22: obj = FFT3::instance(); obj->setup2(log_N); break;

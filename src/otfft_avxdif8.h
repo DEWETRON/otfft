@@ -11,6 +11,7 @@
 
 #include "otfft_avxdif4.h"
 #include "otfft_avxdif8omp.h"
+#include "otfft_avxdif8exp.h"
 
 namespace OTFFT_NAMESPACE {
 
@@ -27,6 +28,10 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
     // than with one up to about this size (docs/benchmarks.md, "Thread break-even", D17).
     constexpr int OMP_THRESHOLD = 1<<16;
 #endif
+
+    // From this length the exp kernels (otfft_avxdif8exp.h) are used: no weight table, the
+    // twiddle factors are computed in registers (upstream 11.6e, D19).
+    constexpr int EXP_THRESHOLD = 1<<18;
 
     ///////////////////////////////////////////////////////////////////////////////
     // Forward Buffterfly Operation

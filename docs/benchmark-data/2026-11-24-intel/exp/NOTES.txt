@@ -1,0 +1,10 @@
+Exp kernels (roadmap R1.9, decision D19), Intel Core Ultra 7 268V, 2026-11-24.
+
+ffttune-old/, ffttune-new/       : MSVC on Windows 11. ffttune --backend avx2 --threads T --min-log 15 --max-log 22,
+                                   T = 1 and 8, three runs each (t<T>-r<run>.log), old and new alternately.
+                                   old = master before the change (merge of PR #36), new = branch exp-kernels.
+gcc-ffttune-old/, gcc-ffttune-new/: GCC 15.2.0 in WSL2 (gcc-machine.txt), taskset -c 2, T = 1, three runs each.
+
+The logs show the time of one forward + one inverse transform in microseconds per algorithm and length.
+The tables in docs/benchmarks.md ("Exp kernels (R1.9)") are old/new ratios of the medians of the three runs.
+Lengths 2^15 to 2^17 run the same code in both builds (EXP_THRESHOLD = 2^18): they show the noise.

@@ -112,14 +112,18 @@ set(OTFFT_HEADER_FILES
   src/otfft_avxdif4omp.h
   src/otfft_avxdif8.h
   src/otfft_avxdif8omp.h
+  src/otfft_avxdif8exp.h
   src/otfft_avxdif16.h
   src/otfft_avxdif16omp.h
+  src/otfft_avxdif16exp.h
   src/otfft_avxdit4.h
   src/otfft_avxdit4omp.h
   src/otfft_avxdit8.h
   src/otfft_avxdit8omp.h
+  src/otfft_avxdit8exp.h
   src/otfft_avxdit16.h
   src/otfft_avxdit16omp.h
+  src/otfft_avxdit16exp.h
   src/otfft_base.h
   src/otfft_eightstep.h
   src/otfft_factory.h
