@@ -1,0 +1,4 @@
+20:28:50
+  2  200 ps -eo psr,pcpu,args --sort=-pcpu
+  4  5.7 /usr/bin/gnome-shell --mode=ubuntu
+ 20:28:50 up  1:34,  1 user,  load average: 0,74, 0,57, 1,28

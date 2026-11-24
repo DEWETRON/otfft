@@ -1021,6 +1021,74 @@ Raw results: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/tune/`
 (`tune-avx2-t1-r1..r3`, `tune-avx2-t12-r1..r3`, `tune-avx-t1-r1`, each as `.log` with
 the full table and `.txt` with the suggested `case` lines).
 
+Tuning file on the Ryzen 9 3900X (R1.8, D22, D23)
+-------------------------------------------------
+
+Does the run-time tuning file give the speed that the `ffttune` data of the section above
+predicts? Measured on 2026-11-24 on the Ryzen 9 3900X (GCC 15.2.0, Release, `schedutil`
+governor, threads not pinned). **Nothing was changed in the library.** The only code change is
+the `--tuning FILE` option of `otfft_bench`, which calls `OTFFT::loadTuningFile` before the runs.
+
+Steps:
+
+1.  `ffttune --backend avx2 --threads 1 --out tuning-avx2-serial.txt` (about 3 minutes; the
+    library accepted the file). Same picks as the three runs of the section above from 2^11
+    up, except two ties (2^19 DIT16, 2^20 DIF16).
+2.  `otfft_bench --kinds complex --sizes pow2 --lib OTFFT-avx2 --threads 1` with the built-in
+    tables ("default") and with `--tuning tuning-avx2-serial.txt` ("tuned"), run alternately,
+    default first, three rounds. The benchmark times one forward plus one inverse transform
+    with the copy that the in-place complex transform needs (see the header of
+    `benchmarks/bench.cpp`).
+
+**Complex FFT, powers of two, AVX2, one thread: time of the library's default tables against
+the tuning file** (median of 3 rounds)
+
+| N | log2 N | Default table picks | Tuned file picks | Default (us) | Tuned (us) | Speedup | Per round |
+| ---: | ---: | --- | --- | ---: | ---: | ---: | --- |
+| 16 | 4 | DIF4 | DIT4 | 0.0 | 0.0 | 0.99x | 1.44, 0.90, 0.96 |
+| 64 | 6 | DIF8 | DIF8 | 0.1 | 0.1 | 1.03x | 1.04, 1.03, 0.98 |
+| 256 | 8 | DIF8 | DIF4 | 0.3 | 0.3 | 1.06x | 1.06, 1.06, 1.02 |
+| 1,024 | 10 | DIF4 | DIF4 | 1.7 | 1.7 | 1.01x | 1.01, 1.03, 0.97 |
+| 4,096 | 12 | DIT8 | DIF4 | 10.4 | 8.8 | 1.18x | 1.20, 1.20, 1.14 |
+| 16,384 | 14 | DIF8 | DIF4 | 60.7 | 42.8 | 1.42x | 1.42, 1.42, 1.44 |
+| 65,536 | 16 | DIF4 | DIF4 | 210.0 | 205.7 | 1.02x | 1.03, 1.02, 1.00 |
+| 262,144 | 18 | DIF8 | DIF4 | 1,822.9 | 1,208.6 | 1.51x | 1.48, 1.64, 1.63 |
+| 1,048,576 | 20 | DIF8 | DIF16 | 17,418.0 | 16,275.7 | 1.07x | 1.01, 1.12, 1.00 |
+| 4,194,304 | 22 | DIF16 | DIF16 | 83,662.4 | 83,709.0 | 1.00x | 1.00, 1.01, 1.00 |
+
+Speedup is default time divided by tuned time (above 1 the tuning file is faster). The
+"picks" columns are the algorithm in the tables; the lengths where both pick the same
+algorithm (2^6, 2^10, 2^16, 2^22) show the noise level: 1.00x to 1.03x in the median, single
+rounds from 0.97x to 1.04x. N = 16 (a time of 15 to 22 ns; the file picks DIT4, a tie within
+5%) is too short to read: single rounds from 0.90x to 1.44x.
+
+What this shows:
+
+*   **The tuning file works end to end.** Where it picks another algorithm than the built-in
+    table, the transform is faster at 2^12 (1.18x), 2^14 (1.42x) and 2^18 (1.51x), and
+    1.06x at 2^8 and 1.07x at 2^20, the last with one round at 1.00x.
+*   **The gain agrees with the baseline** at 2^18, where the `ffttune` data predicts DIF8 1.51x
+    slower than DIF4 (measured 1.51x) and DIT8 at 2^12 (1.93x predicted for `ffttune`'s
+    forward plus inverse of the bare transform; 1.18x measured through the library).
+    At 2^14 the measured gain (1.42x) is larger than the 1.10x of the baseline: not explained
+    here; the three rounds agree with each other (1.42x to 1.44x).
+*   **No loss anywhere:** no length is slower with the file than with the built-in table by
+    more than the noise of the same-algorithm lengths.
+*   **For other CPUs the built-in table is still the choice**, since it is the compromise
+    over the Intel notebook and the two Ryzens (D14).
+
+Limits: other work was running on this machine during the runs (another project's
+benchmark, `otfft-rs`, took about 100% of one core in the load checks, see
+`ab-*.load`); the runs alternate default and tuned to spread this, and three rounds agree
+for the lengths with a gain, but the numbers are not from an idle machine. Not every power of
+two was run (every second one from 2^4: `otfft_bench` `pow2`). One thread, one backend (AVX2),
+one compiler, one CPU. The tuning file was made on this machine in the same session.
+The 12-thread table was not tuned or measured.
+
+Raw results: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/tuning-file/`
+(`tuning-avx2-serial.txt` and `.log`, `ab-default-r1..r3.csv`, `ab-tuned-r1..r3.csv` with the
+matching `.log` and `.load` files).
+
 Algorithm table change: effect on the Intel notebook
 ----------------------------------------------------
 
