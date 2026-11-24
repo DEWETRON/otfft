@@ -1287,11 +1287,12 @@ part of the build):
 | 8 | 165 | 169 | 240 | 172 | 239 | 985 |
 | 12 | 101 | 175 | 210 | 178 | 209 | 876 |
 
-With 12 threads the total is 1.6x faster than with one, and the transposes and the twiddle pass
-barely change from 4 threads on. One thread does a 512-point row FFT in 0.7 us, about 33 GFLOPS
-(5 N log2 N flops), a high rate for one core; if the passes were limited by computing, 12 threads
-would make the row FFT passes much faster than the 2.0x measured. At N = 2^20 the total goes from 15,469 us (one thread; the
-32 MiB of x and y do not fit one 16 MiB L3 slice) to 3,174 us (4.9x).
+The transposes and the twiddle pass barely change from 4 threads on. The one-thread row of this table
+comes from a test program that was compiled faster than the library (see "Correction" in the next
+section): the library's own one-thread time at 2^18 is about 2,500 us, not 1,380 us. Against that, 12 threads
+make the static six-step 3.4x faster (2,603 to 756 us) and the shipped guided one 2.0x (2,471 to 1,207
+us). The 12-thread rows are not affected. At N = 2^20 the one-thread total of the test program is 15,469 us
+(the 32 MiB of x and y do not fit one 16 MiB L3 slice) and 3,174 us with 12 threads.
 
 **2. A pass that reads data written by another thread is slow** (`own`, array of 4 MiB, 12
 threads on CPUs 0 to 11, one in-place sweep, median of 50)
@@ -1374,6 +1375,98 @@ Zen 2 and say nothing about the Intel notebook (one L3 for all cores) or the 995
 Raw results and tools: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/sixstep-analysis/`
 (`phases.cpp`, `bw.cpp`, `own.cpp` and `run1` to `run5` for the harness runs; `pin-*` and
 `sched-*` for the library runs, with `.load` files for the machine state).
+
+Few-exchanges FFT: prototype (issue #19, R1.6)
+------------------------------------------------
+
+The second idea of the analysis above, built as a prototype and measured. **No library change**; the
+prototype is `docs/benchmark-data/2026-11-24-ryzen3900x-linux/sixstep-analysis/fewx_prototype.cpp`
+(it includes `src/otfft_algo_sixstep.cpp` and uses the library's own row FFT, `OTFFT_FourStep::fwdfft`).
+Measured on 2026-11-24 on the Ryzen 9 3900X, threads pinned to cores (`OMP_PROC_BIND=true
+OMP_PLACES=cores`), quiet machine.
+
+**The algorithm** (N = n * n, forward, `scale_1`): view x as an n by n matrix, row j1, column j2 (index
+n * j1 + j2). Pass A: for strips of 4 adjacent columns (one 64 byte cache line), gather the strip into a
+thread-local buffer, do the n-point FFTs down the 4 columns, multiply by the twiddle factor
+W_N^(j2 * k1) from a table read in the order it is used, and write the result to the scratch array y as
+rows. Pass C: for blocks of 4 rows of y, do the row FFTs in place and write the results transposed into x
+as full 64 byte lines (4 rows give 4 complex numbers per line). Two passes over the array, two changes of
+owner (column strips to rows, rows to output lines), instead of five passes with three transposes. The
+output is in natural order. Both passes use `schedule(static)`.
+
+**Correctness:** the maximum difference to the library's own `fwd0` is 1.6e-11 for N = 2^18 (values up
+to 1.2e5) and 9.5e-11 for N = 2^20 (values up to 5.1e5), about 1e-16 relative.
+
+**Speed**, time of one forward transform in us, median of 41 calls after refilling the input (the refill
+is not timed); `few` is the prototype, `shipped` the library as it is (guided schedule from 2^18),
+`static` the library with the static schedule for every size (a local, uncommitted change); each
+algorithm in its own process, three rounds per cell:
+
+| log2 N | Threads | Prototype | Shipped | Static | Prototype vs shipped | Prototype vs static |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 16 | 1 | 397 | 718 | 683 | 1.81x | 1.72x |
+| 16 | 2 | 209 | 366 | 365 | 1.75x | 1.75x |
+| 16 | 4 | 203 | 271 | 270 | 1.33x | 1.33x |
+| 16 | 6 | 159 | 261 | 215 | 1.64x | 1.35x |
+| 16 | 12 | 189 | 235 | 223 | 1.24x | 1.18x |
+| 18 | 1 | 1,775 | 2,471 | 2,603 | 1.39x | 1.47x |
+| 18 | 2 | 912 | 1,311 | 1,317 | 1.44x | 1.44x |
+| 18 | 4 | 719 | 981 | 933 | 1.36x | 1.30x |
+| 18 | 6 | 593 | 1,046 | 729 | 1.76x | 1.23x |
+| 18 | 12 | 614 | 1,207 | 756 | 1.97x | 1.23x |
+| 20 | 1 | 11,463 | 16,636 | 16,807 | 1.45x | 1.47x |
+| 20 | 2 | 8,096 | 10,227 | 10,339 | 1.26x | 1.28x |
+| 20 | 4 | 6,170 | 6,274 | 5,940 | 1.02x | 0.96x |
+| 20 | 6 | 4,291 | 5,766 | 4,317 | 1.34x | 1.01x |
+| 20 | 12 | 2,229 | 4,723 | 2,805 | 2.12x | 1.26x |
+| 22 | 1 | 57,651 | 67,324 | 67,223 | 1.17x | 1.17x |
+| 22 | 2 | 38,945 | 45,292 | 45,628 | 1.16x | 1.17x |
+| 22 | 4 | 33,492 | 39,341 | 38,830 | 1.17x | 1.16x |
+| 22 | 6 | 25,900 | 37,801 | 37,488 | 1.46x | 1.45x |
+| 22 | 12 | 25,224 | 34,454 | 32,874 | 1.37x | 1.30x |
+
+*   **At 12 threads the prototype is 1.2x to 2.1x faster than the shipped code** (2^18 1.97x, 2^20 2.12x,
+    2^22 1.37x, 2^16 1.24x) and **1.2x to 1.3x faster than the static six-step** (2^18 1.23x, 2^20 1.26x,
+    2^22 1.30x). Most of the 2.0x at 2^18 and 2^20 is the guided schedule (1.4x to 1.8x slower than static
+    in the analysis above); the algorithm itself is worth 1.2x to 1.3x at 12 threads.
+*   **It is faster on one thread too** (1.4x to 1.5x at 2^18 and 2^20, 1.2x at 2^22): two passes move less
+    data than five. At 4 threads at 2^20 it is not faster (1.02x and 0.96x); the rounds agree.
+*   **Scaling from one thread** (prototype, 2^18): 1,775 us to 614 us with 12 threads (2.9x); the static
+    six-step 2,603 to 756 (3.4x). The prototype is faster at every thread count but does not scale better,
+    and the model of the analysis (five passes at 40 to 120 GB/s) predicted more. Pass A takes 234 us and pass
+    C 203 us at 12 threads (2^18, back to back calls in one process), 437 us together; the row FFTs of both
+    passes would take about 110 us if they scaled perfectly (about half of the library's one-thread time of
+    2,600 us, divided by 12). Gather, scatter and the exchange take the rest.
+*   **Strip width:** 4 is best (475 us at 2^18); 8 gave 499 us and 16 gave 591 us, so address translation
+    (a strip touches 512 pages) is not the limit.
+*   Not measured: a version with 2 rows interleaved per FFT, ymm-based gather and scatter, non-temporal
+    stores for the output, and other thread counts above 12. The passes still take about 4 times the
+    compute-only bound, so tuning of the gather and scatter code is the next candidate.
+
+**Correction to the analysis above (section 1).** The one-thread numbers of the table in section 1 (1,380 us
+at 2^18) and the 33 GFLOPS row FFT come from a test program that was compiled faster than the library:
+the library's own `fwd0` takes 1,400 us in that program, but about 2,500 us in other programs built from
+the same source (one thread, 2^18; `ffttune` gives 5,094 us for a forward plus inverse, so 2,550 us per
+transform). So "12 threads are only 1.6x faster than one" is wrong for the library: static six-step
+2,603 us to 756 us is 3.4x, the shipped guided one 2,471 to 1,207 us is 2.0x. The 12-thread rows, the
+measurements of section 2 (sweeping data of another thread) and the comparison of the schedules in section
+4 (in one program) are not affected. A smaller fraction of the 12-thread time is communication than I
+wrote: with the library's one-thread time, perfect scaling would be about 215 us for the whole transform at
+2^18, against 756 us (static) and 1,207 us (guided) measured.
+
+**A separate finding:** the one-thread speed of the library's six-step code depends on the program it is
+compiled into, by up to 1.8x (1,400 to 2,600 us at 2^18) and on inlining parameters by 1.3x
+(`run8-compile-context.txt`). The cause is not known. Address space randomisation, the data and the
+placement do not matter. If one of the variants can be had in the library, every thread count gains; this
+needs its own investigation.
+
+Limits: forward transform with `scale_1` only (no inverse, no `scale_length`, no unitary scaling); even log2 N
+only (the odd sizes would need an n by 2n version); one CPU, one compiler; the prototype keeps its
+twiddle table (N entries, 4 MiB at 2^18) in addition to the library's own tables. Comparisons are
+within one program for each row; absolute times differ between programs for the reason above.
+
+Raw results and the prototype: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/sixstep-analysis/`
+(`fewx_prototype.cpp`, `run6-fewx-same-process.txt`, `run7-fewx-isolated.txt`, `run8-compile-context.txt`).
 
 Algorithm table change: effect on the Intel notebook
 ----------------------------------------------------

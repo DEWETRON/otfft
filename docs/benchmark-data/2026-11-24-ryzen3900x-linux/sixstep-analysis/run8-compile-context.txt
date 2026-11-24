@@ -1,0 +1,15 @@
+Same library source, one thread, N = 2^18, library fwd0 (median of 41), measured on the Ryzen 9 3900X.
+Different small test programs that include src/otfft_algo_sixstep.cpp give different times:
+  phases3  1,440 to 1,490 us   (three runs)
+  phases4  1,980 to 2,060 us
+  fx2      2,590 to 2,640 us
+Disabling address space randomisation does not change it (phases4: 1,919 to 1,989 us in 4 runs, 1,931 to 1,976 us with
+randomisation in 8 runs). Data pattern (smooth, periodic, random) does not change it (phases3: 1,385 to 1,405 us).
+Compiler parameters on phases4 (one thread, library fwd0):
+  base                                             1,929 us
+  --param max-inline-insns-single=2000 ... (more inlining)  2,447 us
+  -fno-inline-functions                            2,473 us
+  -fno-tree-vectorize                              1,943 us
+  -falign-functions=64 -falign-loops=32            1,993 us
+ffttune (docs/benchmarks.md, 1 thread, SixStep at 2^18, forward plus inverse): 5,094 us, about 2,550 us per transform:
+the library as built behaves like fx2.
