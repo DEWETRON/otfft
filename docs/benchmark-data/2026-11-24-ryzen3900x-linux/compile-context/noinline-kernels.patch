@@ -1,0 +1,75 @@
+diff --git a/src/otfft_eightstep.h b/src/otfft_eightstep.h
+index 5bf7992..cc455d3 100644
+--- a/src/otfft_eightstep.h
++++ b/src/otfft_eightstep.h
+@@ -40,7 +40,7 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
+         static constexpr int N6 = N1*6;
+         static constexpr int N7 = N1*7;
+ 
+-        static inline void transpose_kernel(
++        OTFFT_NOINLINE static void transpose_kernel(
+                 const int p, complex_vector x, complex_vector y) noexcept
+         {
+ #if 0
+@@ -80,7 +80,7 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
+ #endif
+         }
+ 
+-        static inline void fft_and_mult_twiddle_factor_kernel(
++        OTFFT_NOINLINE static void fft_and_mult_twiddle_factor_kernel(
+                 const int p, complex_vector x, complex_vector y, weight_t W) noexcept
+         {
+             const ymm x0 = scalepz2<N,mode>(getpz2(x+p+N0));
+@@ -240,7 +240,7 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
+             fwdfftr<log_N,mode>::transpose_kernel(p, x, y);
+         }
+ 
+-        static inline void ifft_and_mult_twiddle_factor_kernel(
++        OTFFT_NOINLINE static void ifft_and_mult_twiddle_factor_kernel(
+                 const int p, complex_vector x, complex_vector y, weight_t W) noexcept
+         {
+             const ymm x0 = scalepz2<N,mode>(getpz2(x+p+N0));
+diff --git a/src/otfft_sixstepsq.h b/src/otfft_sixstepsq.h
+index 1b3700a..2be96b1 100644
+--- a/src/otfft_sixstepsq.h
++++ b/src/otfft_sixstepsq.h
+@@ -9,6 +9,12 @@
+ #ifndef otfft_sixstepsq_h
+ #define otfft_sixstepsq_h
+ 
++#if defined(__GNUC__) || defined(__clang__)
++#define OTFFT_NOINLINE __attribute__((noinline))
++#else
++#define OTFFT_NOINLINE
++#endif
++
+ namespace OTFFT_NAMESPACE {
+ #if 0
+ #include "otfft_avxdif4.h"
+@@ -45,7 +51,7 @@ template <int log_N, int mode, bool sng = false> struct fwdffts
+     static constexpr int m = n/2;
+     static constexpr int L = m*(m+1)/2;
+ 
+-    static void transpose_kernel(const int k, const int p, complex_vector x) noexcept
++    OTFFT_NOINLINE static void transpose_kernel(const int k, const int p, complex_vector x) noexcept
+     {
+         if (k != p) {
+             const int p_kn = p + k*n;
+@@ -74,7 +80,7 @@ template <int log_N, int mode, bool sng = false> struct fwdffts
+         }
+     }
+ 
+-    static void mult_twiddle_factor_kernel(const int i,
++    OTFFT_NOINLINE static void mult_twiddle_factor_kernel(const int i,
+             const int p, const int k, complex_vector x, weight_t W) noexcept
+     {
+         if (k != p) {
+@@ -250,7 +256,7 @@ template <int log_N, int mode, bool sng = false> struct invffts
+         fwdffts<log_N,mode,sng>::transpose_kernel(k, p, x);
+     }
+ 
+-    static void mult_twiddle_factor_kernel(const int i,
++    OTFFT_NOINLINE static void mult_twiddle_factor_kernel(const int i,
+             const int p, const int k, complex_vector x, weight_t W) noexcept
+     {
+         if (k != p) {

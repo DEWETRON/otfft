@@ -403,3 +403,20 @@ D23: `ffttune --out` writes a tuning file
     systems write `unknown`).
 *   **Revisit when:** a file from the wrong machine is loaded by mistake (check the comment data
     in `loadTuningFile`), or an environment variable loads the file at start.
+
+D24: do not mark the six-step kernels noinline
+----------------------------------------------
+*   **What:** the six-step kernels (`transpose_kernel` and `mult_twiddle_factor_kernel` in
+    `src/otfft_sixstepsq.h`, the eight-step kernels in `src/otfft_eightstep.h`) stay as they are. A patch
+    that marks them `noinline` for GCC and Clang is kept in
+    `docs/benchmark-data/2026-11-24-ryzen3900x-linux/compile-context/noinline-kernels.patch`.
+    Roadmap R1.6, issue #19, `docs/benchmarks.md` ("Why the one-thread speed of the six-step code varies").
+*   **Why:** with the kernels inlined into the loops, the six-step transform takes up to 1.8x longer on
+    one thread (2^18: 2,500 us against 1,400 us), but only on one thread. With 2 to 12 threads the change
+    makes no difference (0.91x to 1.10x), and the default tables use SixStep only with several threads.
+    The patch makes 2^15 about 10% slower with 1 thread and 7% with 2.
+*   **Rejected:** applying the patch (no gain on any default path, small loss at 2^15); a compiler
+    parameter such as more inlining (made it slower, 2,447 us).
+*   **Limit:** GCC 15.2.0 on one CPU. MSVC and Clang were not measured.
+*   **Revisit when:** a default path uses SixStep with one thread, or the cost of moving data between
+    cores falls (for example with the few-exchanges algorithm) so that the kernels matter at several threads.

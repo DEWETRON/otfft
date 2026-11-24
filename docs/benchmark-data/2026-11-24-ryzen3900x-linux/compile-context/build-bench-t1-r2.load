@@ -1,0 +1,3 @@
+23:27:34
+ 20  200 ps -eo psr,pcpu,args --sort=-pcpu
+  0  6.8 /usr/bin/gnome-shell --mode=ubuntu

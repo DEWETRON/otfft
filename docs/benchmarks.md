@@ -1429,8 +1429,10 @@ algorithm in its own process, three rounds per cell:
     2^22 1.37x, 2^16 1.24x) and **1.2x to 1.3x faster than the static six-step** (2^18 1.23x, 2^20 1.26x,
     2^22 1.30x). Most of the 2.0x at 2^18 and 2^20 is the guided schedule (1.4x to 1.8x slower than static
     in the analysis above); the algorithm itself is worth 1.2x to 1.3x at 12 threads.
-*   **It is faster on one thread too** (1.4x to 1.5x at 2^18 and 2^20, 1.2x at 2^22): two passes move less
-    data than five. At 4 threads at 2^20 it is not faster (1.02x and 0.96x); the rounds agree.
+*   **On one thread** it was 1.4x to 1.5x faster at 2^18 and 2^20 and 1.2x at 2^22, but this was measured
+    against the slow variant of the library code; see "Why the one-thread speed ... varies" below: against the
+    fast variant the prototype is not faster on one thread. At 4 threads at 2^20 it is not faster
+    (1.02x and 0.96x); the rounds agree.
 *   **Scaling from one thread** (prototype, 2^18): 1,775 us to 614 us with 12 threads (2.9x); the static
     six-step 2,603 to 756 (3.4x). The prototype is faster at every thread count but does not scale better,
     and the model of the analysis (five passes at 40 to 120 GB/s) predicted more. Pass A takes 234 us and pass
@@ -1456,9 +1458,8 @@ wrote: with the library's one-thread time, perfect scaling would be about 215 us
 
 **A separate finding:** the one-thread speed of the library's six-step code depends on the program it is
 compiled into, by up to 1.8x (1,400 to 2,600 us at 2^18) and on inlining parameters by 1.3x
-(`run8-compile-context.txt`). The cause is not known. Address space randomisation, the data and the
-placement do not matter. If one of the variants can be had in the library, every thread count gains; this
-needs its own investigation.
+(`run8-compile-context.txt`). The cause was found afterwards (inlining of the kernels; it does not help at
+2 or more threads): see the next section.
 
 Limits: forward transform with `scale_1` only (no inverse, no `scale_length`, no unitary scaling); even log2 N
 only (the odd sizes would need an n by 2n version); one CPU, one compiler; the prototype keeps its
@@ -1467,6 +1468,77 @@ within one program for each row; absolute times differ between programs for the 
 
 Raw results and the prototype: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/sixstep-analysis/`
 (`fewx_prototype.cpp`, `run6-fewx-same-process.txt`, `run7-fewx-isolated.txt`, `run8-compile-context.txt`).
+
+Why the one-thread speed of the six-step code varies, and why it is not fixed (R1.6, issue #19)
+---------------------------------------------------------------------------------------------
+
+Follow-up to the finding of the prototype section above: the library's six-step code takes 1,400 us
+or 2,500 us for the same transform (one thread, 2^18) depending on the program it is compiled into.
+Measured on 2026-11-24 on the Ryzen 9 3900X, GCC 15.2.0, `-O3`, machine quiet (busiest other process
+`gnome-shell` at about 6%). **The library is not changed.** All data and tools are in
+`docs/benchmark-data/2026-11-24-ryzen3900x-linux/compile-context/`.
+
+**Cause found.** `transpose_kernel` and `mult_twiddle_factor_kernel` in `src/otfft_sixstepsq.h` are
+inlined into the big loops of `part2` and `part3` in some builds and not in others. With the kernels
+inlined the transform takes about 2,500 us at 2^18; with `__attribute__((noinline))` on them it takes
+about 1,400 us (scratch copy of the source, `off_offset_test.cpp`: 2,440 to 2,488 us against 1,398 to
+1,413 us, three alternating runs). What did not matter: the placement of x and y (offsets from 0 to
+1 MiB between them, 2,493 to 2,677 us), the tuning flags (`-mtune=znver2`, `haswell`, `skylake`,
+`-mno-avx256-split-unaligned-*`, alignment flags: 2,455 to 2,584 us), address space randomisation and
+the input data. Instruction counts per function (callgrind, `callgrind-top-*.txt`) differ by 10% at
+most between a fast and a slow binary, so the work is the same; the slow variant is slower per
+instruction.
+
+**Effect in the library** (`otfft_bench`, forced SixStep for all sizes with a tuning file, complex
+FFT, AVX2, three alternating rounds, `noinline-kernels.patch` applied to the six-step and eight-step
+kernels against the unchanged source; time of one forward transform plus the benchmark's copy, in us):
+
+| log2 N | 1 thread, now | 1 thread, noinline | Speedup, 1 thread | Speedup, 1 thread, forward plus inverse | Speedup, 12 threads |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 14 | 70.7 | 71.6 | 0.99x | 1.08x | 1.00x |
+| 15 | 143.9 | 160.6 | 0.90x | 0.89x | 0.97x |
+| 16 | 763.5 | 478.5 | 1.60x | 1.59x | 0.97x |
+| 17 | 807.8 | 737.4 | 1.10x | 1.10x | 0.99x |
+| 18 | 2,833.1 | 1,620.9 | 1.75x | 1.86x | 0.99x |
+| 19 | 8,350.6 | 6,358.9 | 1.31x | 1.48x | 1.01x |
+| 20 | 18,814.3 | 16,221.1 | 1.16x | 1.21x | 1.00x |
+| 21 | 26,959.5 | 26,796.4 | 1.01x | 1.04x | 1.02x |
+| 22 | 75,167.8 | 68,477.2 | 1.10x | 1.02x | 1.04x |
+| 23 | 170,104.3 | 172,722.7 | 0.98x | 1.07x | 1.02x |
+| 24 | 525,520.5 | 472,014.6 | 1.11x | 1.03x | 1.02x |
+
+*   **At one thread the change is large at some sizes** (2^16 1.60x, 2^18 1.75x, 2^19 1.31x, 2^20
+    1.16x; with the inverse 2^18 1.86x) and small or negative at others (2^15 0.90x).
+*   **With 2 or more threads it has no effect.** 2 threads: 0.93x to 1.10x; 4 threads: 0.91x to 1.03x; 8
+    threads: 0.95x to 1.01x; 12 threads: 0.94x to 1.04x (forward and round trip; all rounds are in the
+    data directory; single rounds at 2 and 4 threads show outliers, for example 0.43x at 2^15 and 0.58x at
+    2^17 at 2 threads, cause not examined). There the time is spent moving data
+    between cores (analysis above), not in the kernels.
+*   **The shipped tables never use SixStep with one thread** (DIF4, DIF8 or DIF16 are faster at every
+    size; at 2^18 DIF4 takes about 1,100 us against SixStep's 2,600 us, and 1,400 us with the faster
+    code). So the speedup does not reach any default code path.
+
+**Decision: not changed** (D24). The gain exists only where SixStep is not used, and it costs about 10%
+at 2^15 and 7% at 2 threads for that size. The patch is kept in the data directory.
+
+**Consequences for earlier results:**
+
+*   `ffttune` measures SixStep in its own program (the slow variant): its SixStep times at one thread are
+    pessimistic by up to 1.8x. This does not change the tables (the fast variant, 1,400 us, is still
+    slower than DIF4, 1,020 us per transform at 2^18).
+*   The one-thread numbers of the few-exchanges prototype above (1.2x to 1.7x faster than the library)
+    were measured against the slow variant and its own code, which is compiled in the same context. A
+    library with the fast kernels takes about 1,400 us at 2^18 against the prototype's 1,775 us. **The
+    claim that the prototype is faster on one thread does not hold against the fast variant.** The
+    12-thread results (1.2x to 1.3x against the static six-step, up to 2.1x against the shipped code)
+    are not affected, since the kernels make no difference there.
+
+Limits: GCC 15.2.0 only (MSVC and Clang not measured; the macro in the patch does nothing on MSVC); one CPU;
+the inlining decision itself was not traced to a GCC parameter (more inlining made it slower, 2,447 us).
+
+Raw results, tools and the patch: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/compile-context/`
+(`noinline-kernels.patch`, `off_offset_test.cpp`, `callgrind-top-*.txt`, `force-sixstep.txt`,
+`build-bench-*`, `build-v1-*` and `build-v2-*` for the benchmark runs with their `.load` files).
 
 Algorithm table change: effect on the Intel notebook
 ----------------------------------------------------
