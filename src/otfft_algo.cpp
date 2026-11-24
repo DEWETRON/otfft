@@ -5,6 +5,7 @@
 #include "otfft_misc.h"
 #include "otfft.h"
 #include "otfft_platform.h"
+#include "otfft_tuning.h"
 
 #ifdef USE_AVX2
 #include "otfft_avx2.h"
@@ -108,6 +109,16 @@ namespace OTFFT_NAMESPACE
 #else
             const bool threaded = false;
 #endif
+#if defined(USE_AVX2)
+            const Tuning::Backend backend = Tuning::BACKEND_AVX2;
+#elif defined(USE_AVX)
+            const Tuning::Backend backend = Tuning::BACKEND_AVX;
+#else
+            const Tuning::Backend backend = Tuning::BACKEND_SSE2;
+#endif
+            // a loaded tuning file (loadTuningFile, D22) wins over the built-in tables
+            const int tuned = Tuning::lookup(backend, threaded, log_N);
+            if (tuned != 0) return tuned;
             return threaded ? ALGORITHM_THREADED[log_N] : ALGORITHM_SERIAL[log_N];
         }
     }

@@ -133,6 +133,7 @@ set(OTFFT_HEADER_FILES
   src/otfft_platform.h
   src/otfft_sixstep.h
   src/otfft_sixstepsq.h
+  src/otfft_tuning.h
 )
 
 source_group("Header Files" FILES
@@ -141,6 +142,7 @@ source_group("Header Files" FILES
 
 set(OTFFT_SOURCE_FILES
   src/otfft.cpp
+  src/otfft_tuning.cpp
 )
 
 set(OTFFT_SOURCE_FILES_ALGO
