@@ -108,3 +108,25 @@ D11: Benchmark upstream OTFFT through an optional CMake variable
 *   **Limit:** upstream sources are not vendored; the option is off by default and the
     caller supplies the directory.
 *   **Revisit when:** the fork is resynchronised with upstream (R1.8 to R1.11).
+
+D12: ffttune prints the algorithm table, it does not generate library files
+---------------------------------------------------------------------------
+*   **What:** `tools/ffttune.cpp`, built with `-DOTFFT_BUILD_TOOLS=ON` (off by
+    default), is the port of upstream's `ffttune` (roadmap R1.8). It times the
+    seven algorithms (DIF4, DIT4, DIF8, DIT8, DIF16, DIT16, SixStep) per
+    power-of-two length with the fork's own classes of one backend, checks each
+    result against DIF4, and prints a table and the `case` lines for the switch
+    in `src/otfft_algo.cpp`. `--out FILE` writes those lines to a file.
+*   **Why:** the table decides the speed for large N, and the best choice
+    depends on CPU, compiler and thread count (`docs/benchmarks.md`, "Algorithm
+    selection baseline"). Upstream's tool writes nine `otfft_gen_*.h` files
+    that the library includes; here a person reads the numbers and edits the
+    switch, so a table is only changed after it was measured on the machines we
+    care about, and in a reviewed pull request with a test.
+*   **Rejected:** generated headers included by `src/otfft_algo.cpp` (a tuning
+    run on one machine would change the library silently); a run-time tuner
+    (planning time and noise, left to R1.8).
+*   **Limit:** one backend and one thread count per run; the medians of 9
+    batches are not noise-free (the tool marks results within 5% as ties).
+    CI builds and runs the tool only if asked.
+*   **Revisit when:** the table is re-tuned (R1.8), or run-time tuning is wanted.

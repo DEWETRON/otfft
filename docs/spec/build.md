@@ -18,11 +18,19 @@ Rules
     installing. `-DOTFFT_BUILD_TESTS=OFF` skips the tests.
 *   **BLD-6** `[built]` Public headers: `otfft.h`, `otfft_complex.h`,
     `otfft_fwd.h`, `otfft_types.h`, plus the generated `otfft_config.h`.
+*   **BLD-7** `[done]` `-DOTFFT_BUILD_TOOLS=ON` (default OFF) builds `ffttune`.
+    For each power-of-two length from 2^1 to 2^24 it times the seven
+    algorithms of one backend (`--backend sse2|avx|avx2`, default the widest
+    built), checks each result against DIF4, and prints the fastest one per
+    length and the matching `case` lines for the switch in
+    `src/otfft_algo.cpp`. It changes no library file; applying the lines is a
+    separate change. (`ffttune.smoke` in `ctest`; CI does not build the tools.)
 
 Decided
 -------
 
 *   D3: one library per backend, chosen at run time.
+*   D12: `ffttune` prints the algorithm table, it does not generate library files.
 
 Questions
 ---------
