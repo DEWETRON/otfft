@@ -1,0 +1,12 @@
+library,kind,category,n,threads,median_ns,min_ns,mflops,plan_us,rel_error,scale,status
+OTFFT-avx2,complex,pow2all,16384,2,109431.3,108832.2,10480.4,365.3,5.62e-16,1,ok
+OTFFT-avx2,complex,pow2all,32768,2,191926.4,191042.2,12804.9,266.5,6.12e-16,1,ok
+OTFFT-avx2,complex,pow2all,65536,2,489707.6,484267.6,10706.1,1057.8,6.27e-16,1,ok
+OTFFT-avx2,complex,pow2all,131072,2,751385.7,733845.7,14827.4,1063.6,7.28e-16,1,ok
+OTFFT-avx2,complex,pow2all,262144,2,2004214.0,1743670.0,11771.7,3143.5,6.61e-16,1,ok
+OTFFT-avx2,complex,pow2all,524288,2,4920087.0,4840737.0,10123.3,5519.1,8.31e-16,1,ok
+OTFFT-avx2,complex,pow2all,1048576,2,9499902.0,8570641.0,11037.8,20962.8,7.9e-16,1,ok
+OTFFT-avx2,complex,pow2all,2097152,2,22764968.0,22450154.0,9672.8,21192.8,7.48e-16,1,ok
+OTFFT-avx2,complex,pow2all,4194304,2,52422426.0,51373233.0,8801.1,91390.9,7.94e-16,1,ok
+OTFFT-avx2,complex,pow2all,8388608,2,119752016.0,117721052.0,8055.7,147347.8,8.08e-16,1,ok
+OTFFT-avx2,complex,pow2all,16777216,2,283914819.0,283614724.0,7091.1,376222.3,7.63e-16,1,ok

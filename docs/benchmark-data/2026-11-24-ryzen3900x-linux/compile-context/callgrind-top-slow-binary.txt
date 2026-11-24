@@ -1,0 +1,12 @@
+ 41,910,715 ( 5.55%)  ???:OTFFT_AVX2::OTFFT_SixStep::fwdffts<18, 0, false>::part3(OTFFT_AVX2::OTFFT_SixStep::index_t const*, OTFFT::complex_t*, OTFFT::complex_t*, OTFFT::complex_t const*, OTFFT::compl
+ 40,371,037 ( 5.35%)  ???:void run<18>(int, char const*) 
+ 38,148,665 ( 5.06%)  ???:void run<18>(int, char const*) [clone ._omp_fn.0] 
+ 33,136,640 ( 4.39%)  ???:OTFFT_AVX2::OTFFT_AVXDIF8::fwdcore<64, 8>::operator()(OTFFT::complex_t*, OTFFT::complex_t*, OTFFT::complex_t const*) const [clone .isra.0] 
+ 25,952,223 ( 3.44%)  ./math/../sysdeps/x86/fpu/fenv_private.h:__sin_fma
+ 25,952,157 ( 3.44%)  ./math/../sysdeps/x86/fpu/fenv_private.h:__cos_fma
+ 14,256,000 ( 1.89%)  ???:OTFFT_AVX2::OTFFT_SixStep::fwdffts<18, 0, false>::transpose_kernel(int, int, OTFFT::complex_t*) 
+  9,395,056 ( 1.24%)  ./math/../sysdeps/ieee754/dbl-64/s_sin.c:__sincos_fma
+  5,767,168 ( 0.76%)  ???:0x0000000004002280 [???]
+  5,767,146 ( 0.76%)  ???:0x0000000004002430 [???]
+  2,883,584 ( 0.38%)  ./math/../sysdeps/x86/fpu/math-inline-asm.h:__sin_fma
+  2,883,573 ( 0.38%)  ./math/../sysdeps/x86/fpu/math-inline-asm.h:__cos_fma
