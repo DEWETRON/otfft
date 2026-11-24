@@ -1249,6 +1249,135 @@ Raw results: `docs/benchmark-data/2026-11-24-intel/radix35/` (MSVC timing
 program, `bench-noisy/`) and `docs/benchmark-data/2026-11-24-intel/radix35-wsl-gcc/`
 (GCC and FFTW in WSL2, with `machine.txt`).
 
+Thread break-even and the OpenMP thresholds
+-------------------------------------------
+
+Roadmap R1.6 (first part), issue #19, decision D17. The question: from which
+length does a transform run faster with several threads than with one? Each
+AVX algorithm class decides this with its own constant `OMP_THRESHOLD` (below
+it: one thread). The constants were 2^11 (DIF8, DIT16), 2^12 (DIF16), 2^13 (DIF4,
+DIT4, DIT8) and 2^14 (SixStep); they came from upstream and were never measured
+for this fork.
+
+Method: `ffttune --backend avx2 --threads T` times every algorithm for each
+length with T threads; dividing by the time with one thread gives the ratio
+below (below 1 = threads help). Two data sets: the AMD Ryzen 9 9950X (native
+Linux, GCC 15.2, 12 threads, one run; 1-thread times are the mean of three runs,
+`docs/benchmark-data/2026-11-24-ryzen-linux/tune/`) and the Intel Core Ultra 7
+268V (WSL2, GCC 15.2, 2, 4 and 8 threads, two runs each,
+`docs/benchmark-data/2026-11-24-intel/threads/`).
+
+**Ratio time(12 threads) / time(1 thread), Ryzen 9950X, AVX2**
+
+| log2 N | DIF4 | DIT4 | DIF8 | DIT8 | DIF16 | DIT16 | SixStep |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 11 | 1.02 | 1.01 | 3.16 | 1.05 | 1.02 | 2.44 | 1.01 |
+| 12 | 0.99 | 1.00 | 2.09 | 0.99 | 1.27 | 1.00 | 1.00 |
+| 13 | 2.22 | 2.10 | 1.76 | 1.58 | 1.15 | 1.04 | 1.20 |
+| 14 | 2.17 | 1.83 | 1.58 | 1.31 | 0.97 | 0.86 | 0.49 |
+| 15 | 2.12 | 1.48 | 1.12 | 1.10 | 0.77 | 0.72 | 0.76 |
+| 16 | 1.40 | 1.37 | 1.00 | 0.97 | 0.41 | 0.46 | 0.17 |
+| 17 | 1.64 | 0.99 | 0.96 | 0.91 | 0.50 | 0.47 | 0.35 |
+| 18 | 0.96 | 0.84 | 0.89 | 0.89 | 0.57 | 0.56 | 0.14 |
+| 19 | 1.82 | 1.33 | 1.08 | 0.91 | 0.57 | 0.53 | 1.09 |
+| 20 | 0.70 | 0.64 | 0.64 | 0.61 | 0.37 | 0.36 | 0.11 |
+| 21 | 0.58 | 0.54 | 0.43 | 0.38 | 0.44 | 0.43 | 0.93 |
+| 22 | 0.70 | 0.68 | 0.64 | 0.61 | 0.64 | 0.63 | 0.26 |
+| old threshold | 2^13 | 2^13 | 2^11 | 2^13 | 2^12 | 2^11 | 2^14 |
+| **new threshold** | **2^18** | **2^16** | **2^16** | **2^16** | **2^15** | **2^14** | **2^14** |
+
+*   Threading starts far too early for DIF4, DIT4, DIF8 and DIT8: they are 1.1x
+    to 3.2x slower with 12 threads up to 2^17 and only clearly faster from 2^18 to
+    2^20. DIF16 and DIT16 break even at 2^15 and 2^14. SixStep scales from 2^14
+    (but see the odd powers of 2 below).
+*   On the Intel notebook with 2 threads the break-even sizes are lower (about
+    2^14 for DIF4, DIT4, DIF16, 2^13 for DIT16, 2^15 for DIF8 and DIT8); with
+    4 and 8 threads they are between 2^12 and 2^16 where the run was not
+    disturbed (see "Limits").
+
+**Best threaded time / best serial time (any algorithm), per length**
+
+This is what a user gets: with threads, is the transform faster than with one
+thread at all? (below 1 = yes)
+
+| log2 N | Intel, 2 threads | 4 threads | 8 threads | Ryzen, 12 threads |
+| ---: | ---: | ---: | ---: | ---: |
+| 12 | 0.90 | 0.77 | 0.93 | 1.00 |
+| 13 | 1.01 | 0.72 | 2.06 | 1.48 |
+| 14 | 0.92 | 0.72 | 0.74 | 1.21 |
+| 15 | 0.75 | 0.59 | 0.62 | 0.95 |
+| 16 | 0.65 | 0.37 | 0.40 | 0.51 |
+| 17 | 0.62 | 0.45 | 0.43 | 0.75 |
+| 18 | 0.53 | 0.30 | 0.37 | 0.46 |
+| 19 | 0.49 | 0.29 | 0.42 | 0.81 |
+
+On the Ryzen the best threaded transform is slower than the best serial one at
+2^13 (1.48x) and 2^14 (1.21x) and breaks even at 2^15 (0.95x); on the Intel
+notebook threads help from about 2^14.
+
+**The change** (`src/otfft_algo.cpp` and the six `src/otfft_avx*.h`):
+
+*   `OMP_THRESHOLD` per class: DIF4 2^13 to 2^18, DIT4 2^13 to 2^16, DIF8 2^11 to
+    2^16, DIT8 2^13 to 2^16, DIF16 2^12 to 2^15, DIT16 2^11 to 2^14; SixStep stays
+    at 2^14. The radix-4 and radix-8 classes break even at 2^18 to 2^20 on the
+    Ryzen but at 2^14 to 2^16 on the Intel notebook; 2^16 is a compromise
+    (removes the slowdowns of 1.5x to 3.2x below it, keeps most of the Intel gain,
+    leaves 1.0x to 1.4x losses at 2^16 to 2^17 on the Ryzen).
+*   With more than one thread the threaded table of D14 is used only from 2^15
+    (`THREADED_MIN_LOG`); below it the serial table, and the classes of it do not
+    use threads there.
+
+**Effect on the Intel notebook (WSL2, GCC 15.2)**, `otfft_bench` of `master` and
+of the branch, alternately, three runs each, medians, MFLOPS, complex
+transforms; old / new:
+
+| N | 2 threads | 4 threads | 8 threads |
+| ---: | ---: | ---: | ---: |
+| 1,024 | 36,180 / 34,481 | 35,850 / 37,145 | 37,149 / 35,302 |
+| 4,096 | 22,734 / 24,308 | 23,170 / 25,035 | 22,895 / 24,145 |
+| 16,384 | 20,456 / 28,155 | 149 / 26,822 | 72 / 25,699 |
+| 65,536 | 16,288 / 16,407 | 28,784 / 26,718 | 18,066 / 315 |
+| 262,144 | 16,441 / 15,073 | 29,396 / 29,701 | 20,049 / 20,429 |
+| 1,048,576 | 13,289 / 12,981 | 25,809 / 25,518 | 6,183 / 6,190 |
+| 4,194,304 | 9,838 / 10,359 | 19,228 / 19,073 | 19,884 / 18,474 |
+
+*   N=16,384 is the case of the issue. With 4 and 8 threads the old code
+    collapsed there (149 and 73 MFLOPS, one run of the old code even gave 52 or 76
+    at 8 threads) while the new code gives 25,000 to 27,000, as with one thread;
+    with 2 threads it is 1.38x faster. The old code behaved erratically there
+    (a run at 8 threads gave 18,000 and the next 76).
+*   N = 1,024, 4,096 and 262,144 to 4,194,304 are unchanged within the noise
+    (0.92x to 1.08x).
+*   N=65,536 with 8 threads is erratic in the unchanged code: with
+    `OMP_WAIT_POLICY=active` the clean `master` build gave 852, 18,016 and 17,325
+    MFLOPS in three runs, and the old and the new build both alternate between
+    a few hundred and about 17,000. The plan chooses SixStep there in all
+    builds, so the median of three runs in the table (316 for the new build, 18,066
+    for the old) shows this erratic effect, not the thresholds (details in
+    `docs/benchmark-data/2026-11-24-intel/threads/NOTES.txt`).
+
+**Limits**
+
+*   Not run on the Ryzen with the changed library: the thresholds for DIF4,
+    DIT4, DIF8, DIT8 are a compromise between the two machines, based on
+    one 12-thread run (with odd results at 2^19, 2^21 and 2^23, see below).
+*   On this Intel notebook in WSL2, runs with 4 or 8 threads at small lengths
+    were slow by factors of 40 to 2,800 and often erratic (a call takes
+    milliseconds); on native Linux (Ryzen) the same cases cost 1.0x to 3.2x. This
+    looks like the wake-up latency of the OpenMP threads in the VM and the
+    hybrid CPU, so those numbers are not used for the thresholds, only to
+    show that the old thresholds make it worse. The first length where a class
+    threads can still show it after the change (for example DIT16 at 2^14).
+*   Not done: scaling above the break-even (R1.6 asks for better than 1.8x at
+    4M points), the thresholds of the eight-step (2^13 and 2^19) and of the mixed
+    radix, real FFT, DCT and Bluestein code, and the choice of the algorithm for
+    threads. SixStep does not scale for odd powers of 2 from 2^19 (ratio 0.93 to
+    1.09 at 2^19, 2^21, 2^23 on the Ryzen), where the eight-step path is used;
+    that is part of the threaded table retune of R1.8.
+*   One CPU with 2 to 8 threads and one 12-thread run on another: the
+    break-even depends on the thread count and the CPU (cross-CCD cost on the
+    Ryzen). A run-time calibration would be the general solution.
+
 Problems found
 --------------
 
@@ -1272,7 +1401,10 @@ Problems found
     PocketFFT. The radix 3 and 5 butterflies are still plain; see "Radix-7
     butterfly: effect on the Intel notebook".
 3.  **Threading** ([#19](https://github.com/DEWETRON/otfft/issues/19)). OpenMP is used for N=16,384 where it makes OTFFT 2.5x
-    slower, and scales to only 1.8x at N=4,194,304.
+    slower, and scales to only 1.8x at N=4,194,304. **Partly fixed** (roadmap R1.6,
+    D17): the class thresholds are at the measured break-even now and the
+    serial table is used below 2^15 with several threads; the scaling above is
+    not improved yet. See "Thread break-even and the OpenMP thresholds".
 4.  **AVX2.** No gain over AVX in these tests, so the AVX2 backend adds
     build time for no measured benefit.
 5.  **DCT scale.** OTFFT's DCT-II output is 0.5 times FFTW's and PocketFFT's

@@ -40,6 +40,12 @@ Milestone 1b: Fixes and speed found by the benchmarks
 *   [ ] **R1.6** OpenMP: do not thread below the break-even size (N=16,384 is
     2.5x slower with 12 threads) and scale better above it (1.8x at 4M points,
     [#19](https://github.com/DEWETRON/otfft/issues/19)).
+    Done: the first part (D17): per-class thresholds at the measured break-even and
+    the serial table below 2^15 with several threads (N=16,384 with 4 and 8
+    threads on the Intel notebook: from a collapse to the 1-thread speed). Still
+    open: scaling above the break-even, thresholds of the eight-step, mixed
+    radix, real FFT, DCT and Bluestein code, and a check on the Ryzen with the
+    changed library.
 *   [ ] **R1.7** Decide whether the AVX2 backend is worth keeping (no gain over
     AVX in the benchmarks); recheck after R2.1.
 

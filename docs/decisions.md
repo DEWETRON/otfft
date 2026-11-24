@@ -233,3 +233,32 @@ D16: radix-3 and radix-5 butterflies in the symmetric form
     passes, memory traffic) and not the butterflies is the remaining cost, or
     R2.1 and R2.2 need other kernels.
 
+D17: threading thresholds at the measured break-even
+----------------------------------------------------
+*   **What:** each AVX algorithm class starts to use OpenMP threads from a length
+    given by its `OMP_THRESHOLD` (`src/otfft_avx*.h`). New values (log2): DIF4 18,
+    DIT4 16, DIF8 16, DIT8 16, DIF16 15, DIT16 14; SixStep stays at 14. With more
+    than one thread the threaded table of D14 is used only from 2^15
+    (`THREADED_MIN_LOG` in `src/otfft_algo.cpp`), below it the serial table.
+    Roadmap R1.6, issue #19.
+*   **Why:** measured with `tools/ffttune` (D12) on a Ryzen 9 9950X (12 threads)
+    and an Intel Core Ultra 7 268V (2 to 8 threads): the old thresholds (2^11 to
+    2^13) made the transform 1.1x to 3.2x slower than with one thread on the Ryzen,
+    and the best threaded transform was slower than the best serial one up to 2^14
+    (1.5x at 2^13). On the Intel notebook N=16,384 with 4 and 8 threads ran at
+    under 1% of the one-thread speed before, and at the one-thread speed after.
+*   **Rejected:** one threshold for all classes (on the Ryzen the break-even of the
+    classes differs by up to 2^6, from 2^14 to 2^20); thresholds that depend on the thread count or the CPU (the data
+    do not show a rule: the break-even of one class changes by 2^4 between two
+    CPUs); the Ryzen-only values (2^18 to 2^20 for the radix-4 and radix-8
+    classes, which would give up the 2-thread gain on the Intel notebook from
+    2^14).
+*   **Limit:** a compromise for DIF4, DIT4, DIF8 and DIT8 (2^16 and 2^18,
+    from two CPUs); 1.0x to 1.4x losses remain at 2^16 to 2^17 on the Ryzen with
+    12 threads. Not run on the Ryzen with the changed library. The thresholds of
+    the eight-step, mixed radix, real FFT, DCT and Bluestein code are not
+    changed (not measured). The best algorithm with threads still differs
+    between the two CPUs (R1.8).
+*   **Revisit when:** the threaded table is retuned (R1.8), the Ryzen result is in,
+    or a run-time calibration of the break-even is added.
+

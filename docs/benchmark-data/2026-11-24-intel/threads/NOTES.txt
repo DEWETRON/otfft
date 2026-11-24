@@ -1,0 +1,21 @@
+Thread break-even measurements, Intel Core Ultra 7 268V, WSL2 Ubuntu 26.04, GCC 15.2.0, 2026-11-24.
+
+ffttune-old/  : ffttune --backend avx2 --threads T (T = 1, 2, 4, 8), two runs each, library of master
+                (before the threshold change). The logs show time of one forward + inverse transform
+                per algorithm in microseconds.
+ffttune-new/  : the same with the library of the branch (new OMP_THRESHOLD per class, serial table below 2^15).
+bench-ab/     : otfft_bench --kinds complex --sizes pow2 --min-n 1024 --lib OTFFT --threads T,
+                old (master) and new alternately, three runs each (T = 2, 4, 8).
+
+Extra checks (output of the commands, not stored as files)
+----------------------------------------------------------
+N = 65,536 with 8 threads is bimodal in WSL2 for the UNCHANGED code. otfft_bench, OMP_WAIT_POLICY=active, MFLOPS:
+  master (clean build)            : 852, 18016, 17325
+  master + a debug fprintf only   : 1121, 18473, 781
+  branch (new thresholds)         : 410, 519, 371   (earlier: 481, 366, 279)
+  new thresholds, old table rule  : 708, 405, 97
+  old thresholds, new table rule  : 18070, 18187, 17230 (first run), later after a rebuild 302
+  A debug print showed that the plan uses algorithm 7 (SixStep) at 2^16 with 8 threads in every variant.
+Per-class bisect (old thresholds + ONE new class threshold, 8 threads, N = 65,536): only the DIF8 variant was
+slow in all 3 runs (435 to 458), the other five variants 15,568 to 18,224. Because the unchanged master binary also
+shows slow runs at this size, this is not caused by the threshold values (SixStep does not read the DIF8 threshold).
