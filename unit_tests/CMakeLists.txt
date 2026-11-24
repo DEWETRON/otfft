@@ -10,6 +10,7 @@ set(UNIT_TEST_HEADERS
 
 set(UNIT_TEST_SOURCES
   test_module.cpp
+  otfft_algorithm_table_test.cpp
   otfft_basic_test.cpp
   otfft_bluestein_test.cpp
   otfft_dct_test.cpp

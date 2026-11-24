@@ -154,3 +154,33 @@ D13: createComplexFFT uses Bluestein for lengths with a large prime factor
     compiler and may move with R1.5.
 *   **Revisit when:** R1.5 adds butterflies for more factors, or measurements
     on other CPUs (Ryzen, ARM64) put the crossover elsewhere.
+
+D14: two algorithm tables for the power-of-two FFT, chosen by the thread count
+------------------------------------------------------------------------------
+*   **What:** `src/otfft_algo.cpp` has two tables of the algorithm per length
+    2^1 to 2^24 (DIF4, DIT4, DIF8, DIT8, DIF16, DIT16, SixStep).
+    `ALGORITHM_SERIAL` is used when `omp_get_max_threads()` is 1 (or the library
+    has no OpenMP) when the plan is made, `ALGORITHM_THREADED` otherwise.
+    `ALGORITHM_THREADED` is the table the fork had so far (upstream's);
+    `ALGORITHM_SERIAL` differs from it from 2^14. Roadmap R1.8.
+*   **Why:** `tools/ffttune` (D12) on an Intel Core Ultra 7 268V (MSVC) and an
+    AMD Ryzen 9 9950X (GCC) showed that the old table loses 1.1x to 3.3x with one
+    thread from 2^14 (SixStep at 2^16 and above), but that SixStep is the best
+    choice with 12 threads (the other algorithms scale poorly: DIF8 at 2^20 is
+    2.9x slower). One table cannot serve both, and the two machines also
+    disagree on the best one-thread algorithm (Intel DIF8 almost everywhere;
+    Ryzen DIF4 at 2^13 to 2^19). `ALGORITHM_SERIAL` takes, for each length from
+    2^14, the algorithm with the smallest slowdown on the worse machine (at most
+    1.26x of the fastest on either).
+*   **Rejected:** one new table for every case (slows threaded runs at large N);
+    generated headers (D12); a run-time tuner (R1.8 keeps it as an option).
+*   **Limit:** the thread table is not re-tuned (one 12-thread run on one CPU
+    only, with odd results at 2^19 and 2^21); the serial table comes from
+    two CPUs, one thread, AVX2, and its choices at 2^22 and 2^23 are within
+    5% of others. The table is chosen when the plan is made, so changing the
+    thread count afterwards does not change the plan. Other backends (SSE2) use
+    the same tables.
+*   **Revisit when:** a threaded retune exists, or R1.6 (do not thread below the
+    break-even size) changes which algorithms scale, or other CPUs (ARM64) are
+    measured.
+
