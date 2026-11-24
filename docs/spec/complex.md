@@ -58,6 +58,12 @@ Rules
     CPUs. Results do not depend on the thread count. (`otfft_algorithm_table_test`
     checks the results with 1 and 4 threads; the speed is measured in
     `docs/benchmarks.md`, not by a test.)
+*   **CFFT-12** `[done]` From length 2^18 the DIF8, DIT8, DIF16 and DIT16 classes of
+    every backend (SSE2, AVX, AVX2) compute the twiddle factors in registers instead of
+    reading a weight table (the exp kernels of upstream 11.6e, D19). The result is the
+    same as for the table path: all six transform functions (`fwd`, `fwd0`, `fwdu`, `inv`,
+    `invu`, `invn`) match the direct sum for lengths 2^18 to 2^21 with one and with four
+    threads. (`otfft_exp_test: TestExpKernelsOneThread, TestExpKernelsFourThreads`)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)

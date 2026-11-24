@@ -68,10 +68,19 @@ Background and measurements: `docs/upstream-comparison.md`.
     table; one 12-thread run exists, with odd results at 2^19 and 2^21), and
     check the new serial table on the Ryzen with the library, not only with
     `ffttune`.
+    After R1.9 the best class at 2^18 to 2^22 differs between MSVC and GCC
+    (`docs/benchmarks.md`, "Exp kernels (R1.9)"), so the table has to be tuned
+    again for the exp kernels, on more than one machine and compiler.
     Measured target (2026-11-24, `docs/benchmarks.md`): the fork reaches 0.5 to
     0.6 of upstream 11.6e for complex N = 65,536 to 524,288 with one thread.
-*   [ ] **R1.9** Port the `exp` kernels (`otfft_avx{dif,dit}{8,16}exp.h`,
+*   [x] **R1.9** Port the `exp` kernels (`otfft_avx{dif,dit}{8,16}exp.h`,
     `init_Wq`, `init_Wr`, `EXP_THRESHOLD = 2^18`) from upstream 11.6e.
+    Done: the four kernel files, `EXP_THRESHOLD = 2^18` and a test of every
+    class, backend and function (D19, CFFT-12). `init_Wq` and `init_Wr` are not
+    used by upstream 11.6e, so they were not ported. Not a speed gain yet: on the
+    Intel notebook the best class changes by 0.93x to 1.13x (DIT16 is faster on both
+    compilers, DIF16 only with GCC); the Ryzen, where the gap to FFTW is largest,
+    has not been run. The table is not retuned for the new kernels (see R1.8).
 *   [ ] **R1.10** Port the OpenMP changes of 11.6e: two six-step thresholds,
     `schedule(static)` and `guided`, `omp sections` in the eight-step; then
     re-measure for issue [#19](https://github.com/DEWETRON/otfft/issues/19).
