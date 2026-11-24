@@ -385,3 +385,8 @@ option(OTFFT_BUILD_BENCHMARKS "Build the benchmarks (compare with FFTW, PocketFF
 if (OTFFT_BUILD_BENCHMARKS)
   add_subdirectory(benchmarks)
 endif()
+
+option(OTFFT_BUILD_TOOLS "Build the tools (ffttune: find the fastest algorithm per length)" OFF)
+if (OTFFT_BUILD_TOOLS)
+  add_subdirectory(tools)
+endif()
