@@ -826,6 +826,126 @@ compiled with
 `cl /MD /openmp /O2 /std:c++17 /arch:AVX2 /DUSE_AVX2 /DOTFFT_NAMESPACE=OTFFT_AVX2 /Iinc /Isrc forktune.cpp`
 and linked with `otfft_avx2.lib` and `otfft_common.lib` from a Release build.
 
+Algorithm selection baseline (ffttune), AMD Ryzen 9 9950X
+---------------------------------------------------------
+
+Second baseline for roadmap item R1.8, measured with the fork's `ffttune` tool
+(`-DOTFFT_BUILD_TOOLS=ON`, decision D12) on 2026-11-24. The question was
+whether the Intel result above (DIF8 fastest from 2^12 up, fork's table 1.1x to
+1.8x slower from 2^14) also holds on an AMD CPU with GCC. **Nothing was changed
+in the library.**
+
+Note that this is a different machine from the Ryzen 9 3900X in "Setup":
+
+| Item | Value |
+| --- | --- |
+| CPU | AMD Ryzen 9 9950X, 16 cores / 32 threads, L2 1 MiB per core, L3 2 x 32 MiB |
+| OS | Linux 7.0.0-44-generic, driver `amd-pstate-epp`, governor `powersave` (not changed: `sudo` needs a password) |
+| Compiler | GCC 15.2.0, Release |
+| FFTW | 3.3.10 from the Ubuntu package (`libfftw3-dev`, SSE2/AVX), found by CMake |
+| Machine state | Desktop in use: an Oxygen process was busy at about 65% of one core (load average about 1.4), plus VS Code. Not closed. Threads not pinned. |
+
+Runs (`build/Release/ffttune --backend B --threads T --out ...`, medians of 9
+batches of about 20 ms, forward plus inverse transform): AVX2 with one thread
+three times (r1 to r3), AVX with one thread once, AVX2 with 12 threads once.
+No result was marked wrong (`-`) in any run.
+
+**Fastest algorithm per length, AVX2, one thread**
+
+| log2 N | Fastest r1 | Fastest r2 | Fastest r3 | Fork now | Fork now vs fastest (r1, r2, r3) | Within 5% of the fastest (r1) |
+| ---: | --- | --- | --- | --- | --- | --- |
+| 11 | DIF16 | DIF16 | DIT8 | DIF16 | 1.00x, 1.00x, 1.00x | DIF4, DIT4, DIT8 |
+| 12 | DIT4 | DIT4 | DIT4 | DIT8 | 1.01x, 1.03x, 1.05x | DIF4, DIT8 |
+| 13 | DIF4 | DIF4 | DIF4 | DIF8 | 1.06x, 1.07x, 1.09x | |
+| 14 | DIF4 | DIF4 | DIF4 | DIT8 | 1.23x, 1.21x, 1.19x | |
+| 15 | DIF8 | DIF8 | DIF8 | DIT8 | 1.07x, 1.07x, 1.08x | DIF4 |
+| 16 | DIF4 | DIF4 | DIF4 | SixStep | 3.08x, 3.09x, 3.09x | (r2: DIF8) |
+| 17 | DIF4 | DIF4 | DIF4 | DIT8 | 1.12x, 1.14x, 1.16x | |
+| 18 | DIF4 | DIF4 | DIF4 | SixStep | 3.28x, 3.39x, 3.32x | |
+| 19 | DIF4 | DIF4 | DIF4 | SixStep | 3.05x, 3.11x, 3.03x | |
+| 20 | DIF8 | DIF8 | DIF8 | SixStep | 1.96x, 2.02x, 2.04x | |
+| 21 | DIF8 | DIF8 | DIF8 | SixStep | 1.46x, 1.48x, 1.49x | DIF16 |
+| 22 | DIT16 | DIT16 | DIF16 | SixStep | 1.60x, 1.60x, 1.61x | DIF16 |
+| 23 | DIT16 | DIT16 | DIT16 | SixStep | 1.52x, 1.47x, 1.47x | DIF16 |
+| 24 | DIT16 | DIF16 | DIF16 | SixStep | 1.66x, 1.61x, 1.64x | DIF16 |
+
+"Fork now" is the pick in `src/otfft_algo.cpp`; the ratio is its time divided
+by the fastest algorithm's time in the same run. Lengths up to 2^10 are left
+out (all within noise, as on the Intel machine).
+
+What this shows:
+
+*   **The result is stable between runs.** The fork's slowdown differs by at
+    most 0.11x between r1 and r3 at every length. The fastest algorithm changes
+    between runs only where two are within 5% of each other: 2^11 (DIF16 or
+    DIT8), 2^22 and 2^24 (DIT16 or DIF16). 2^12 (DIT4, DIF4 and DIT8 within 5%)
+    and 2^15 (DIF8 and DIF4 within 5%) are ties too.
+*   **The fork's table is clearly wrong for one thread at the large sizes.**
+    SixStep is 3.0x to 3.4x slower than the fastest at 2^16, 2^18 and 2^19, 2.0x
+    at 2^20, and 1.5x to 1.7x at 2^21 to 2^24. This agrees with the benchmark
+    below: OTFFT falls from 36,096 MFLOPS at N=16,384 to 11,091 at N=65,536
+    while FFTW stays at 38,039. Below 2^16 the loss is small (at most 1.2x,
+    and 1.0x at 2^11).
+*   **Different from the Intel result.** There DIF8 was fastest almost everywhere
+    from 2^12 up. Here DIF4 is fastest at 2^13, 2^14 and 2^16 to 2^19, DIF8
+    only at 2^15, 2^20 and 2^21, and DIT16 or DIF16 (about equal) from 2^22. At
+    2^22 to 2^24 DIT16 or DIF16 is 1.2x to 1.3x faster than DIF8 (r1). What both machines agree on is
+    that SixStep is not the best one-thread choice for 2^16 and up, and that
+    DIT8 at 2^15 and 2^17 is not either.
+*   **AVX (r1).** Same picture as AVX2, with ties moving (2^17 DIF8 or DIT8
+    within 5%, 2^21 and 2^22 DIF16 first). The fork's slowdown is the same
+    within 0.1x.
+*   **12 threads (r1 only).** The picture reverses. SixStep is fastest at
+    2^13 to 2^18, 2^20, 2^22 and 2^24, where the fork's pick is SixStep
+    already (1.00x) at 2^16, 2^18, 2^20, 2^22 and 2^24 and 1.25x to 1.38x slower
+    at 2^13, 2^14, 2^15 and 2^17 (DIF8 and DIT8). At 2^19, 2^21 and 2^23 SixStep
+    is not fastest: the fork's pick is 4.1x, 3.2x and 2.0x slower than DIF16,
+    DIT8 and DIT16. One run only, so the odd 2^19 and 2^21 results are not
+    established. The threads were not pinned and 12 of 32 logical CPUs were
+    used.
+
+**Do the data suggest changing the table?** Yes for one thread: a
+Ryzen/GCC table with DIF4 at 2^13, 2^14, 2^16 to 2^19, DIF8 at 2^15, 2^20 and
+2^21 and DIT16 from 2^22 would remove the 1.5x to 3.4x loss above 2^16 on this
+machine. But the table has no thread dimension, and the 12-thread run shows
+that the best choice for 12 threads (SixStep) is the worst one for one
+thread. So a change should wait for repeated multi-thread runs (the odd
+2^19 and 2^21 results first), and for a run on the Intel machine with GCC or Clang
+to separate the CPU from the compiler. That is a separate pull request with
+a test (AGENTS.md rule 1). This pull request proposes no table.
+
+**Complex FFT on this machine (benchmark, GCC, MFLOPS, powers of two)**
+
+The earlier tables are from the 3900X, so these are new numbers.
+
+| N | OTFFT 1 thread | FFTW-measure 1 thread | PocketFFT 1 thread | OTFFT 12 threads | FFTW-measure 12 threads |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1,024 | 55,485 | 69,968 | 11,854 | 56,064 | 11,362 |
+| 16,384 | 36,096 | 43,903 | 14,153 | 20,729 | 76,803 |
+| 65,536 | 11,091 | 38,039 | 10,799 | 48,060 | 138,281 |
+| 262,144 | 11,883 | 35,941 | 10,639 | 51,858 | 113,293 |
+| 1,048,576 | 10,998 | 17,949 | 8,557 | 61,105 | 140,947 |
+| 4,194,304 | 8,053 | 14,879 | 5,840 | 26,010 | 30,788 |
+
+OTFFT is 1.0x to 1.3x behind FFTW with one thread up to N=16,384 and 1.6x to
+3.4x behind from N=65,536. The OTFFT column is the library's default pick (the
+table in question), so part of that gap is the SixStep problem above. All sizes,
+the backends and the plan times are in the CSV files.
+
+Limits: one CPU, one compiler (GCC 15.2.0), no `performance` governor
+(`powersave` with `amd-pstate-epp`, so clock speed varied with load; the CPU
+reports a 5.76 GHz maximum), another program running during all runs, threads
+not pinned, and three runs for the main case but one each for AVX and 12
+threads. Run-to-run differences under 5% are noise. FFTW here is the
+distribution package (SSE2/AVX), not the AVX2 build used for the 3900X
+numbers, so the FFTW columns are not comparable with the earlier ones.
+
+Raw results: `docs/benchmark-data/2026-11-24-ryzen-linux/` (`bench-t1.*`,
+`bench-t12.*` from `otfft_bench --kinds complex`) and
+`docs/benchmark-data/2026-11-24-ryzen-linux/tune/`
+(`tune-avx2-t1-r1..r3`, `tune-avx-t1-r1`, `tune-avx2-t12-r1`, each as `.log`
+with the full table and `.txt` with the suggested `case` lines).
+
 Problems found
 --------------
 
