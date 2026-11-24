@@ -1250,6 +1250,131 @@ the issue, not repeated with the old library. Six lengths only; the lengths with
 Raw results: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/mixed-radix/`
 (`smooth-OTFFT-avx2-rN` and `smooth-FFTW-measure-rN`, each as `.csv`, `.log` and `.load`).
 
+Why SixStep scales poorly above 2^18 (analysis, issue #19, R1.6)
+---------------------------------------------------------------
+
+Analysis, no library change. Question: with 12 threads OTFFT gains only 1.1x to 1.3x at 2^18 and
+2^19 and 1.8x to 2.6x from 2^20, where FFTW gains 3.0x to 9.1x (table "Against FFTW and against
+one thread" above). Measured on 2026-11-24 on the Ryzen 9 3900X (Zen 2; GCC 15.2.0, `-O3`,
+AVX2 and FMA), machine quiet (busiest other process `gnome-shell` at about 6%). `perf` was not
+usable (`perf_event_paranoid` is 4), so the measurements use small programs that call the
+library's own kernels. The programs and raw output are in
+`docs/benchmark-data/2026-11-24-ryzen3900x-linux/sixstep-analysis/`.
+
+**How the code is built.** For an even log2 N the complex FFT with SixStep runs five passes over
+the whole array (`src/otfft_sixstepsq.h`, `part2` and `part3`): a transpose, the row FFTs, the
+twiddle multiplication fused with a transpose, the row FFTs again, a transpose. Each pass is a
+parallel loop with a barrier at the end, and each pass splits the work differently (a loop over
+the triangle of block pairs, or over rows). Odd log2 N (2^19, 2^21) runs the eight-step code
+(`src/otfft_eightstep.h`), which calls the same parts; it was not analysed separately.
+
+**Tools** (copies in the data directory; they `#include` `src/otfft_algo_sixstep.cpp` and are not
+part of the build):
+
+*   `phases.cpp` times the five passes separately per thread count, schedule and placement.
+*   `bw.cpp` and `own.cpp` measure how fast threads can sweep an array when each thread keeps its
+    own part, and when it sweeps data that another thread wrote in the previous sweep.
+
+**1. The passes do not scale** (`phases`, N = 2^18, static schedule, median of 41, time in us)
+
+| Threads | Transpose 1 | Row FFTs 1 | Twiddle and transpose | Row FFTs 2 | Transpose 2 | Total |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 218 | 356 | 217 | 363 | 220 | 1,380 |
+| 2 | 204 | 293 | 194 | 281 | 191 | 1,174 |
+| 3 | 197 | 235 | 187 | 237 | 192 | 1,050 |
+| 4 | 134 | 216 | 158 | 215 | 167 | 891 |
+| 6 | 135 | 179 | 194 | 183 | 195 | 892 |
+| 8 | 165 | 169 | 240 | 172 | 239 | 985 |
+| 12 | 101 | 175 | 210 | 178 | 209 | 876 |
+
+With 12 threads the total is 1.6x faster than with one, and the transposes and the twiddle pass
+barely change from 4 threads on. One thread does a 512-point row FFT in 0.7 us, about 33 GFLOPS
+(5 N log2 N flops), a high rate for one core; if the passes were limited by computing, 12 threads
+would make the row FFT passes much faster than the 2.0x measured. At N = 2^20 the total goes from 15,469 us (one thread; the
+32 MiB of x and y do not fit one 16 MiB L3 slice) to 3,174 us (4.9x).
+
+**2. A pass that reads data written by another thread is slow** (`own`, array of 4 MiB, 12
+threads on CPUs 0 to 11, one in-place sweep, median of 50)
+
+| Sweep of data last written by | Time (us) | Rate |
+| --- | ---: | ---: |
+| the same thread | 8 | 1,033 GB/s |
+| thread t+1 (usually the same L3 slice) | 70 | 121 GB/s |
+| thread t+3 or t+6 (another L3 slice) | 207 and 209 | 41 and 40 GB/s |
+
+The L3 of this CPU is four slices of 16 MiB, one per three cores (CPUs 0 to 2 with 12 to 14,
+3 to 5, 6 to 8, 9 to 11 share a slice); a thread cannot use the cache of another slice, the data
+has to move over the Infinity Fabric. With 16 MiB the rates are the same (948, 120 and 41 GB/s).
+In `bw` a thread sweeping its own part gets 750 to 880 GB/s (12 threads, 4 and 16 MiB), so the
+memory system is not the limit; the ownership of the data is.
+
+The five passes read and write 8 MiB each at N = 2^18. At 40 to 120 GB/s that is 70 to 210 us
+per pass, 350 to 1,050 us for five. The measured passes with 12 threads on 12 distinct cores
+(pinned to CPUs 0 to 11) add up to 744 us (105, 141, 174, 139 and 175 us, which is 48 to 80
+GB/s). So each pass pays for moving the array between the caches of different cores, because
+each pass splits the data differently from the one before.
+
+**3. Placement matters, but not enough to fix it.** In the harness at N = 2^18 three threads in
+one L3 slice need 809 us, three threads in three slices 1,063 us (the data of x and y fit one
+slice). At N = 2^20 it is the other way round (7,940 us in one slice, 3,891 us in three), because
+x and y do not fit one slice. With the library (`otfft_bench`, 12 threads, three alternating
+rounds, `OMP_PROC_BIND=true OMP_PLACES=cores` against unset) pinning gives 0.98x to 1.14x at
+2^16 to 2^24 (1.10x at 2^16, 1.14x at 2^19, 1.13x at 2^21, the others within 5%). So pinning is
+worth recommending for a deployment, but it does not change the picture.
+
+**4. The guided schedule is slower than the static one on this machine.** From 2^18 the library
+uses `schedule(guided)` (`part3`, D20, chosen on the Intel notebook). In the harness, 12
+threads, three rounds each, forward transform only (total of the five passes, us):
+
+| log2 N | Placement | Static | Guided | Guided over static |
+| ---: | --- | ---: | ---: | ---: |
+| 18 | unbound | 878 | 1,232 | 1.40x |
+| 18 | pinned CPUs 0 to 11 | 771 | 1,271 | 1.65x |
+| 20 | unbound | 3,181 | 4,775 | 1.50x |
+| 20 | pinned CPUs 0 to 11 | 2,594 | 4,780 | 1.84x |
+| 22 | unbound | 33,679 | 35,121 | 1.04x |
+| 22 | pinned CPUs 0 to 11 | 32,095 | 34,362 | 1.07x |
+
+The rounds agree within about 5%. With the library, a build in which the static schedule is used
+for every size (a one-line local change of `OMP_THRESHOLD2` in `src/otfft_sixstepsq.h`,
+reverted, not committed), `otfft_bench`, 12 threads, complex FFT, three alternating rounds
+against the built-in code: 2^18 1.16x faster (1.12x to 1.21x), 2^20 1.16x (1.12x to 1.24x), 2^16,
+2^17 and the odd sizes 2^19 and 2^21 unchanged (0.98x to 1.01x, they do not use this code or are
+below the threshold), 2^22 0.98x, 2^23 0.97x and 2^24 0.93x (one round at 0.88x). The gain
+through the library is smaller than in the harness because the library benchmark times the
+forward and the inverse transform and a copy, and the odd sizes are not affected. A static
+schedule keeps the same rows and block pairs on the same core call after call, a guided one does
+not.
+
+What this suggests (hypotheses, not tested by a change to the library):
+
+*   **A cheap change:** a static schedule for the square six-step code on this machine up to 2^21
+    or 2^22 would give about 1.16x at 2^18 and 2^20. D20 chose guided from the Intel notebook,
+    where guided was neutral to 16% slower at 2^18 to 2^20 with 4 threads and up to 1.44x faster
+    with 8: the best schedule depends on CPU and thread count. Choosing it per machine (the
+    tuning file, D22) or per thread count is an option; changing the built-in default needs the
+    Intel notebook and the 9950X measured.
+*   **The real limit is the number of passes over data that changes owner.** Five passes at
+    40 to 120 GB/s cost about what is measured. A scheme with fewer exchanges between the cores
+    should scale better. The first column FFTs can run vertically on pairs of adjacent columns
+    (a vector register holds two complex numbers), which needs no transpose; the twiddle
+    multiplication can be done in the same pass; then only one exchange before the row FFTs and
+    one for the output order remain, two instead of five. If the model of section 2 holds, the
+    passes at 2^18 would take about 140 to 420 us in place of 350 to 1,050 us. Not measured; it
+    is a change of the algorithm, with a test and a decision entry.
+*   FFTW's better scaling is consistent with this (a blocked recursion keeps data in the cache of
+    one core for several steps), but that was not examined here.
+
+Limits: one CPU (Zen 2, four L3 slices of three cores), one compiler. The harness runs the
+forward transform with `scale_1` and the passes of `part2` and `part3` outside the library's own
+parallel region, with the schedule chosen at run time; it times what the library does, but is not
+the library. The odd sizes (eight-step) were not analysed. The ownership numbers are for AMD
+Zen 2 and say nothing about the Intel notebook (one L3 for all cores) or the 9950X.
+
+Raw results and tools: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/sixstep-analysis/`
+(`phases.cpp`, `bw.cpp`, `own.cpp` and `run1` to `run5` for the harness runs; `pin-*` and
+`sched-*` for the library runs, with `.load` files for the machine state).
+
 Algorithm table change: effect on the Intel notebook
 ----------------------------------------------------
 

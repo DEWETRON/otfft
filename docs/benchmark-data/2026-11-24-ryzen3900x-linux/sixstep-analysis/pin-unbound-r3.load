@@ -1,0 +1,3 @@
+22:26:39
+ 15  6.0 /usr/bin/gnome-shell --mode=ubuntu
+ 22  4.8 /usr/share/code/code --type=gpu-process --ozone-platform=wayland --render-node-override=/de

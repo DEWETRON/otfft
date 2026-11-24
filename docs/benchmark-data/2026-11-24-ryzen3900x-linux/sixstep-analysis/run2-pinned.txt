@@ -1,0 +1,16 @@
+[one-slice(0-2)] log2N=18 threads=3 sched=static  transpose1 141 | rowFFT1 197 | twiddle+tr 127 | rowFFT2 198 | transpose2 138 | total 809 us
+[three-slices(0,3,6)] log2N=18 threads=3 sched=static  transpose1 194 | rowFFT1 238 | twiddle+tr 181 | rowFFT2 236 | transpose2 194 | total 1063 us
+[two-slices(0-5)] log2N=18 threads=6 sched=static  transpose1 125 | rowFFT1 161 | twiddle+tr 142 | rowFFT2 154 | transpose2 141 | total 718 us
+[three-slices(2/slice)] log2N=18 threads=6 sched=static  transpose1 138 | rowFFT1 171 | twiddle+tr 165 | rowFFT2 172 | transpose2 166 | total 811 us
+[four-slices(spread)] log2N=18 threads=6 sched=static  transpose1 140 | rowFFT1 183 | twiddle+tr 183 | rowFFT2 186 | transpose2 188 | total 881 us
+[12-cores(0-11)] log2N=18 threads=12 sched=static  transpose1 105 | rowFFT1 141 | twiddle+tr 174 | rowFFT2 139 | transpose2 175 | total 744 us
+[unbound-24cpus] log2N=18 threads=12 sched=static  transpose1 92 | rowFFT1 143 | twiddle+tr 129 | rowFFT2 146 | transpose2 127 | total 640 us
+[24-threads] log2N=18 threads=24 sched=static  transpose1 79 | rowFFT1 134 | twiddle+tr 160 | rowFFT2 133 | transpose2 159 | total 679 us
+[one-slice(0-2)] log2N=20 threads=3 sched=static  transpose1 682 | rowFFT1 2084 | twiddle+tr 1732 | rowFFT2 2100 | transpose2 1160 | total 7940 us
+[three-slices(0,3,6)] log2N=20 threads=3 sched=static  transpose1 578 | rowFFT1 924 | twiddle+tr 768 | rowFFT2 948 | transpose2 639 | total 3891 us
+[two-slices(0-5)] log2N=20 threads=6 sched=static  transpose1 408 | rowFFT1 914 | twiddle+tr 963 | rowFFT2 1066 | transpose2 595 | total 3955 us
+[three-slices(2/slice)] log2N=20 threads=6 sched=static  transpose1 443 | rowFFT1 566 | twiddle+tr 645 | rowFFT2 592 | transpose2 566 | total 2816 us
+[four-slices(spread)] log2N=20 threads=6 sched=static  transpose1 432 | rowFFT1 612 | twiddle+tr 646 | rowFFT2 629 | transpose2 592 | total 2945 us
+[12-cores(0-11)] log2N=20 threads=12 sched=static  transpose1 312 | rowFFT1 547 | twiddle+tr 600 | rowFFT2 548 | transpose2 598 | total 2603 us
+[unbound-24cpus] log2N=20 threads=12 sched=static  transpose1 369 | rowFFT1 855 | twiddle+tr 922 | rowFFT2 1066 | transpose2 641 | total 3865 us
+[24-threads] log2N=20 threads=24 sched=static  transpose1 226 | rowFFT1 543 | twiddle+tr 548 | rowFFT2 543 | transpose2 552 | total 2578 us

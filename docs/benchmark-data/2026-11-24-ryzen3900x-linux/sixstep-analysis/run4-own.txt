@@ -1,0 +1,8 @@
+array 4 MiB threads=12 shift=0: sweep of another thread's data 8 us (1033 GB/s)
+array 4 MiB threads=12 shift=1: sweep of another thread's data 70 us (121 GB/s)
+array 4 MiB threads=12 shift=3: sweep of another thread's data 207 us (41 GB/s)
+array 4 MiB threads=12 shift=6: sweep of another thread's data 209 us (40 GB/s)
+array 16 MiB threads=12 shift=0: sweep of another thread's data 35 us (948 GB/s)
+array 16 MiB threads=12 shift=1: sweep of another thread's data 281 us (120 GB/s)
+array 16 MiB threads=12 shift=3: sweep of another thread's data 827 us (41 GB/s)
+array 16 MiB threads=12 shift=6: sweep of another thread's data 841 us (40 GB/s)
