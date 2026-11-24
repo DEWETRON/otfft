@@ -3,12 +3,15 @@
 //
 // Port of the idea of upstream OTFFT's ffttune (otfft-11.6e/otfft/ffttune.cpp). Unlike
 // upstream it does not generate files that the library includes: it only prints a
-// table and, with --out, writes the suggested switch lines to a file. Applying them
-// to src/otfft_algo.cpp is a separate, reviewed change.
+// table and the suggested switch lines. With --out it writes a tuning file that
+// OTFFT::loadTuningFile reads (D22, D23); the file is for the serial table with one
+// thread and for the threaded table with more. Changing the built-in tables in
+// src/otfft_algo.cpp is a separate, reviewed change.
 //
 // usage: ffttune [--backend sse2|avx|avx2] [--min-log N] [--max-log N] [--threads T]
 //                [--repeats R] [--batch-ms MS] [--out FILE]
 #include "ffttune.h"
+#include "otfft.h"
 
 #include <array>
 #include <cstdio>
@@ -98,6 +101,34 @@ namespace
         return 1;
     }
 
+    std::string cpuModel()
+    {
+        std::ifstream cpuinfo("/proc/cpuinfo");
+        std::string line;
+        while (std::getline(cpuinfo, line))
+        {
+            if (line.compare(0, 10, "model name") == 0)
+            {
+                const std::string::size_type colon = line.find(':');
+                if (colon != std::string::npos && colon + 2 <= line.size()) return line.substr(colon + 2);
+            }
+        }
+        return "unknown";
+    }
+
+    std::string compilerName()
+    {
+#if defined(_MSC_VER)
+        return "MSVC " + std::to_string(_MSC_VER);
+#elif defined(__clang__)
+        return std::string("Clang ") + __clang_version__;
+#elif defined(__GNUC__)
+        return std::string("GCC ") + __VERSION__;
+#else
+        return "unknown";
+#endif
+    }
+
     bool parse(int argc, char** argv, Options& o)
     {
         o.backend = defaultBackend();
@@ -151,6 +182,13 @@ int main(int argc, char** argv)
     }
     std::printf("  fastest\n");
 
+    struct Entry
+    {
+        int log;
+        int best;
+        bool tie;
+    };
+    std::vector<Entry> entries;
     std::vector<std::string> lines;
     for (int n = o.minLog; n <= o.maxLog; n++)
     {
@@ -189,6 +227,7 @@ int main(int argc, char** argv)
         char line[96];
         std::snprintf(line, sizeof line, "case %2d: obj = FFT%d::instance(); obj->setup2(log_N); break;", n, best + 1);
         lines.emplace_back(line);
+        entries.push_back({n, best, tie});
     }
 
     std::printf("\n# suggested lines for the switch in FFT0::setup (src/otfft_algo.cpp):\n");
@@ -198,16 +237,41 @@ int main(int argc, char** argv)
     }
     if (!o.outPath.empty())
     {
-        std::ofstream ofs(o.outPath);
-        if (!ofs)
+        const char* const table = o.threads > 1 ? "threaded" : "serial";
         {
-            std::fprintf(stderr, "ffttune: cannot write %s\n", o.outPath.c_str());
+            std::ofstream ofs(o.outPath);
+            if (!ofs)
+            {
+                std::fprintf(stderr, "ffttune: cannot write %s\n", o.outPath.c_str());
+                return 1;
+            }
+            ofs << "otfft-tuning 1\n";
+            ofs << "# written by ffttune; load it with OTFFT::loadTuningFile\n";
+            ofs << "# cpu: " << cpuModel() << "\n";
+            ofs << "# compiler: " << compilerName() << "\n";
+            ofs << "# backend " << o.backend << ", " << o.threads << " thread(s), table " << table
+                << ", median of " << o.repeats << " batches of about " << o.batchMs << " ms\n";
+            if (o.threads > 1) ofs << "# the library uses the threaded table from length 2^15 only\n";
+            for (const Entry& e : entries)
+            {
+                ofs << o.backend << " " << table << " " << e.log << " " << kNames[e.best]
+                    << (e.tie ? "   # tie within 5%" : "") << "\n";
+            }
+            if (!ofs)
+            {
+                std::fprintf(stderr, "ffttune: error writing %s\n", o.outPath.c_str());
+                return 1;
+            }
+        }
+        // the library has to accept what was written
+        std::string error;
+        if (!OTFFT::loadTuningFile(o.outPath, error))
+        {
+            std::fprintf(stderr, "ffttune: the library rejects %s: %s\n", o.outPath.c_str(), error.c_str());
             return 1;
         }
-        for (const std::string& l : lines)
-        {
-            ofs << l << "\n";
-        }
+        OTFFT::resetTuning();
+        std::printf("\n# wrote %s (%s table) and the library accepts it\n", o.outPath.c_str(), table);
     }
     return 0;
 }

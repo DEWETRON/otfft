@@ -84,8 +84,8 @@ Background and measurements: `docs/upstream-comparison.md`.
     Measured target (2026-11-24, `docs/benchmarks.md`): the fork reaches 0.5 to
     0.6 of upstream 11.6e for complex N = 65,536 to 524,288 with one thread.
     Run-time part: a tuning file can replace the built-in tables (D22, FAC-9 to
-    FAC-13). Still open: `ffttune --out` writing that format, and the choice of
-    the built-in default.
+    FAC-13), and `ffttune --out` writes one (D23). Still open: the choice of the
+    built-in default, and re-tuning the threaded table.
 *   [x] **R1.9** Port the `exp` kernels (`otfft_avx{dif,dit}{8,16}exp.h`,
     `init_Wq`, `init_Wr`, `EXP_THRESHOLD = 2^18`) from upstream 11.6e.
     Done: the four kernel files, `EXP_THRESHOLD = 2^18` and a test of every

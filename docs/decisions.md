@@ -116,7 +116,8 @@ D12: ffttune prints the algorithm table, it does not generate library files
     seven algorithms (DIF4, DIT4, DIF8, DIT8, DIF16, DIT16, SixStep) per
     power-of-two length with the fork's own classes of one backend, checks each
     result against DIF4, and prints a table and the `case` lines for the switch
-    in `src/otfft_algo.cpp`. `--out FILE` writes those lines to a file.
+    in `src/otfft_algo.cpp`. `--out FILE` wrote those lines to a file (replaced by a
+    tuning file in D23; the lines are still printed).
 *   **Why:** the table decides the speed for large N, and the best choice
     depends on CPU, compiler and thread count (`docs/benchmarks.md`, "Algorithm
     selection baseline"). Upstream's tool writes nine `otfft_gen_*.h` files
@@ -373,8 +374,32 @@ D22: run-time tuning file for the algorithm tables
     result would depend on the order of calls); accepting algorithm numbers (names are
     readable and cannot be mistaken for the table's numbering).
 *   **Limit:** the file is not checked against the machine (CPU, compiler, thread count), so a
-    file from another machine is used as it is. `ffttune --out` still writes `case` lines, not
-    this format. No environment variable loads a file. The built-in tables are not changed.
+    file from another machine is used as it is. (`ffttune --out` writes this format since D23.)
+    No environment variable loads a file. The built-in tables are not changed.
     The tables are per backend and per serial/threaded, not per thread count.
-*   **Revisit when:** `ffttune` writes the format (the next step of R1.8), or a wrong file from
+*   **Revisit when:** a wrong file from
     another machine causes trouble (then record the CPU and compiler in the file and check them).
+
+D23: `ffttune --out` writes a tuning file
+-----------------------------------------
+*   **What:** `--out FILE` writes the format of D22 (spec FAC-10) instead of the `case` lines: the
+    `serial` table when `--threads` is 1, the `threaded` table when it is more, one line per
+    measured length with the fastest algorithm (ties within 5% are marked in a comment), and
+    comments with the CPU model, compiler, backend, thread count and run settings. The
+    `case` lines are still printed on standard output. After writing, `ffttune` loads the
+    file with `OTFFT::loadTuningFile` and exits with an error if it is rejected;
+    `ctest` runs this for both tables (`ffttune.tuning_file`, `ffttune.tuning_file_threaded`).
+    Spec BLD-7. Roadmap R1.8.
+*   **Why:** one run of the tool gives a file the library can use, with no edit of the source or
+    rebuild. The comments record where the file came from, as a person (or later a check) needs
+    when a file moves to another machine.
+*   **Rejected:** keeping the `case` lines in `--out` and adding a second option for the new
+    format (two formats to keep, and the `case` lines are of use only to a person who reads the
+    standard output); one run writing both tables (a run measures one thread count).
+*   **Limit:** the file is not checked against the machine when loaded (D22). The tool picks the
+    fastest algorithm per length; it does not choose a compromise over several machines as the
+    built-in tables do (D14). The old `.txt` files in `docs/benchmark-data/` are `case` lines
+    and cannot be loaded. The tool is Linux-oriented for the CPU name (`/proc/cpuinfo`; other
+    systems write `unknown`).
+*   **Revisit when:** a file from the wrong machine is loaded by mistake (check the comment data
+    in `loadTuningFile`), or an environment variable loads the file at start.
