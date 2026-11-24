@@ -664,6 +664,7 @@ struct Options
     double targetMs = 2.0;
     double maxRunMs = 2000.0;
     std::string csvPath;
+    std::string tuningPath; // OTFFT tuning file (D22), loaded before the runs
     bool quick = false;
     std::size_t minN = 0;
 };
@@ -852,6 +853,7 @@ bool parseArgs(int argc, char** argv, Options& o)
         if (a == "--threads") o.threads = std::max(1, std::atoi(next().c_str()));
         else if (a == "--lib") o.libFilter = next();
         else if (a == "--csv") o.csvPath = next();
+        else if (a == "--tuning") o.tuningPath = next();
         else if (a == "--samples") o.samples = std::max(3, std::atoi(next().c_str()));
         else if (a == "--target-ms") o.targetMs = std::atof(next().c_str());
         else if (a == "--max-run-ms") o.maxRunMs = std::atof(next().c_str());
@@ -875,7 +877,7 @@ bool parseArgs(int argc, char** argv, Options& o)
             std::fprintf(stderr,
                          "usage: otfft_bench [--kinds complex,real,dct,roundtrip] [--sizes pow2,pow2all,smooth,prime]\n"
                          "                   [--lib NAME] [--threads T] [--samples S] [--target-ms MS]\n                   [--max-run-ms MS]\n"
-                         "                   [--csv FILE] [--quick] [--min-n N]\n");
+                         "                   [--csv FILE] [--quick] [--min-n N] [--tuning FILE]\n");
             return false;
         }
     }
@@ -901,6 +903,25 @@ int main(int argc, char** argv)
 #endif
 #ifdef HAVE_FFTW
     fftw_set_timelimit(10.0);
+#endif
+
+#ifndef OTFFT_UPSTREAM
+    if (!o.tuningPath.empty())
+    {
+        std::string error;
+        if (!OTFFT::loadTuningFile(o.tuningPath, error))
+        {
+            std::fprintf(stderr, "tuning file %s: %s\n", o.tuningPath.c_str(), error.c_str());
+            return 1;
+        }
+        std::fprintf(stderr, "# tuning file: %s\n", o.tuningPath.c_str());
+    }
+#else
+    if (!o.tuningPath.empty())
+    {
+        std::fprintf(stderr, "--tuning: not available for the upstream OTFFT\n");
+        return 1;
+    }
 #endif
 
     printEnvironment(o);

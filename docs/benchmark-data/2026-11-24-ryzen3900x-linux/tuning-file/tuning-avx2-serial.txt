@@ -1,0 +1,29 @@
+otfft-tuning 1
+# written by ffttune; load it with OTFFT::loadTuningFile
+# cpu: AMD Ryzen 9 3900X 12-Core Processor
+# compiler: GCC 15.2.0
+# backend avx2, 1 thread(s), table serial, median of 9 batches of about 20 ms
+avx2 serial 1 DIF16   # tie within 5%
+avx2 serial 2 DIT16   # tie within 5%
+avx2 serial 3 DIF16   # tie within 5%
+avx2 serial 4 DIT4   # tie within 5%
+avx2 serial 5 DIF8   # tie within 5%
+avx2 serial 6 DIF8
+avx2 serial 7 DIT16   # tie within 5%
+avx2 serial 8 DIF4   # tie within 5%
+avx2 serial 9 DIF8
+avx2 serial 10 DIF4   # tie within 5%
+avx2 serial 11 DIF16
+avx2 serial 12 DIF4
+avx2 serial 13 DIF4   # tie within 5%
+avx2 serial 14 DIF4
+avx2 serial 15 DIF8   # tie within 5%
+avx2 serial 16 DIF4
+avx2 serial 17 DIF4
+avx2 serial 18 DIF4
+avx2 serial 19 DIT16   # tie within 5%
+avx2 serial 20 DIF16   # tie within 5%
+avx2 serial 21 SixStep
+avx2 serial 22 DIF16   # tie within 5%
+avx2 serial 23 DIF16
+avx2 serial 24 DIF8   # tie within 5%
