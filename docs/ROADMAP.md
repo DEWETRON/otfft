@@ -52,8 +52,15 @@ Milestone 1b: Fixes and speed found by the benchmarks
     (R1.10: SixStep 1.5x to 2.5x faster from 2^19, N = 4,194,304 with 8 threads
     1.19x complex, 1.82x real); the table still picks SixStep where DIF8 is
     faster on the Intel notebook (R1.8).
-*   [ ] **R1.7** Decide whether the AVX2 backend is worth keeping (no gain over
+*   [x] **R1.7** Decide whether the AVX2 backend is worth keeping (no gain over
     AVX in the benchmarks); recheck after R2.1.
+    Decided: keep it (D21). The "no gain" was a build flag gap: GCC and Clang
+    do not enable FMA with `-mavx2` and the flags had no `-mfma`. With it the
+    AVX2 backend is 5% to 7% faster over all sizes and 10% to 18% faster at N = 64 to
+    4,096 (GCC 15.2, one thread, Intel notebook); MSVC already had it. The
+    backend is now chosen only on CPUs with AVX2 and FMA, and
+    `otfft_backend_test` checks the flags. Not done: a run on the Ryzen and with
+    Clang; the recheck after R2.1 (AVX-512) stays.
 
 Milestone 1c: Catch up with upstream 11.6e
 ------------------------------------------
