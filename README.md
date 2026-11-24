@@ -142,13 +142,26 @@ Complex FFT, one thread, equivalent MFLOPS (higher is better), AMD Ryzen 9
 | 65,536 | 6,907 | 21,515 | 4,726 | 5,110 |
 | 1,048,576 | 5,346 | 8,176 | 3,095 | 2,256 |
 
+Same test on a Windows notebook, Intel Core Ultra 7 268V, MSVC (FFTW not
+available there):
+
+| N | OTFFT | PocketFFT | KissFFT |
+| ---: | ---: | ---: | ---: |
+| 256 | 42,646 | 5,950 | 8,536 |
+| 4,096 | 25,566 | 9,123 | 9,406 |
+| 65,536 | 13,639 | 4,717 | 6,346 |
+| 1,048,576 | 6,280 | 5,012 | 2,801 |
+
+OTFFT is the fastest of the three at every power of two on this machine; see
+[docs/benchmarks.md](docs/benchmarks.md#intel-core-ultra-7-268v-windows-msvc).
+
 * OTFFT is within 1.3x of FFTW up to N=16,384 and 1.3x to 26x faster than PocketFFT and KissFFT on powers of two. From N=65,536, FFTW is 1.6x to 3x faster.
 * The DCT-II is 1.1x to 1.9x faster than FFTW's up to N=262,144.
 * Lengths with factors 3, 5 and 7 are 2x to 11x slower than FFTW, and OTFFT's own prime-length path is much slower still.
 * The upstream claim that OTFFT is faster than FFTW at every length is **not reproduced** on this machine; the section [Comparison with the upstream benchmark](docs/benchmarks.md#comparison-with-the-upstream-benchmark) shows the two side by side.
 
 Method, caveats and all tables are in [docs/benchmarks.md](docs/benchmarks.md).
-The numbers come from one shared machine and vary by up to 30% for large sizes.
+The numbers come from two machines, each shared with other work, and vary by up to 30% for large sizes.
 To run them yourself: `cmake -B build -DOTFFT_BUILD_BENCHMARKS=ON`, then
 `build/Release/otfft_bench` (see the benchmarks page).
 

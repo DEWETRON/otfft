@@ -35,6 +35,10 @@ Summary
     N=65,536 and differs by a factor of 0.5 to 1.6 at some larger sizes.
 *   **Compilers.** GCC 15.2 and Clang 21.1.8 give the same picture; the real FFT and DCT
     are 4 to 12 percent slower with Clang and Bluestein 15 to 43 percent. See "Compiler comparison".
+*   **Other CPU.** On an Intel Core Ultra 7 268V with MSVC (no FFTW) OTFFT is
+    the fastest of OTFFT, PocketFFT and KissFFT at every power of two and
+    shows the same weak spots (N=10,080, prime lengths). See "Intel Core Ultra
+    7 268V, Windows, MSVC".
 *   **Planning.** OTFFT plans in 8 microseconds to 100 ms. FFTW with
     `FFTW_MEASURE` needs 0.3 ms to 10 s (the time limit we set).
 
@@ -668,6 +672,88 @@ Caveats of this comparison: one machine, GCC only for upstream, upstream's tuner
 the main run is a single run, so single differences below about 10% at N <=
 16,384 are not meaningful. FFTW-measure ran with the same 10 s planning limit
 as before.
+
+Intel Core Ultra 7 268V, Windows, MSVC
+--------------------------------------
+
+The same harness run on a Windows 11 notebook on 2026-11-24, to see how the
+picture changes on another CPU and compiler. **FFTW was not available**, so
+only OTFFT, PocketFFT and KissFFT are compared, and only complex transforms
+(the default `--kinds`) were run. The prime length N=100,003 is not in the
+default size set, so it is missing too.
+
+| Item | Value |
+| --- | --- |
+| CPU | Intel Core Ultra 7 268V, 8 cores / 8 threads (no Hyper-Threading) |
+| OS | Windows 11 Enterprise, notebook, default power plan, not isolated |
+| Compiler | MSVC (Visual Studio 2022 Build Tools), `Release` (`/O2`) |
+| Threads | 1 and 8 (the Ryzen runs used 12) |
+
+The log says `optimised build: NO` and `cpu: unknown`. Both are false:
+`bench.cpp` tests `__OPTIMIZE__`, which MSVC does not define, and reads the CPU
+name only on Linux. The build was a Release build.
+
+**Complex FFT, powers of two, one thread, MFLOPS**
+
+| N | OTFFT | PocketFFT | KissFFT |
+| ---: | ---: | ---: | ---: |
+| 16 | **29,196** | 576 | 4,063 |
+| 64 | **41,554** | 2,510 | 6,783 |
+| 256 | **42,646** | 5,950 | 8,536 |
+| 1,024 | **44,476** | 7,049 | 9,391 |
+| 4,096 | **25,566** | 9,123 | 9,406 |
+| 16,384 | **24,249** | 9,718 | 9,171 |
+| 65,536 | **13,639** | 4,717 | 6,346 |
+| 262,144 | **9,880** | 5,456 | 6,435 |
+| 1,048,576 | **6,280** | 5,012 | 2,801 |
+| 4,194,304 | **5,362** | 5,249 | 1,910 |
+
+**Complex FFT, smooth and prime lengths, one thread, MFLOPS**
+
+| N | OTFFT | PocketFFT | KissFFT | OTFFT-bluestein |
+| ---: | ---: | ---: | ---: | ---: |
+| 480 | **19,809** | 7,139 | 8,613 | 2,239 |
+| 1,000 | **14,016** | 7,875 | 8,870 | 2,390 |
+| 3,000 | **13,910** | 8,612 | 8,647 | 1,472 |
+| 10,080 | 5,303 | **8,906** | 4,900 | 1,296 |
+| 100,000 | **11,402** | 5,788 | 8,536 | 1,069 |
+| 1,000,000 | **9,976** | 6,112 | 3,126 | 1,116 |
+| 1,009 (prime) | 39 | 1,186 | 69 | **2,406** |
+| 10,007 (prime) | 5 | 1,210 | 9 | **1,349** |
+
+**OTFFT, powers of two, MFLOPS: backends at one thread, and 8 threads**
+
+| N | SSE2 (1 thread) | AVX (1 thread) | AVX2 (1 thread) | auto, 1 thread | auto, 8 threads |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 16 | 21,670 | 26,795 | 27,574 | 29,196 | 28,499 |
+| 1,024 | 23,342 | 38,489 | 42,497 | 44,476 | 43,557 |
+| 16,384 | 16,878 | 23,649 | 19,151 | 24,249 | 11,914 |
+| 65,536 | 9,820 | 10,976 | 11,807 | 13,639 | 15,995 |
+| 262,144 | 8,934 | 12,197 | 11,500 | 9,880 | 22,715 |
+| 1,048,576 | 7,946 | 6,516 | 6,208 | 6,280 | 15,302 |
+| 4,194,304 | 5,371 | 5,213 | 5,162 | 5,362 | 17,286 |
+
+What this shows:
+
+*   OTFFT is the fastest of the three at every power of two. Its lead over
+    PocketFFT falls from about 6x at N=1,024 to 1.0x at N=4,194,304, where
+    both are limited by memory.
+*   N=10,080 is again OTFFT's weak smooth length: PocketFFT is 1.7x faster.
+*   The prime-length problem is the same as on the Ryzen: `createComplexFFT`
+    gives 39 and 5 MFLOPS, `createBluesteinFFT` is 2,406 and 1,349 and beats
+    PocketFFT at N=1,009 (2.0x) and N=10,007 (1.1x).
+*   AVX and AVX2 are 1.5x to 1.9x faster than SSE2 up to N=1,024. Above
+    N=1,048,576 and up SSE2 is as fast or faster.
+*   8 threads are faster from N=65,536 (1.2x) up to 3.2x at N=4,194,304 and
+    2.4x at N=1,048,576, but slower at N=16,384 (0.5x), as on the Ryzen.
+*   Absolute numbers cannot be compared with the Ryzen tables: another CPU,
+    another compiler, and a notebook with power management. There are no FFTW
+    numbers to set against.
+
+Raw results and logs: `docs/benchmark-data/2026-11-24-intel/` (`bench-t1.*`,
+`bench-t8.*`). Reproduce as in "Reproduce" below, with `--threads 8`; the
+Windows build uses the Visual Studio generator, so the executable is
+`build/Release/otfft_bench.exe`.
 
 Problems found
 --------------
