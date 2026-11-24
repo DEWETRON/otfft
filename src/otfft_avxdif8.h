@@ -22,7 +22,10 @@ namespace OTFFT_AVXDIF8 { /////////////////////////////////////////////////////
 #ifdef DO_SINGLE_THREAD
     constexpr int OMP_THRESHOLD = 1<<30;
 #else
-    constexpr int OMP_THRESHOLD = 1<<11;
+    // Below this length the transform runs on one thread: with 12 threads on a Ryzen 9
+    // 9950X and with 2 to 8 threads on a Core Ultra 7 268V, DIF8 with more threads was slower
+    // than with one up to about this size (docs/benchmarks.md, "Thread break-even", D17).
+    constexpr int OMP_THRESHOLD = 1<<16;
 #endif
 
     ///////////////////////////////////////////////////////////////////////////////

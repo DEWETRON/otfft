@@ -38,7 +38,8 @@ Rules
     `setup(n)` from a table per length. There are two tables: one for a
     configured OpenMP thread count of 1 (tuned with `tools/ffttune` on an
     Intel and an AMD CPU) and one for more than 1 thread (the upstream table,
-    not re-tuned). The thread count is read when the plan is made, so a plan
+    not re-tuned), used from length 2^15 up; below 2^15 the serial table is
+    used also with several threads. The thread count is read when the plan is made, so a plan
     keeps its algorithm if `omp_set_num_threads` is called later. The result
     does not depend on the table. (`otfft_algorithm_table_test:
     TestPowerOfTwoOneThread, TestPowerOfTwoSeveralThreads,
@@ -51,6 +52,12 @@ Rules
     together with 2, 4, 8 and 7, are correct, also above the OpenMP threshold.
     (`otfft_radix35_test: TestRadix3Only, TestRadix5Only,
     TestRadix3And5WithOtherFactors, TestRadix3And5AboveOpenMpThreshold`)
+*   **CFFT-11** `[built]` A power-of-two transform runs on one thread below a
+    length that depends on the algorithm (2^14 to 2^18, D17) and on several above
+    it; the lengths are where threads started to pay off in measurements on two
+    CPUs. Results do not depend on the thread count. (`otfft_algorithm_table_test`
+    checks the results with 1 and 4 threads; the speed is measured in
+    `docs/benchmarks.md`, not by a test.)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)
@@ -69,6 +76,7 @@ Decided
 *   D14: two algorithm tables, chosen by the thread count.
 *   D15: radix-7 butterfly in the symmetric form (speed only, no change of results).
 *   D16: radix-3 and radix-5 butterflies in the symmetric form (speed only).
+*   D17: threading thresholds at the measured break-even.
 
 Questions
 ---------

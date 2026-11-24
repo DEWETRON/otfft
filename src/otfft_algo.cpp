@@ -49,10 +49,10 @@ namespace OTFFT_NAMESPACE
         // Algorithm per length 2^log_N (index log_N, 1 to 24), numbered as FFT1 to FFT7 above:
         // 1 DIF4, 2 DIT4, 3 DIF8, 4 DIT8, 5 DIF16, 6 DIT16, 7 SixStep.
         //
-        // Used when more than one OpenMP thread is configured: the upstream table (see
-        // upstream otfft_gen_*.h), not re-tuned. From 2^18 it is SixStep, the algorithm that
-        // scales with threads (12 threads on the Ryzen: SixStep is fastest at most lengths
-        // from 2^13, see docs/benchmarks.md).
+        // Used when more than one OpenMP thread is configured and the length is at least
+        // THREADED_MIN_LOG: the upstream table (see upstream otfft_gen_*.h), not re-tuned.
+        // From 2^18 it is SixStep, the algorithm that scales with threads (12 threads on
+        // the Ryzen: SixStep is fastest at most lengths from 2^13, see docs/benchmarks.md).
         const int ALGORITHM_THREADED[25] = {0,
             2, 1, 4, 1, 4, 3, 5, 3, 3, 1, 5, 4, 3, 4, 4, 7, 4, 7, 7, 7, 7, 7, 7, 7};
 
@@ -64,11 +64,19 @@ namespace OTFFT_NAMESPACE
         const int ALGORITHM_SERIAL[25] = {0,
             2, 1, 4, 1, 4, 3, 5, 3, 3, 1, 5, 4, 3, 3, 3, 1, 3, 3, 3, 3, 3, 5, 5, 3};
 
+        // Below this length (log2) the best algorithm with several threads is slower than the
+        // best one with a single thread: 1.5x at 2^13 and 1.2x at 2^14 with 12 threads on a
+        // Ryzen 9 9950X; on a Core Ultra 7 268V with 2 to 8 threads threading helps from about
+        // 2^14 to 2^15 (docs/benchmarks.md, "Thread break-even", decision D17). From 2^15 up
+        // ALGORITHM_THREADED is used; below it ALGORITHM_SERIAL, and the algorithm classes
+        // do not use threads there (their OMP_THRESHOLD is above these lengths).
+        const int THREADED_MIN_LOG = 15;
+
         // The table is chosen when the plan is made, from the OpenMP thread count at that time.
         int selectAlgorithm(int log_N) noexcept
         {
 #ifdef _OPENMP
-            const bool threaded = omp_get_max_threads() > 1;
+            const bool threaded = omp_get_max_threads() > 1 && log_N >= THREADED_MIN_LOG;
 #else
             const bool threaded = false;
 #endif
