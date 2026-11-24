@@ -42,3 +42,13 @@ endif()
 add_test(NAME ffttune.smoke
   COMMAND ffttune --min-log 4 --max-log 12 --repeats 3 --batch-ms 2)
 set_tests_properties(ffttune.smoke PROPERTIES PASS_REGULAR_EXPRESSION "case 12: obj = FFT[1-7]::instance")
+
+# the tuning file that --out writes must be accepted by OTFFT::loadTuningFile (D23); ffttune
+# checks this itself and fails if the library rejects the file. The second run uses the
+# threaded table.
+add_test(NAME ffttune.tuning_file
+  COMMAND ffttune --min-log 4 --max-log 12 --repeats 3 --batch-ms 2 --out ffttune_test_tuning.txt)
+set_tests_properties(ffttune.tuning_file PROPERTIES PASS_REGULAR_EXPRESSION "and the library accepts it")
+add_test(NAME ffttune.tuning_file_threaded
+  COMMAND ffttune --min-log 4 --max-log 12 --repeats 3 --batch-ms 2 --threads 2 --out ffttune_test_tuning_threaded.txt)
+set_tests_properties(ffttune.tuning_file_threaded PROPERTIES PASS_REGULAR_EXPRESSION "\\(threaded table\\) and the library accepts it")

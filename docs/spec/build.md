@@ -23,8 +23,14 @@ Rules
     algorithms of one backend (`--backend sse2|avx|avx2`, default the widest
     built), checks each result against DIF4, and prints the fastest one per
     length and the matching `case` lines for the switch in
-    `src/otfft_algo.cpp`. It changes no library file; applying the lines is a
-    separate change. (`ffttune.smoke` in `ctest`; CI does not build the tools.)
+    `src/otfft_algo.cpp`. It changes no library file. With `--out FILE` it writes
+    a tuning file (format: FAC-10): the `serial` table for one thread
+    (`--threads 1`, the default) or the `threaded` table for more, with the CPU model,
+    compiler and run settings as comment lines. It reads the file back with
+    `OTFFT::loadTuningFile` and fails if the library rejects it. The
+    built-in tables are changed only in a separate change.
+    (`ffttune.smoke`, `ffttune.tuning_file` and `ffttune.tuning_file_threaded` in
+    `ctest`; CI does not build the tools.)
 
 *   **BLD-8** `[done]` `-DOTFFT_BUILD_EXAMPLES=ON` builds the programs in
     `examples/` (`complex_fft`, `real_fft`, `dct`, `bluestein`). The default is
@@ -46,6 +52,7 @@ Decided
 
 *   D3: one library per backend, chosen at run time.
 *   D12: `ffttune` prints the algorithm table, it does not generate library files.
+*   D23: `ffttune --out` writes a tuning file, not `case` lines.
 *   D18: the examples check themselves and run under `ctest`.
 *   D21: the AVX2 backend is kept and built with FMA.
 

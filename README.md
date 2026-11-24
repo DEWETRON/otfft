@@ -52,7 +52,7 @@ Options:
 | `OTFFT_BUILD_TESTS` | ON | build the unit tests (doctest is included in `third_party/`) |
 | `OTFFT_BUILD_BENCHMARKS` | OFF | build `otfft_bench`; finds FFTW with pkg-config if installed |
 | `OTFFT_BUILD_EXAMPLES` | ON (OFF when otfft is a subproject) | build the programs in `examples/`, which `ctest` also runs |
-| `OTFFT_BUILD_TOOLS` | OFF | build `ffttune`, which finds the fastest algorithm for each power-of-two length on this machine |
+| `OTFFT_BUILD_TOOLS` | OFF | build `ffttune`, which finds the fastest algorithm for each power-of-two length on this machine and can write a tuning file for `OTFFT::loadTuningFile` |
 
 To use the library from another CMake project, add the directory with
 `add_subdirectory(otfft)` and link the `otfft` target. Include the header as
