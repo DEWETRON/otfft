@@ -1,0 +1,3 @@
+22:31:31
+  4  6.2 /usr/bin/gnome-shell --mode=ubuntu
+ 12  4.9 /usr/share/code/code --type=renderer --crashpad-handler-pid=9608 --enable-crash-reporter=41
