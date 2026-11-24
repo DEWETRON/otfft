@@ -1,0 +1,3 @@
+otfft-tuning 1
+# control: one entry that does not change any choice at 2^22
+avx2 serial 4 DIF4

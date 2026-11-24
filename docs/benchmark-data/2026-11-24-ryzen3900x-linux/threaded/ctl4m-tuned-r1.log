@@ -1,0 +1,7 @@
+# tuning file: docs/benchmark-data/2026-11-24-ryzen3900x-linux/threaded/tuning-avx2-threaded-r1.txt
+# cpu: AMD Ryzen 9 3900X 12-Core Processor
+# governor: schedutil
+# compiler: 15.2.0
+# optimised build: yes
+# threads: 12, samples: 11, target batch: 2.0 ms
+# done complex n=4194304
