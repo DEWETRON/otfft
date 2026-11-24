@@ -207,3 +207,29 @@ D15: radix-7 butterfly in the symmetric form
 *   **Revisit when:** the radix 3 and 5 butterflies are changed to the
     symmetric form (R1.5), or when R2.1 and R2.2 need other kernels.
 
+D16: radix-3 and radix-5 butterflies in the symmetric form
+-----------------------------------------------------------
+*   **What:** the radix-3 and radix-5 butterflies in `src/otfft_mixedradix.h`
+    (`fwdend3`, `fwdcore3`, `fwdend5`, `fwdcore5`, the inverse ones and the
+    OpenMP versions with `p`) use the same symmetric form as the radix-7
+    butterfly (D15): sums and differences of the symmetric pairs with real
+    constants, one `bfly3` and one `bfly5` kernel shared by all of them. The
+    twiddle factors of the core step are read from the table (`W[k*sp]`,
+    inverse `W[N-k*sp]`). The end functions no longer take the twiddle table.
+    Roadmap R1.5, issue #18.
+*   **Why:** 2 and 8 real multiplications instead of 4 and 16 complex ones per
+    butterfly. Measured on the Intel notebook: lengths with a factor 5 are 1.1x
+    to 1.4x faster. Powers of 3 do not change measurably (probably the
+    radix-3 pass was already cheap; not investigated), but the code is shared
+    with the other radices and not slower beyond noise.
+*   **Rejected:** keeping the plain form for radix 3 (no gain, but two forms of
+    the same idea in one file); a hand-written radix-9 or radix-25 pass (more
+    code for lengths that are rare).
+*   **Limit:** the results differ from the old code in the last bits (other
+    order of operations). Measured on one CPU, with MSVC and with GCC (WSL2); on
+    that CPU the transform is still about 2x slower than FFTW for lengths with
+    3, 5 and 7 (docs/benchmarks.md), so the butterflies were not the only cost.
+*   **Revisit when:** FFTW comparison shows that the pass structure (number of
+    passes, memory traffic) and not the butterflies is the remaining cost, or
+    R2.1 and R2.2 need other kernels.
+

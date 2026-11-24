@@ -1136,6 +1136,119 @@ second, small timing program (`lens.cpp`, kept with the data) times
 
 Raw results: `docs/benchmark-data/2026-11-24-intel/radix7/`.
 
+Radix-3 and radix-5 butterflies in the symmetric form: effect on the Intel notebook
+--------------------------------------------------------------------------------
+
+Roadmap R1.5 (second part), issue #18, decision D16. After the radix-7
+butterfly (previous section), the radix-3 and radix-5 butterflies were the
+remaining plain ones (4 and 16 complex multiplications per butterfly). They use
+the symmetric form with real constants now (2 and 8 multiplications by a real
+number), forward and inverse, with and without OpenMP.
+
+Method: a small timing program (`lens.cpp`, kept with the data) times
+`createComplexFFT` `fwd0` for each length (best of 7 timed loops of about 30 ms),
+of the library before and after the change, one thread, MSVC Release, Intel
+notebook as above. The two libraries were run alternately, three times each;
+the table shows the median of the three, MFLOPS (5 N log2 N / time).
+
+| N | Factors | Before | After | Change |
+| ---: | --- | ---: | ---: | ---: |
+| 3 | 3 | 4,716 | 4,294 | 0.91x |
+| 27 | 3^3 | 11,299 | 12,105 | 1.07x |
+| 2,187 | 3^7 | 14,622 | 15,768 | 1.08x |
+| 59,049 | 3^10 (OpenMP) | 16,909 | 15,214 | 0.90x |
+| 5 | 5 | 6,530 | 8,715 | 1.33x |
+| 25 | 5^2 | 9,999 | 14,168 | 1.42x |
+| 125 | 5^3 | 11,546 | 15,676 | 1.36x |
+| 15,625 | 5^6 | 12,063 | 15,175 | 1.26x |
+| 78,125 | 5^7 (OpenMP) | 19,665 | 24,715 | 1.26x |
+| 15 | 3 5 | 9,020 | 10,090 | 1.12x |
+| 75 | 3 5^2 | 11,122 | 14,703 | 1.32x |
+| 375 | 3 5^3 | 11,803 | 15,466 | 1.31x |
+| 3,375 | 3^3 5^3 | 12,415 | 14,539 | 1.17x |
+| 480 | 2^5 3 5 | 18,729 | 20,775 | 1.11x |
+| 1,000 | 2^3 5^3 | 14,709 | 17,940 | 1.22x |
+| 3,000 | 2^3 3 5^3 | 14,391 | 17,311 | 1.20x |
+| 12,000 | 2^5 3 5^3 | 14,488 | 16,437 | 1.13x |
+| 100,000 | 2^5 5^5 | 22,816 | 28,324 | 1.24x |
+| 10,080 | 2^5 3^2 5 7 | 16,286 | 17,879 | 1.10x |
+| 1,024 | 2^10 | 47,039 | 48,495 | 1.03x |
+| 4,096 | 2^12 | 27,367 | 26,446 | 0.97x |
+| 65,536 | 2^16 | 21,921 | 20,559 | 0.94x |
+
+*   Lengths with a factor 5 are 1.1x to 1.4x faster: 5^k alone 1.25x to
+    1.42x, mixed lengths such as 75, 375 and 1,000 1.2x to 1.3x, N=100,000
+    1.24x. Between the three runs the results of most lengths vary by 10% or less
+    (27% for the old library at N=78,125 and 23% at N=100,000).
+*   Powers of 3 alone show no measurable change (0.90x to 1.12x, up to 12%
+    spread between runs). A likely reason is that the radix-3 pass was already
+    cheap per point and the transform is limited by memory access, not by the
+    multiplications; this was not investigated.
+*   Lengths made of 2 only (the last three rows) do not use the new code; their
+    changes (0.94x to 1.03x) show the size of the noise.
+*   With the radix-7 change, N=10,080 is now at about 18,000 MFLOPS (it was 8,800
+    two steps ago).
+*   `otfft_bench` of the same two builds (complex, smooth and power-of-two
+    lengths, one thread, three runs each) showed the same direction for lengths with
+    a factor 5 (median gains of 1.2x to 1.4x for N = 480, 1,000, 100,000 and
+    1,000,000), but its run-to-run spread was up to 2x to 3x on this machine
+    (probably the hybrid CPU moving the thread between core types) and pure
+    powers of 2, which do not use the changed code, came out between 0.84x and
+    1.69x. So none of its numbers are quoted; the files are kept
+    in `docs/benchmark-data/2026-11-24-intel/radix35/bench-noisy/`.
+*   FFTW is not available for MSVC on this machine; the GCC part below has the
+    FFTW numbers.
+
+**GCC, with FFTW (WSL2).** The same two builds (old = `master` with the radix-7
+butterfly, new = with the radix 3 and 5 butterflies) were also built with
+GCC 15.2.0 in WSL2 (Ubuntu 26.04) on the same Intel notebook, against FFTW 3.3.10
+(Ubuntu package, SSE2/AVX) and PocketFFT. `otfft_bench`, complex transforms,
+one thread, pinned to one logical CPU with `taskset -c 2` (which core type that
+is was not checked), `--lib OTFFT`: old and new alternately three times
+(medians below; the three runs differ by at most 1.05x for nearly all lengths,
+1.20x at the worst); FFTW and PocketFFT from one separate run of the new build.
+MFLOPS; "new / FFTW" is the new OTFFT divided by FFTW-measure (below 1 means
+FFTW is faster). `ctest` passes with this build, and it has no compiler warnings from the OTFFT sources.
+
+| N | Factors | Before | After | Change | FFTW-measure | New / FFTW | PocketFFT |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 480 | 2^5 3 5 | 14,906 | 18,693 | 1.25x | 41,163 | 0.45 | 6,651 |
+| 1,000 | 2^3 5^3 | 11,217 | 16,251 | 1.45x | 35,524 | 0.46 | 8,537 |
+| 3,000 | 2^3 3 5^3 | 10,797 | 15,314 | 1.42x | 30,495 | 0.50 | 7,419 |
+| 10,080 | 2^5 3^2 5 7 | 13,585 | 15,549 | 1.14x | 28,658 | 0.54 | 10,468 |
+| 100,000 | 2^5 5^5 | 8,787 | 12,951 | 1.47x | 26,608 | 0.49 | 8,384 |
+| 1,000,000 | 2^6 5^6 | 8,051 | 10,691 | 1.33x | 11,669 | 0.92 | 6,694 |
+| 16 | 2^4 | 33,589 | 32,768 | 0.98x | 30,752 | 1.07 | 1,694 |
+| 256 | 2^8 | 37,611 | 38,457 | 1.02x | 45,756 | 0.84 | 7,488 |
+| 1,024 | 2^10 | 37,106 | 37,328 | 1.01x | 46,483 | 0.80 | 8,980 |
+| 4,096 | 2^12 | 23,915 | 25,034 | 1.05x | 36,245 | 0.69 | 9,274 |
+| 65,536 | 2^16 | 17,018 | 17,197 | 1.01x | 26,400 | 0.65 | 6,798 |
+| 262,144 | 2^18 | 13,872 | 15,030 | 1.08x | 20,712 | 0.73 | 6,276 |
+| 1,048,576 | 2^20 | 10,252 | 10,361 | 1.01x | 16,070 | 0.64 | 5,426 |
+| 4,194,304 | 2^22 | 7,885 | 7,870 | 1.00x | 4,008 | 1.96 | 4,745 |
+
+*   Under GCC the lengths with a factor 5 are 1.25x to 1.47x faster
+    (N = 1,000: 1.45x, N = 3,000: 1.42x, N = 100,000: 1.47x, N = 10,080 with the 7:
+    1.14x); powers of 2, which use none of the changed code, differ by 0.98x to
+    1.08x. The Windows/MSVC timing program above gave 1.1x to 1.4x.
+*   FFTW is still faster: OTFFT reaches 0.45 to 0.54 of FFTW's speed for N = 480,
+    1,000, 3,000, 10,080 and 100,000 (FFTW is 1.9x to 2.2x faster), and 0.92 at
+    N=1,000,000. Before this change the same lengths were 0.32 to 0.36 (2.8x
+    to 3.2x slower) for N = 480, 1,000 and 3,000. N=10,080 was about 11x behind on
+    the Ryzen before the radix-7 change; this machine was not measured against
+    FFTW before it. Powers of 2: 0.80 to 0.86 of FFTW for N = 64 to 1,024
+    (OTFFT is ahead at N=16), 0.65 to 0.73 for N = 4,096 to 262,144, 0.64 at
+    1,048,576, and OTFFT is ahead at N=4,194,304 (1.96x; FFTW measured slower
+    than OTFFT there, and sizes that large vary by up to 30% between runs).
+*   Limits: WSL2 on a hybrid CPU, one logical CPU, one run of FFTW and
+    PocketFFT; the machine had a load average of about 2.6 when the runs
+    started (builds just before) and was otherwise idle. The numbers are
+    not comparable with the Ryzen tables.
+
+Raw results: `docs/benchmark-data/2026-11-24-intel/radix35/` (MSVC timing
+program, `bench-noisy/`) and `docs/benchmark-data/2026-11-24-intel/radix35-wsl-gcc/`
+(GCC and FFTW in WSL2, with `machine.txt`).
+
 Problems found
 --------------
 

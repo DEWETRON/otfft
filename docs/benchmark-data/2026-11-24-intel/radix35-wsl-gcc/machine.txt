@@ -1,0 +1,6 @@
+date: 2026-11-24T10:48:34+01:00
+kernel: 6.6.114.1-microsoft-standard-WSL2
+gcc: gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+cpu: model name	: Intel(R) Core(TM) Ultra 7 268V
+pinned: taskset -c 2
+uptime:  10:48:34 up 8 min,  1 user,  load average: 2.59, 2.71, 1.32

@@ -40,6 +40,64 @@ constexpr int OMP_THRESHOLD = 1<<15;
     }
 
     ///////////////////////////////////////////////////////////////////////////////
+    // Radix-3 and radix-5 butterfly kernels
+    //
+    // The same symmetric form as the radix-7 kernel below: with the sums
+    // t_j = x_j + x_(R-j) and the differences d_j = x_j - x_(R-j),
+    //   X_k     = x_0 + sum_j cos(2 pi j k / R) t_j -+ i sum_j sin(2 pi j k / R) d_j
+    //   X_(R-k) = x_0 + sum_j cos(2 pi j k / R) t_j +- i sum_j sin(2 pi j k / R) d_j
+    // (upper sign: forward, lower: inverse). The multiplications are by real
+    // constants, 2 for R = 3 and 8 for R = 5, instead of 4 and 16 complex ones.
+    ///////////////////////////////////////////////////////////////////////////////
+
+    constexpr double R3_C1 = -0.5;                    // cos(2 pi / 3)
+    constexpr double R3_S1 =  0.86602540378443864676; // sin(2 pi / 3)
+    constexpr double R5_C1 =  0.30901699437494742410; // cos(2 pi / 5)
+    constexpr double R5_C2 = -0.80901699437494742410; // cos(4 pi / 5)
+    constexpr double R5_S1 =  0.95105651629515357212; // sin(2 pi / 5)
+    constexpr double R5_S2 =  0.58778525229247312917; // sin(4 pi / 5)
+
+    // r[k] = k-th output; DIR = -1 forward, +1 inverse
+    template <int DIR> static inline void bfly3(const xmm x0, const xmm x1, const xmm x2, xmm* r) noexcept force_inline3;
+    template <int DIR> static inline void bfly3(const xmm x0, const xmm x1, const xmm x2, xmm* r) noexcept
+    {
+        const xmm c1 = cmplx(R3_C1, R3_C1);
+        const xmm s1 = cmplx(R3_S1, R3_S1);
+        const xmm t1 = addpz(x1, x2);
+        const xmm a1 = addpz(x0, mulpd(c1, t1));
+        const xmm b1 = mulpd(s1, subpz(x1, x2));
+        r[0] = addpz(x0, t1);
+        if (DIR < 0) { r[1] = addpz(a1, mjxpz(b1)); r[2] = addpz(a1, jxpz(b1)); }
+        else         { r[1] = addpz(a1, jxpz(b1));  r[2] = addpz(a1, mjxpz(b1)); }
+    }
+
+    template <int DIR> static inline void bfly5(const xmm x0, const xmm x1, const xmm x2, const xmm x3, const xmm x4,
+                                                xmm* r) noexcept force_inline3;
+    template <int DIR> static inline void bfly5(const xmm x0, const xmm x1, const xmm x2, const xmm x3, const xmm x4,
+                                                xmm* r) noexcept
+    {
+        const xmm c1 = cmplx(R5_C1, R5_C1);
+        const xmm c2 = cmplx(R5_C2, R5_C2);
+        const xmm s1 = cmplx(R5_S1, R5_S1);
+        const xmm s2 = cmplx(R5_S2, R5_S2);
+        const xmm t1 = addpz(x1, x4), d1 = subpz(x1, x4);
+        const xmm t2 = addpz(x2, x3), d2 = subpz(x2, x3);
+        r[0] = addpz(x0, addpz(t1, t2));
+        const xmm a1 = addpz(x0, addpz(mulpd(c1, t1), mulpd(c2, t2)));
+        const xmm a2 = addpz(x0, addpz(mulpd(c2, t1), mulpd(c1, t2)));
+        const xmm b1 = addpz(mulpd(s1, d1), mulpd(s2, d2));
+        const xmm b2 = subpz(mulpd(s2, d1), mulpd(s1, d2));
+        if (DIR < 0) {
+            r[1] = addpz(a1, mjxpz(b1)); r[4] = addpz(a1, jxpz(b1));
+            r[2] = addpz(a2, mjxpz(b2)); r[3] = addpz(a2, jxpz(b2));
+        }
+        else {
+            r[1] = addpz(a1, jxpz(b1)); r[4] = addpz(a1, mjxpz(b1));
+            r[2] = addpz(a2, jxpz(b2)); r[3] = addpz(a2, mjxpz(b2));
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
     // Forward Butterfly Operation
     ///////////////////////////////////////////////////////////////////////////////
 
@@ -389,24 +447,13 @@ constexpr int OMP_THRESHOLD = 1<<15;
     ///////////////////////////////////////////////////////////////////////////////
 
     void fwdend5(const int s, const bool eo,
-                 complex_vector x, complex_vector y, const_complex_vector W) noexcept
+                 complex_vector x, complex_vector y) noexcept
     {
-        const cpx w1 = getpz(W[s]);
-        const cpx w2 = mulpz(w1,w1);
-        const cpx w3 = mulpz(w1,w2);
-        const cpx w4 = mulpz(w2,w2);
         complex_vector z = eo ? y : x;
         for (int q = 0; q < s; q++) {
-            const cpx a = getpz(x[q+s*0]);
-            const cpx b = getpz(x[q+s*1]);
-            const cpx c = getpz(x[q+s*2]);
-            const cpx d = getpz(x[q+s*3]);
-            const cpx e = getpz(x[q+s*4]);
-            setpz(z[q+s*0], a + b + c + d + e);
-            setpz(z[q+s*1], a + w1*b + w2*c + w3*d + w4*e);
-            setpz(z[q+s*2], a + w2*b + w4*c + w1*d + w3*e);
-            setpz(z[q+s*3], a + w3*b + w1*c + w4*d + w2*e);
-            setpz(z[q+s*4], a + w4*b + w3*c + w2*d + w1*e);
+            xmm r[5];
+            bfly5<-1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), getpz(x[q+s*3]), getpz(x[q+s*4]), r);
+            for (int k = 0; k < 5; k++) setpz(z[q+s*k], r[k]);
         }
     }
 
@@ -414,35 +461,24 @@ constexpr int OMP_THRESHOLD = 1<<15;
                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
         const int N  = n*s;
-        const int m  = n/5;
-        const int N0 = 0;
         const int N1 = N/5;
-        const int N2 = N1*2;
-        const int N3 = N1*3;
-        const int N4 = N1*4;
-        const cpx w1 = getpz(W[N1]);
-        const cpx w2 = mulpz(w1,w1);
-        const cpx w3 = mulpz(w1,w2);
-        const cpx w4 = mulpz(w2,w2);
+        const int m  = n/5;
         for (int p = 0; p < m; p++) {
             const int sp = s*p;
-            const cpx w1p = getpz(W[sp]);
-            const cpx w2p = mulpz(w1p,w1p);
-            const cpx w3p = mulpz(w1p,w2p);
-            const cpx w4p = mulpz(w2p,w2p);
+            const cpx w1p = getpz(W[1*sp]);
+            const cpx w2p = getpz(W[2*sp]);
+            const cpx w3p = getpz(W[3*sp]);
+            const cpx w4p = getpz(W[4*sp]);
             for (int q = 0; q < s; q++) {
                 const int q_sp = q + sp;
-                const cpx a = getpz(x[q_sp+N0]);
-                const cpx b = getpz(x[q_sp+N1]);
-                const cpx c = getpz(x[q_sp+N2]);
-                const cpx d = getpz(x[q_sp+N3]);
-                const cpx e = getpz(x[q_sp+N4]);
+                xmm r[5];
+                bfly5<-1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), getpz(x[q_sp+N1*3]), getpz(x[q_sp+N1*4]), r);
                 const int q_s5p = q + sp*5;
-                setpz(y[q_s5p+s*0],  a + b + c + d + e);
-                setpz(y[q_s5p+s*1], (a + w1*b + w2*c + w3*d + w4*e)*w1p);
-                setpz(y[q_s5p+s*2], (a + w2*b + w4*c + w1*d + w3*e)*w2p);
-                setpz(y[q_s5p+s*3], (a + w3*b + w1*c + w4*d + w2*e)*w3p);
-                setpz(y[q_s5p+s*4], (a + w4*b + w3*c + w2*d + w1*e)*w4p);
+                setpz(y[q_s5p+s*0], r[0]);
+                setpz(y[q_s5p+s*1], cpx(r[1])*w1p);
+                setpz(y[q_s5p+s*2], cpx(r[2])*w2p);
+                setpz(y[q_s5p+s*3], cpx(r[3])*w3p);
+                setpz(y[q_s5p+s*4], cpx(r[4])*w4p);
             }
         }
     }
@@ -450,18 +486,13 @@ constexpr int OMP_THRESHOLD = 1<<15;
     ///////////////////////////////////////////////////////////////////////////////
 
     void fwdend3(const int s, const bool eo,
-                 complex_vector x, complex_vector y, const_complex_vector W) noexcept
+                 complex_vector x, complex_vector y) noexcept
     {
-        const cpx w1 = getpz(W[s]);
-        const cpx w2 = mulpz(w1,w1);
         complex_vector z = eo ? y : x;
         for (int q = 0; q < s; q++) {
-            const cpx a = getpz(x[q+s*0]);
-            const cpx b = getpz(x[q+s*1]);
-            const cpx c = getpz(x[q+s*2]);
-            setpz(z[q+s*0], a + b + c);
-            setpz(z[q+s*1], a + w1*b + w2*c);
-            setpz(z[q+s*2], a + w2*b + w1*c);
+            xmm r[3];
+            bfly3<-1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), r);
+            for (int k = 0; k < 3; k++) setpz(z[q+s*k], r[k]);
         }
     }
 
@@ -469,25 +500,20 @@ constexpr int OMP_THRESHOLD = 1<<15;
                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
         const int N  = n*s;
-        const int m  = n/3;
-        const int N0 = 0;
         const int N1 = N/3;
-        const int N2 = N1*2;
-        const cpx w1 = getpz(W[N1]);
-        const cpx w2 = mulpz(w1,w1);
+        const int m  = n/3;
         for (int p = 0; p < m; p++) {
             const int sp = s*p;
-            const cpx w1p = getpz(W[sp]);
-            const cpx w2p = mulpz(w1p,w1p);
+            const cpx w1p = getpz(W[1*sp]);
+            const cpx w2p = getpz(W[2*sp]);
             for (int q = 0; q < s; q++) {
                 const int q_sp = q + sp;
-                const cpx a = getpz(x[q_sp+N0]);
-                const cpx b = getpz(x[q_sp+N1]);
-                const cpx c = getpz(x[q_sp+N2]);
+                xmm r[3];
+                bfly3<-1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), r);
                 const int q_s3p = q + sp*3;
-                setpz(y[q_s3p+s*0],  a + b + c);
-                setpz(y[q_s3p+s*1], (a + w1*b + w2*c)*w1p);
-                setpz(y[q_s3p+s*2], (a + w2*b + w1*c)*w2p);
+                setpz(y[q_s3p+s*0], r[0]);
+                setpz(y[q_s3p+s*1], cpx(r[1])*w1p);
+                setpz(y[q_s3p+s*2], cpx(r[2])*w2p);
             }
         }
     }
@@ -512,7 +538,7 @@ constexpr int OMP_THRESHOLD = 1<<15;
 
     // r[k] = k-th output; DIR = -1 forward, +1 inverse
     template <int DIR> static inline void bfly7(const xmm x0, const xmm x1, const xmm x2, const xmm x3,
-                                                const xmm x4, const xmm x5, const xmm x6, xmm* r) noexcept force_inline;
+                                                const xmm x4, const xmm x5, const xmm x6, xmm* r) noexcept force_inline3;
     template <int DIR> static inline void bfly7(const xmm x0, const xmm x1, const xmm x2, const xmm x3,
                                                 const xmm x4, const xmm x5, const xmm x6, xmm* r) noexcept
     {
@@ -679,7 +705,7 @@ constexpr int OMP_THRESHOLD = 1<<15;
         }
         else if (n%5 == 0) {
             if (n == 5)
-                fwdend5(s, eo, x, y, W);
+                fwdend5(s, eo, x, y);
             else {
                 fwdcore5(n, s, x, y, W);
                 fwdfft(n/5, 5*s, !eo, y, x, W);
@@ -687,7 +713,7 @@ constexpr int OMP_THRESHOLD = 1<<15;
         }
         else if (n%3 == 0) {
             if (n == 3)
-                fwdend3(s, eo, x, y, W);
+                fwdend3(s, eo, x, y);
             else {
                 fwdcore3(n, s, x, y, W);
                 fwdfft(n/3, 3*s, !eo, y, x, W);
@@ -1054,24 +1080,13 @@ constexpr int OMP_THRESHOLD = 1<<15;
     ///////////////////////////////////////////////////////////////////////////////
 
     void invend5(const int s, const bool eo,
-                 complex_vector x, complex_vector y, const_complex_vector W) noexcept
+                 complex_vector x, complex_vector y) noexcept
     {
-        const cpx w1 = getpz(W[4*s]);
-        const cpx w2 = mulpz(w1,w1);
-        const cpx w3 = mulpz(w1,w2);
-        const cpx w4 = mulpz(w2,w2);
         complex_vector z = eo ? y : x;
         for (int q = 0; q < s; q++) {
-            const cpx a = getpz(x[q+s*0]);
-            const cpx b = getpz(x[q+s*1]);
-            const cpx c = getpz(x[q+s*2]);
-            const cpx d = getpz(x[q+s*3]);
-            const cpx e = getpz(x[q+s*4]);
-            setpz(z[q+s*0], a + b + c + d + e);
-            setpz(z[q+s*1], a + w1*b + w2*c + w3*d + w4*e);
-            setpz(z[q+s*2], a + w2*b + w4*c + w1*d + w3*e);
-            setpz(z[q+s*3], a + w3*b + w1*c + w4*d + w2*e);
-            setpz(z[q+s*4], a + w4*b + w3*c + w2*d + w1*e);
+            xmm r[5];
+            bfly5<1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), getpz(x[q+s*3]), getpz(x[q+s*4]), r);
+            for (int k = 0; k < 5; k++) setpz(z[q+s*k], r[k]);
         }
     }
 
@@ -1079,35 +1094,24 @@ constexpr int OMP_THRESHOLD = 1<<15;
                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
         const int N  = n*s;
-        const int m  = n/5;
-        const int N0 = 0;
         const int N1 = N/5;
-        const int N2 = N1*2;
-        const int N3 = N1*3;
-        const int N4 = N1*4;
-        const cpx w1 = getpz(W[N4]);
-        const cpx w2 = mulpz(w1,w1);
-        const cpx w3 = mulpz(w1,w2);
-        const cpx w4 = mulpz(w2,w2);
+        const int m  = n/5;
         for (int p = 0; p < m; p++) {
             const int sp = s*p;
-            const cpx w1p = getpz(W[N-sp]);
-            const cpx w2p = mulpz(w1p,w1p);
-            const cpx w3p = mulpz(w1p,w2p);
-            const cpx w4p = mulpz(w2p,w2p);
+            const cpx w1p = getpz(W[N-1*sp]);
+            const cpx w2p = getpz(W[N-2*sp]);
+            const cpx w3p = getpz(W[N-3*sp]);
+            const cpx w4p = getpz(W[N-4*sp]);
             for (int q = 0; q < s; q++) {
                 const int q_sp = q + sp;
-                const cpx a = getpz(x[q_sp+N0]);
-                const cpx b = getpz(x[q_sp+N1]);
-                const cpx c = getpz(x[q_sp+N2]);
-                const cpx d = getpz(x[q_sp+N3]);
-                const cpx e = getpz(x[q_sp+N4]);
+                xmm r[5];
+                bfly5<1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), getpz(x[q_sp+N1*3]), getpz(x[q_sp+N1*4]), r);
                 const int q_s5p = q + sp*5;
-                setpz(y[q_s5p+s*0],  a + b + c + d + e);
-                setpz(y[q_s5p+s*1], (a + w1*b + w2*c + w3*d + w4*e)*w1p);
-                setpz(y[q_s5p+s*2], (a + w2*b + w4*c + w1*d + w3*e)*w2p);
-                setpz(y[q_s5p+s*3], (a + w3*b + w1*c + w4*d + w2*e)*w3p);
-                setpz(y[q_s5p+s*4], (a + w4*b + w3*c + w2*d + w1*e)*w4p);
+                setpz(y[q_s5p+s*0], r[0]);
+                setpz(y[q_s5p+s*1], cpx(r[1])*w1p);
+                setpz(y[q_s5p+s*2], cpx(r[2])*w2p);
+                setpz(y[q_s5p+s*3], cpx(r[3])*w3p);
+                setpz(y[q_s5p+s*4], cpx(r[4])*w4p);
             }
         }
     }
@@ -1115,18 +1119,13 @@ constexpr int OMP_THRESHOLD = 1<<15;
     ///////////////////////////////////////////////////////////////////////////////
 
     void invend3(const int s, const bool eo,
-                 complex_vector x, complex_vector y, const_complex_vector W) noexcept
+                 complex_vector x, complex_vector y) noexcept
     {
-        const cpx w1 = getpz(W[2*s]);
-        const cpx w2 = mulpz(w1,w1);
         complex_vector z = eo ? y : x;
         for (int q = 0; q < s; q++) {
-            const cpx a = getpz(x[q+s*0]);
-            const cpx b = getpz(x[q+s*1]);
-            const cpx c = getpz(x[q+s*2]);
-            setpz(z[q+s*0], a + b + c);
-            setpz(z[q+s*1], a + w1*b + w2*c);
-            setpz(z[q+s*2], a + w2*b + w1*c);
+            xmm r[3];
+            bfly3<1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), r);
+            for (int k = 0; k < 3; k++) setpz(z[q+s*k], r[k]);
         }
     }
 
@@ -1134,25 +1133,20 @@ constexpr int OMP_THRESHOLD = 1<<15;
                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
         const int N  = n*s;
-        const int m  = n/3;
-        const int N0 = 0;
         const int N1 = N/3;
-        const int N2 = N1*2;
-        const cpx w1 = getpz(W[N2]);
-        const cpx w2 = mulpz(w1,w1);
+        const int m  = n/3;
         for (int p = 0; p < m; p++) {
             const int sp = s*p;
-            const cpx w1p = getpz(W[N-sp]);
-            const cpx w2p = mulpz(w1p,w1p);
+            const cpx w1p = getpz(W[N-1*sp]);
+            const cpx w2p = getpz(W[N-2*sp]);
             for (int q = 0; q < s; q++) {
                 const int q_sp = q + sp;
-                const cpx a = getpz(x[q_sp+N0]);
-                const cpx b = getpz(x[q_sp+N1]);
-                const cpx c = getpz(x[q_sp+N2]);
+                xmm r[3];
+                bfly3<1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), r);
                 const int q_s3p = q + sp*3;
-                setpz(y[q_s3p+s*0],  a + b + c);
-                setpz(y[q_s3p+s*1], (a + w1*b + w2*c)*w1p);
-                setpz(y[q_s3p+s*2], (a + w2*b + w1*c)*w2p);
+                setpz(y[q_s3p+s*0], r[0]);
+                setpz(y[q_s3p+s*1], cpx(r[1])*w1p);
+                setpz(y[q_s3p+s*2], cpx(r[2])*w2p);
             }
         }
     }
@@ -1292,7 +1286,7 @@ constexpr int OMP_THRESHOLD = 1<<15;
         }
         else if (n%5 == 0) {
             if (n == 5)
-                invend5(s, eo, x, y, W);
+                invend5(s, eo, x, y);
             else {
                 invcore5(n, s, x, y, W);
                 invfft(n/5, 5*s, !eo, y, x, W);
@@ -1300,7 +1294,7 @@ constexpr int OMP_THRESHOLD = 1<<15;
         }
         else if (n%3 == 0) {
             if (n == 3)
-                invend3(s, eo, x, y, W);
+                invend3(s, eo, x, y);
             else {
                 invcore3(n, s, x, y, W);
                 invfft(n/3, 3*s, !eo, y, x, W);
@@ -1685,25 +1679,14 @@ constexpr int OMP_THRESHOLD = 1<<15;
     ///////////////////////////////////////////////////////////////////////////////
 
     void fwdend5p(const int s, const bool eo,
-                  complex_vector x, complex_vector y, const_complex_vector W) noexcept
+                  complex_vector x, complex_vector y) noexcept
     {
-        const cpx w1 = getpz(W[s]);
-        const cpx w2 = mulpz(w1,w1);
-        const cpx w3 = mulpz(w1,w2);
-        const cpx w4 = mulpz(w2,w2);
         complex_vector z = eo ? y : x;
 #pragma omp for schedule(static) nowait
         for (int q = 0; q < s; q++) {
-            const cpx a = getpz(x[q+s*0]);
-            const cpx b = getpz(x[q+s*1]);
-            const cpx c = getpz(x[q+s*2]);
-            const cpx d = getpz(x[q+s*3]);
-            const cpx e = getpz(x[q+s*4]);
-            setpz(z[q+s*0], a + b + c + d + e);
-            setpz(z[q+s*1], a + w1*b + w2*c + w3*d + w4*e);
-            setpz(z[q+s*2], a + w2*b + w4*c + w1*d + w3*e);
-            setpz(z[q+s*3], a + w3*b + w1*c + w4*d + w2*e);
-            setpz(z[q+s*4], a + w4*b + w3*c + w2*d + w1*e);
+            xmm r[5];
+            bfly5<-1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), getpz(x[q+s*3]), getpz(x[q+s*4]), r);
+            for (int k = 0; k < 5; k++) setpz(z[q+s*k], r[k]);
         }
     }
 
@@ -1711,56 +1694,40 @@ constexpr int OMP_THRESHOLD = 1<<15;
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
         const int N  = n*s;
-        const int ms = N/5;
-        const int N0 = 0;
         const int N1 = N/5;
-        const int N2 = N1*2;
-        const int N3 = N1*3;
-        const int N4 = N1*4;
-        const cpx w1 = getpz(W[N1]);
-        const cpx w2 = mulpz(w1,w1);
-        const cpx w3 = mulpz(w1,w2);
-        const cpx w4 = mulpz(w2,w2);
+        const int ms = N/5;
 #pragma omp for schedule(static)
         for (int i = 0; i < ms; i++) {
             const int p = i / s;
             const int q = i % s;
             const int sp = s*p;
-            const cpx w1p = getpz(W[sp]);
-            const cpx w2p = mulpz(w1p,w1p);
-            const cpx w3p = mulpz(w1p,w2p);
-            const cpx w4p = mulpz(w2p,w2p);
+            const cpx w1p = getpz(W[1*sp]);
+            const cpx w2p = getpz(W[2*sp]);
+            const cpx w3p = getpz(W[3*sp]);
+            const cpx w4p = getpz(W[4*sp]);
             const int q_sp = q + sp;
-            const cpx a = getpz(x[q_sp+N0]);
-            const cpx b = getpz(x[q_sp+N1]);
-            const cpx c = getpz(x[q_sp+N2]);
-            const cpx d = getpz(x[q_sp+N3]);
-            const cpx e = getpz(x[q_sp+N4]);
+            xmm r[5];
+            bfly5<-1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), getpz(x[q_sp+N1*3]), getpz(x[q_sp+N1*4]), r);
             const int q_s5p = q + sp*5;
-            setpz(y[q_s5p+s*0],  a + b + c + d + e);
-            setpz(y[q_s5p+s*1], (a + w1*b + w2*c + w3*d + w4*e)*w1p);
-            setpz(y[q_s5p+s*2], (a + w2*b + w4*c + w1*d + w3*e)*w2p);
-            setpz(y[q_s5p+s*3], (a + w3*b + w1*c + w4*d + w2*e)*w3p);
-            setpz(y[q_s5p+s*4], (a + w4*b + w3*c + w2*d + w1*e)*w4p);
+            setpz(y[q_s5p+s*0], r[0]);
+            setpz(y[q_s5p+s*1], cpx(r[1])*w1p);
+            setpz(y[q_s5p+s*2], cpx(r[2])*w2p);
+            setpz(y[q_s5p+s*3], cpx(r[3])*w3p);
+            setpz(y[q_s5p+s*4], cpx(r[4])*w4p);
         }
     }
 
     ///////////////////////////////////////////////////////////////////////////////
 
     void fwdend3p(const int s, const bool eo,
-                  complex_vector x, complex_vector y, const_complex_vector W) noexcept
+                  complex_vector x, complex_vector y) noexcept
     {
-        const cpx w1 = getpz(W[s]);
-        const cpx w2 = mulpz(w1,w1);
         complex_vector z = eo ? y : x;
 #pragma omp for schedule(static) nowait
         for (int q = 0; q < s; q++) {
-            const cpx a = getpz(x[q+s*0]);
-            const cpx b = getpz(x[q+s*1]);
-            const cpx c = getpz(x[q+s*2]);
-            setpz(z[q+s*0], a + b + c);
-            setpz(z[q+s*1], a + w1*b + w2*c);
-            setpz(z[q+s*2], a + w2*b + w1*c);
+            xmm r[3];
+            bfly3<-1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), r);
+            for (int k = 0; k < 3; k++) setpz(z[q+s*k], r[k]);
         }
     }
 
@@ -1768,27 +1735,22 @@ constexpr int OMP_THRESHOLD = 1<<15;
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
         const int N  = n*s;
-        const int ms = N/3;
-        const int N0 = 0;
         const int N1 = N/3;
-        const int N2 = N1*2;
-        const cpx w1 = getpz(W[N1]);
-        const cpx w2 = mulpz(w1,w1);
+        const int ms = N/3;
 #pragma omp for schedule(static)
         for (int i = 0; i < ms; i++) {
             const int p = i / s;
             const int q = i % s;
             const int sp = s*p;
-            const cpx w1p = getpz(W[sp]);
-            const cpx w2p = mulpz(w1p,w1p);
+            const cpx w1p = getpz(W[1*sp]);
+            const cpx w2p = getpz(W[2*sp]);
             const int q_sp = q + sp;
-            const cpx a = getpz(x[q_sp+N0]);
-            const cpx b = getpz(x[q_sp+N1]);
-            const cpx c = getpz(x[q_sp+N2]);
+            xmm r[3];
+            bfly3<-1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), r);
             const int q_s3p = q + sp*3;
-            setpz(y[q_s3p+s*0],  a + b + c);
-            setpz(y[q_s3p+s*1], (a + w1*b + w2*c)*w1p);
-            setpz(y[q_s3p+s*2], (a + w2*b + w1*c)*w2p);
+            setpz(y[q_s3p+s*0], r[0]);
+            setpz(y[q_s3p+s*1], cpx(r[1])*w1p);
+            setpz(y[q_s3p+s*2], cpx(r[2])*w2p);
         }
     }
 
@@ -1934,7 +1896,7 @@ constexpr int OMP_THRESHOLD = 1<<15;
         }
         else if (n%5 == 0) {
             if (n == 5)
-                fwdend5p(s, eo, x, y, W);
+                fwdend5p(s, eo, x, y);
             else {
                 fwdcore5p(n, s, x, y, W);
                 fwdfftp(n/5, 5*s, !eo, y, x, W);
@@ -1942,7 +1904,7 @@ constexpr int OMP_THRESHOLD = 1<<15;
         }
         else if (n%3 == 0) {
             if (n == 3)
-                fwdend3p(s, eo, x, y, W);
+                fwdend3p(s, eo, x, y);
             else {
                 fwdcore3p(n, s, x, y, W);
                 fwdfftp(n/3, 3*s, !eo, y, x, W);
@@ -2327,25 +2289,14 @@ constexpr int OMP_THRESHOLD = 1<<15;
     ///////////////////////////////////////////////////////////////////////////////
 
     void invend5p(const int s, const bool eo,
-                  complex_vector x, complex_vector y, const_complex_vector W) noexcept
+                  complex_vector x, complex_vector y) noexcept
     {
-        const cpx w1 = getpz(W[4*s]);
-        const cpx w2 = mulpz(w1,w1);
-        const cpx w3 = mulpz(w1,w2);
-        const cpx w4 = mulpz(w2,w2);
         complex_vector z = eo ? y : x;
 #pragma omp for schedule(static) nowait
         for (int q = 0; q < s; q++) {
-            const cpx a = getpz(x[q+s*0]);
-            const cpx b = getpz(x[q+s*1]);
-            const cpx c = getpz(x[q+s*2]);
-            const cpx d = getpz(x[q+s*3]);
-            const cpx e = getpz(x[q+s*4]);
-            setpz(z[q+s*0], a + b + c + d + e);
-            setpz(z[q+s*1], a + w1*b + w2*c + w3*d + w4*e);
-            setpz(z[q+s*2], a + w2*b + w4*c + w1*d + w3*e);
-            setpz(z[q+s*3], a + w3*b + w1*c + w4*d + w2*e);
-            setpz(z[q+s*4], a + w4*b + w3*c + w2*d + w1*e);
+            xmm r[5];
+            bfly5<1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), getpz(x[q+s*3]), getpz(x[q+s*4]), r);
+            for (int k = 0; k < 5; k++) setpz(z[q+s*k], r[k]);
         }
     }
 
@@ -2353,56 +2304,40 @@ constexpr int OMP_THRESHOLD = 1<<15;
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
         const int N  = n*s;
-        const int ms = N/5;
-        const int N0 = 0;
         const int N1 = N/5;
-        const int N2 = N1*2;
-        const int N3 = N1*3;
-        const int N4 = N1*4;
-        const cpx w1 = getpz(W[N4]);
-        const cpx w2 = mulpz(w1,w1);
-        const cpx w3 = mulpz(w1,w2);
-        const cpx w4 = mulpz(w2,w2);
+        const int ms = N/5;
 #pragma omp for schedule(static)
         for (int i = 0; i < ms; i++) {
             const int p = i / s;
             const int q = i % s;
             const int sp = s*p;
-            const cpx w1p = getpz(W[N-sp]);
-            const cpx w2p = mulpz(w1p,w1p);
-            const cpx w3p = mulpz(w1p,w2p);
-            const cpx w4p = mulpz(w2p,w2p);
+            const cpx w1p = getpz(W[N-1*sp]);
+            const cpx w2p = getpz(W[N-2*sp]);
+            const cpx w3p = getpz(W[N-3*sp]);
+            const cpx w4p = getpz(W[N-4*sp]);
             const int q_sp = q + sp;
-            const cpx a = getpz(x[q_sp+N0]);
-            const cpx b = getpz(x[q_sp+N1]);
-            const cpx c = getpz(x[q_sp+N2]);
-            const cpx d = getpz(x[q_sp+N3]);
-            const cpx e = getpz(x[q_sp+N4]);
+            xmm r[5];
+            bfly5<1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), getpz(x[q_sp+N1*3]), getpz(x[q_sp+N1*4]), r);
             const int q_s5p = q + sp*5;
-            setpz(y[q_s5p+s*0],  a + b + c + d + e);
-            setpz(y[q_s5p+s*1], (a + w1*b + w2*c + w3*d + w4*e)*w1p);
-            setpz(y[q_s5p+s*2], (a + w2*b + w4*c + w1*d + w3*e)*w2p);
-            setpz(y[q_s5p+s*3], (a + w3*b + w1*c + w4*d + w2*e)*w3p);
-            setpz(y[q_s5p+s*4], (a + w4*b + w3*c + w2*d + w1*e)*w4p);
+            setpz(y[q_s5p+s*0], r[0]);
+            setpz(y[q_s5p+s*1], cpx(r[1])*w1p);
+            setpz(y[q_s5p+s*2], cpx(r[2])*w2p);
+            setpz(y[q_s5p+s*3], cpx(r[3])*w3p);
+            setpz(y[q_s5p+s*4], cpx(r[4])*w4p);
         }
     }
 
     ///////////////////////////////////////////////////////////////////////////////
 
     void invend3p(const int s, const bool eo,
-                  complex_vector x, complex_vector y, const_complex_vector W) noexcept
+                  complex_vector x, complex_vector y) noexcept
     {
-        const cpx w1 = getpz(W[2*s]);
-        const cpx w2 = mulpz(w1,w1);
         complex_vector z = eo ? y : x;
 #pragma omp for schedule(static) nowait
         for (int q = 0; q < s; q++) {
-            const cpx a = getpz(x[q+s*0]);
-            const cpx b = getpz(x[q+s*1]);
-            const cpx c = getpz(x[q+s*2]);
-            setpz(z[q+s*0], a + b + c);
-            setpz(z[q+s*1], a + w1*b + w2*c);
-            setpz(z[q+s*2], a + w2*b + w1*c);
+            xmm r[3];
+            bfly3<1>(getpz(x[q+s*0]), getpz(x[q+s*1]), getpz(x[q+s*2]), r);
+            for (int k = 0; k < 3; k++) setpz(z[q+s*k], r[k]);
         }
     }
 
@@ -2410,27 +2345,22 @@ constexpr int OMP_THRESHOLD = 1<<15;
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
         const int N  = n*s;
-        const int ms = N/3;
-        const int N0 = 0;
         const int N1 = N/3;
-        const int N2 = N1*2;
-        const cpx w1 = getpz(W[N2]);
-        const cpx w2 = mulpz(w1,w1);
+        const int ms = N/3;
 #pragma omp for schedule(static)
         for (int i = 0; i < ms; i++) {
             const int p = i / s;
             const int q = i % s;
             const int sp = s*p;
-            const cpx w1p = getpz(W[N-sp]);
-            const cpx w2p = mulpz(w1p,w1p);
+            const cpx w1p = getpz(W[N-1*sp]);
+            const cpx w2p = getpz(W[N-2*sp]);
             const int q_sp = q + sp;
-            const cpx a = getpz(x[q_sp+N0]);
-            const cpx b = getpz(x[q_sp+N1]);
-            const cpx c = getpz(x[q_sp+N2]);
+            xmm r[3];
+            bfly3<1>(getpz(x[q_sp+N1*0]), getpz(x[q_sp+N1*1]), getpz(x[q_sp+N1*2]), r);
             const int q_s3p = q + sp*3;
-            setpz(y[q_s3p+s*0],  a + b + c);
-            setpz(y[q_s3p+s*1], (a + w1*b + w2*c)*w1p);
-            setpz(y[q_s3p+s*2], (a + w2*b + w1*c)*w2p);
+            setpz(y[q_s3p+s*0], r[0]);
+            setpz(y[q_s3p+s*1], cpx(r[1])*w1p);
+            setpz(y[q_s3p+s*2], cpx(r[2])*w2p);
         }
     }
 
@@ -2576,7 +2506,7 @@ constexpr int OMP_THRESHOLD = 1<<15;
         }
         else if (n%5 == 0) {
             if (n == 5)
-                invend5p(s, eo, x, y, W);
+                invend5p(s, eo, x, y);
             else {
                 invcore5p(n, s, x, y, W);
                 invfftp(n/5, 5*s, !eo, y, x, W);
@@ -2584,7 +2514,7 @@ constexpr int OMP_THRESHOLD = 1<<15;
         }
         else if (n%3 == 0) {
             if (n == 3)
-                invend3p(s, eo, x, y, W);
+                invend3p(s, eo, x, y);
             else {
                 invcore3p(n, s, x, y, W);
                 invfftp(n/3, 3*s, !eo, y, x, W);
