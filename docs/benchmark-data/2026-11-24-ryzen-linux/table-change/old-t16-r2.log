@@ -1,0 +1,12 @@
+# cpu: AMD Ryzen 9 9950X 16-Core Processor
+# governor: powersave
+# compiler: 15.2.0
+# optimised build: yes
+# fftw: fftw-3.3.10-sse2-avx
+# threads: 16, samples: 11, target batch: 2.0 ms
+# done complex n=4096
+# done complex n=16384
+# done complex n=65536
+# done complex n=262144
+# done complex n=1048576
+# done complex n=4194304

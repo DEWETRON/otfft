@@ -985,6 +985,104 @@ The change column is the mean of the two "after" runs over the mean of the two
 Raw results: `docs/benchmark-data/2026-11-24-intel/table-change/`
 (`old-*` and `new-*`).
 
+Algorithm table change: effect on the Ryzen 9 9950X
+---------------------------------------------------
+
+The same change as above (roadmap R1.8, decision D14), measured on the AMD
+Ryzen 9 9950X with GCC. The ffttune data of that machine predicted 1.5x to 3.3x
+with one thread from 2^16 and no change with several threads.
+
+Before: `master` at `bbb6c0c` (first parent of the merge of PR #31). After:
+`master` at `b548629`. Both were built Release with GCC 15.2.0 in separate
+directories, and run alternately (old, new, old, new, ...) as
+`otfft_bench --kinds complex --sizes pow2 --min-n 4096 --lib OTFFT`, MFLOPS of
+the default `OTFFT` choice. Machine: Linux 7.0.0-44, `amd-pstate-epp` with
+governor `powersave` (not changed: `sudo` needs a password), other load a
+`uniThreadPool` process (Oxygen) at about 60% of one core and VS Code, load
+average about 1.5 to 1.9, threads not pinned. `ctest` on the new build:
+`otfft.test` and `ffttune.smoke` passed.
+
+**One thread, three alternating runs (MFLOPS)**
+
+| N | Before r1 / r2 / r3 | Before mean | After r1 / r2 / r3 | After mean | Change |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 4,096 | 42,020 / 46,092 / 48,326 | 45,480 | 48,002 / 47,132 / 45,671 | 46,935 | 1.03x |
+| 16,384 | 35,963 / 36,651 / 35,887 | 36,167 | 38,727 / 39,453 / 39,734 | 39,305 | 1.09x |
+| 65,536 | 11,195 / 11,281 / 11,177 | 11,218 | 33,410 / 33,374 / 33,329 | 33,371 | **2.97x** |
+| 262,144 | 12,250 / 12,294 / 11,911 | 12,152 | 35,120 / 35,769 / 35,723 | 35,538 | **2.92x** |
+| 1,048,576 | 11,181 / 11,038 / 11,049 | 11,089 | 20,468 / 21,640 / 20,359 | 20,823 | **1.88x** |
+| 4,194,304 | 7,870 / 7,872 / 8,060 | 7,934 | 12,592 / 12,743 / 12,933 | 12,756 | **1.61x** |
+
+The change is the mean of the three "after" runs over the mean of the three
+"before" runs. Spread between the three runs (highest minus lowest, over the
+mean): at most 6% for N >= 16,384, except 14% for "before" at N=4,096.
+
+**12 and 16 threads, three alternating runs each (mean MFLOPS)**
+
+The table for more than one thread did not change, so any difference here is
+noise. The first run of each is `old-t12.csv`, `new-t12.csv` (`-t16`); the
+other two (`-r2`, `-r3`) were added after the first run showed large
+differences.
+
+| N | 12 thr. before | 12 thr. after | Change | Spread before / after | 16 thr. before | 16 thr. after | Change | Spread before / after |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 4,096 | 44,974 | 47,231 | 1.05x | 11% / 8% | 46,695 | 47,625 | 1.02x | 10% / 5% |
+| 16,384 | 20,418 | 18,276 | 0.90x | 16% / 20% | 16,700 | 17,837 | 1.07x | 8% / 25% |
+| 65,536 | 44,150 | 45,325 | 1.03x | 7% / 8% | 40,975 | 42,964 | 1.05x | 4% / 8% |
+| 262,144 | 56,363 | 51,237 | 0.91x | 14% / 5% | 56,523 | 55,504 | 0.98x | 5% / 4% |
+| 1,048,576 | 55,922 | 54,237 | 0.97x | 6% / 10% | 58,580 | 59,587 | 1.02x | 9% / 22% |
+| 4,194,304 | 23,861 | 24,610 | 1.03x | 5% / 4% | 24,705 | 25,311 | 1.02x | 2% / 2% |
+
+**One-thread comparison with FFTW** (one run of the full benchmark with the new
+build, `new-fftw-t1.csv`; FFTW 3.3.10 Ubuntu package, `FFTW_MEASURE`; MFLOPS)
+
+| N | OTFFT after | FFTW | OTFFT vs FFTW | Before the change (earlier section) |
+| ---: | ---: | ---: | ---: | ---: |
+| 65,536 | 33,745 | 37,324 | 0.90x | 0.29x |
+| 262,144 | 35,239 | 34,505 | 1.02x | 0.33x |
+| 1,048,576 | 21,509 | 17,756 | 1.21x | 0.61x |
+| 4,194,304 | 12,986 | 15,049 | 0.86x | 0.54x |
+
+"Before" is the OTFFT over FFTW ratio of the Ryzen benchmark of the tuning
+section above (a different run on the same machine).
+
+What this shows:
+
+*   **The predicted gain appeared.** With one thread the new table is 2.97x
+    (N=65,536), 2.92x (262,144), 1.88x (1,048,576) and 1.61x (4,194,304)
+    faster. The ffttune data predicted 3.1x at 2^16, 3.3x at 2^18, 2.0x at 2^20
+    and 1.6x at 2^22, so all four agree within 12%. The three runs agree
+    within 6%. At N=16,384 the gain is 1.09x (predicted 1.2x for the old DIT8
+    pick); at N=4,096 the pick did not change and the 1.03x is noise (the
+    "before" runs alone differ by 14%). No one-thread size got slower.
+*   **Multi-thread results are mostly unchanged, with two means at the edge
+    of the noise.** Most changes are within 0.97x to 1.07x. At 12 threads the
+    means are 0.90x at N=16,384 and 0.91x at N=262,144. The run-to-run spread
+    of one cell is 14% to 20% in those cells, so three runs do not separate
+    this from noise, but we cannot exclude a small real loss either. The
+    table for threads is the same code path, so no cause is known. At
+    16 threads no cell is below 0.98x. Spreads in the threaded runs are
+    larger than at one thread (up to 25%); the odd N=16,384 and
+    N=1,048,576 cells ("after", 16 threads) each have one run far from the other
+    two.
+*   **Where the new table is still behind FFTW** (one thread): 1.11x at
+    N=65,536 and 1.16x at N=4,194,304 (single run each; at 4,096 and 16,384
+    FFTW leads by 1.06x and 1.11x). OTFFT is level or ahead at 262,144 and
+    1,048,576. This closes most of the gap of 1.6x to 3.4x found before, but
+    not all of it. With several threads FFTW was far ahead before (1.2x to 3.7x at
+    N=16,384 to 4,194,304 in the 12-thread table of the tuning section above) and this change did not touch that;
+    the threaded FFTW numbers were not repeated here.
+*   **Limits.** One CPU, GCC 15.2.0, `powersave` governor, other load
+    present, threads not pinned. Three runs per one-thread cell, three per
+    threaded cell. The FFTW comparison is one run, and its OTFFT numbers differ by
+    up to 10% from the means above (51,514 against 46,935 at N=4,096), which
+    is the size of the noise at the small N. `--sizes pow2` covers every
+    second power of two only (2^12, 2^14, ...), so 2^15, 2^17 and the odd
+    exponents above were not measured with the library.
+
+Raw results: `docs/benchmark-data/2026-11-24-ryzen-linux/table-change/`
+(`old-*` and `new-*` CSV and log files, `new-fftw-t1.*`).
+
 Radix-7 butterfly: effect on the Intel notebook
 -----------------------------------------------
 
