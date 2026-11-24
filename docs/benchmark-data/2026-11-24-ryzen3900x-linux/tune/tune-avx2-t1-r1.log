@@ -1,0 +1,53 @@
+# ffttune: backend avx2, 1 thread(s), median of 9 batches of about 20 ms
+# time in microseconds of one forward plus one inverse transform; '-' = wrong result
+ log2N       DIF4       DIT4       DIF8       DIT8      DIF16      DIT16    SixStep  fastest
+     1      0.010      0.010      0.008      0.008      0.008      0.008      0.009  5 (DIF16) tie within 5%
+     2      0.012      0.011      0.011      0.011      0.011      0.011      0.012  5 (DIF16) tie within 5%
+     3      0.022      0.022      0.018      0.018      0.017      0.017      0.018  5 (DIF16) tie within 5%
+     4      0.029      0.029      0.033      0.031      0.032      0.032      0.037  1 (DIF4) tie within 5%
+     5      0.070      0.072      0.057      0.061      0.088      0.092      0.057  7 (SixStep) tie within 5%
+     6      0.158      0.137      0.112      0.127      0.151      0.124      0.309  3 (DIF8)
+     7      0.297      0.354      0.331      0.357      0.274      0.266      0.770  6 (DIT16) tie within 5%
+     8      0.577      0.673      0.600      0.725      0.596      0.611      1.148  1 (DIF4) tie within 5%
+     9      1.430      1.566      1.334      1.525      1.536      1.590      3.149  3 (DIF8)
+    10      3.101      3.314      3.379      3.889      3.108      3.239      5.086  1 (DIF4) tie within 5%
+    11      7.550      8.112      7.182      8.206      6.920      7.747     13.421  5 (DIF16) tie within 5%
+    12     16.019     17.046     17.497     30.901     34.163     40.297     23.344  1 (DIF4)
+    13     36.043     37.832     39.493     43.865     64.719     74.101     61.427  1 (DIF4) tie within 5%
+    14     77.721     82.864     85.181        119        164        129        140  1 (DIF4)
+    15        205        196        176        241        328        359        296  3 (DIF8)
+    16        400        554        632        684        788        908       1388  1 (DIF4)
+    17        865       1223       1307       1419       1645       1512       1727  1 (DIF4)
+    18       2005       2441       3023       4058       3073       2975       5094  1 (DIF4)
+    19       9172       9612       9101       9522       8601       8669      14124  5 (DIF16) tie within 5%
+    20      39029      39686      29955      31504      30214      31223      33336  3 (DIF8) tie within 5%
+    21      87272      89288      65376      68558      76488      79373      50053  7 (SixStep)
+    22     175386     178549     157335     163695     151391     158535     137566  7 (SixStep)
+    23     393292     400190     319527     328789     304027     318840     339733  5 (DIF16) tie within 5%
+    24     785294     804367     654614     681218     831744     807521     706354  3 (DIF8) tie within 5%
+
+# suggested lines for the switch in FFT0::setup (src/otfft_algo.cpp):
+case  1: obj = FFT5::instance(); obj->setup2(log_N); break;
+case  2: obj = FFT5::instance(); obj->setup2(log_N); break;
+case  3: obj = FFT5::instance(); obj->setup2(log_N); break;
+case  4: obj = FFT1::instance(); obj->setup2(log_N); break;
+case  5: obj = FFT7::instance(); obj->setup2(log_N); break;
+case  6: obj = FFT3::instance(); obj->setup2(log_N); break;
+case  7: obj = FFT6::instance(); obj->setup2(log_N); break;
+case  8: obj = FFT1::instance(); obj->setup2(log_N); break;
+case  9: obj = FFT3::instance(); obj->setup2(log_N); break;
+case 10: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 11: obj = FFT5::instance(); obj->setup2(log_N); break;
+case 12: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 13: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 14: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 15: obj = FFT3::instance(); obj->setup2(log_N); break;
+case 16: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 17: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 18: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 19: obj = FFT5::instance(); obj->setup2(log_N); break;
+case 20: obj = FFT3::instance(); obj->setup2(log_N); break;
+case 21: obj = FFT7::instance(); obj->setup2(log_N); break;
+case 22: obj = FFT7::instance(); obj->setup2(log_N); break;
+case 23: obj = FFT5::instance(); obj->setup2(log_N); break;
+case 24: obj = FFT3::instance(); obj->setup2(log_N); break;
