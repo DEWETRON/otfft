@@ -985,6 +985,59 @@ The change column is the mean of the two "after" runs over the mean of the two
 Raw results: `docs/benchmark-data/2026-11-24-intel/table-change/`
 (`old-*` and `new-*`).
 
+Radix-7 butterfly: effect on the Intel notebook
+-----------------------------------------------
+
+Roadmap R1.5 (first part), issue #18, decision D15. The mixed radix code had
+butterflies for the factors 2, 3, 4, 5 and 8 only; a factor 7 went through the
+generic O(k^2) loop. It now has a radix-7 butterfly (forward, inverse, and the
+OpenMP versions) that uses the symmetry of the 7th roots of unity: 18
+multiplications by a real constant instead of 36 complex multiplications.
+
+Same-session comparison on the Intel notebook above (MSVC, Release, one
+thread): `otfft_bench` of `master` before the change and of the branch after
+it, built the same way and run alternately (two runs each); complex transforms,
+MFLOPS.
+
+| N | Factors | Before (r1, r2) | After (r1, r2) | Change | PocketFFT |
+| ---: | --- | ---: | ---: | ---: | ---: |
+| 480 | 2^5 3 5 | 17,181 / 16,915 | 18,450 / 18,255 | 1.08x | 6,325 |
+| 1,000 | 2^3 5^3 | 13,874 / 13,941 | 13,074 / 13,222 | 0.95x | 6,073 |
+| 3,000 | 2^3 3 5^3 | 13,197 / 12,730 | 12,030 / 12,646 | 0.95x | 5,519 |
+| **10,080** | 2^5 3^2 5 **7** | 7,205 / 7,600 | **14,529 / 14,684** | **1.97x** | 8,330 |
+| 100,000 | 2^5 5^5 | 9,611 / 10,168 | 9,624 / 9,771 | 0.98x | 5,177 |
+| 1,000,000 | 2^6 5^6 | 8,467 / 9,498 | 8,733 / 9,152 | 1.00x | 5,684 |
+
+Lengths without a factor 7 do not use the new code; their changes (0.95x to
+1.08x) are run-to-run noise. The benchmark has only one length with a 7, so a
+second, small timing program (`lens.cpp`, kept with the data) times
+`createComplexFFT` for more lengths, before and after, one run each:
+
+| N | Factors | Before | After | Change |
+| ---: | --- | ---: | ---: | ---: |
+| 7 | 7 | 2,852 | 11,874 | 4.2x |
+| 49 | 7^2 | 2,779 | 15,375 | 5.5x |
+| 2,401 | 7^4 | 3,137 | 15,911 | 5.1x |
+| 117,649 | 7^6 (OpenMP) | 7,350 | 36,509 | 5.0x |
+| 112 | 2^4 7 | 6,017 | 19,711 | 3.3x |
+| 245 | 5 7^2 | 3,753 | 14,518 | 3.9x |
+| 3,500 | 2^2 5^3 7 | 7,405 | 14,166 | 1.9x |
+| 5,600 | 2^5 5^2 7 | 8,109 | 16,896 | 2.1x |
+| 10,080 | 2^5 3^2 5 7 | 8,789 | 17,311 | 2.0x |
+| 6,720 | 2^6 3 5 7 | 8,473 | 18,962 | 2.2x |
+
+*   A factor 7 is now 1.9x to 5.5x faster. OTFFT is 1.75x faster than
+    PocketFFT at N=10,080 (it was 0.9x).
+*   Lengths with a 7 are now as fast per point as lengths with only 3 and 5
+    (14,000 to 19,000 MFLOPS, powers of 7 up to 16,000). The remaining gap to
+    FFTW (on the Ryzen, 2.8x to 3.5x for N = 480, 1,000, 3,000) comes from the
+    radix 3 and 5 butterflies, which are still the plain form with complex
+    multiplications; that is the next step of R1.5. FFTW is not available on
+    this machine, so no FFTW numbers were measured here.
+*   One CPU, one compiler, one thread; the second table is single runs.
+
+Raw results: `docs/benchmark-data/2026-11-24-intel/radix7/`.
+
 Problems found
 --------------
 
@@ -1002,8 +1055,11 @@ Problems found
     and gives 901 (was wrong). The real FFT and DCT are not routed yet.
 2.  **Factor 7** ([#18](https://github.com/DEWETRON/otfft/issues/18)). N=10,080 is 11x
     slower than FFTW and 3.4x slower than PocketFFT, much worse than
-    neighbouring sizes. There is no radix-7 butterfly; 7 goes to the generic
-    code above.
+    neighbouring sizes. There was no radix-7 butterfly; 7 went to the generic
+    code above. **Fixed** (roadmap R1.5, D15): there is a radix-7 butterfly
+    now; N=10,080 is 2.0x faster on the Intel notebook and faster than
+    PocketFFT. The radix 3 and 5 butterflies are still plain; see "Radix-7
+    butterfly: effect on the Intel notebook".
 3.  **Threading** ([#19](https://github.com/DEWETRON/otfft/issues/19)). OpenMP is used for N=16,384 where it makes OTFFT 2.5x
     slower, and scales to only 1.8x at N=4,194,304.
 4.  **AVX2.** No gain over AVX in these tests, so the AVX2 backend adds

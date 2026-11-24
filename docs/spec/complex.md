@@ -43,6 +43,10 @@ Rules
     does not depend on the table. (`otfft_algorithm_table_test:
     TestPowerOfTwoOneThread, TestPowerOfTwoSeveralThreads,
     TestPlanSurvivesThreadCountChange`)
+*   **CFFT-9** `[done]` Lengths with a prime factor 7 (together with other small
+    factors, or alone) are correct and as fast per point as lengths with 3 and 5.
+    (`otfft_radix7_test: TestRadix7Only, TestRadix7WithOtherFactors,
+    TestRadix7AboveOpenMpThreshold`)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)
@@ -59,6 +63,7 @@ Decided
 *   D4: keep upstream's normalisation names.
 *   D13: lengths with a prime factor above 100 use Bluestein.
 *   D14: two algorithm tables, chosen by the thread count.
+*   D15: radix-7 butterfly in the symmetric form (speed only, no change of results).
 
 Questions
 ---------
