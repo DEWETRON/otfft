@@ -948,6 +948,79 @@ at the sizes compared) and
 (`tune-avx2-t1-r1..r3`, `tune-avx-t1-r1`, `tune-avx2-t12-r1`, each as `.log`
 with the full table and `.txt` with the suggested `case` lines).
 
+Algorithm selection baseline (ffttune), AMD Ryzen 9 3900X
+---------------------------------------------------------
+
+Third baseline for roadmap item R1.8, measured with `ffttune` (`-DOTFFT_BUILD_TOOLS=ON`,
+decision D12) on 2026-11-24, on the Ryzen 9 3900X of "Setup". Information only:
+**nothing was changed in the library**, no table is proposed here.
+
+| Item | Value |
+| --- | --- |
+| CPU | AMD Ryzen 9 3900X (Zen 2), 12 cores / 24 threads, L2 512 KiB per core, L3 4 x 16 MiB, AVX2 and FMA, no AVX-512 |
+| OS | Linux 7.0.0-44-generic, governor `schedutil` |
+| Compiler | GCC 15.2.0, Release |
+| Machine state | Desktop session, no other program started during the runs (load average 0.6 before them). Threads not pinned. |
+
+Runs (`build-tune/Release/ffttune --backend B --threads T --out ...`, medians of 9
+batches of about 20 ms, forward plus inverse transform): AVX2 with 1 thread three
+times (r1 to r3), AVX2 with 12 threads three times, AVX with 1 thread once. No
+result was marked wrong (`-`) in any run.
+
+**Fastest algorithm per length, AVX2** (slowdown of the fork's current pick against
+the fastest, run r1)
+
+| log2 N | 1 thread: fastest (r1, r2, r3) | Fork now (serial) | Fork now vs fastest | 12 threads: fastest (r1, r2, r3) | Fork now (threaded) | Fork now vs fastest |
+| ---: | --- | --- | ---: | --- | --- | ---: |
+| 11 | DIF16, DIF16, DIF16 | DIF16 | 1.00x | DIF16, DIF16, DIF16 | (serial) | |
+| 12 | DIF4, DIF4, DIF4 | DIT8 | 1.93x | DIF4, DIF4, DIF4 | (serial) | |
+| 13 | DIF4, DIF4, DIF4 | DIF8 | 1.10x | DIF4, DIF4, DIF4 | (serial) | |
+| 14 | DIF4, DIF4, DIF4 | DIF8 | 1.10x | DIF4, DIT4, DIF4 | (serial) | |
+| 15 | DIF8, DIF8, DIF8 | DIF8 | 1.00x | DIF8, DIF8, DIF8 | DIT8 | 1.35x |
+| 16 | DIF4, DIF4, DIF4 | DIF4 | 1.00x | DIF4, DIF4, DIF4 | SixStep | 1.28x |
+| 17 | DIF4, DIF4, DIF4 | DIF8 | 1.51x | DIF4, DIF4, DIF4 | DIT8 | 2.23x |
+| 18 | DIF4, DIF4, DIF4 | DIF8 | 1.51x | SixStep, SixStep, SixStep | SixStep | 1.00x |
+| 19 | DIF16, DIF16, DIF16 | DIF8 | 1.06x | DIF16, DIF16, DIF16 | SixStep | 1.06x |
+| 20 | DIF8, DIF16, DIF16 | DIF8 | 1.00x | SixStep, SixStep, SixStep | SixStep | 1.00x |
+| 21 | SixStep, SixStep, SixStep | DIF8 | 1.31x | SixStep, SixStep, SixStep | SixStep | 1.00x |
+| 22 | SixStep, SixStep, SixStep | DIF16 | 1.10x | SixStep, SixStep, SixStep | SixStep | 1.00x |
+| 23 | DIF16, DIF16, DIF16 | DIF16 | 1.00x | SixStep, SixStep, SixStep | SixStep | 1.00x |
+| 24 | DIF8, DIF8, DIF16 | DIF8 | 1.00x | DIF16, SixStep, SixStep | SixStep | 1.00x |
+
+"Fork now" is the pick in `src/otfft_algo.cpp` at the time of the run (the 1-thread
+table for 1 thread; for 12 threads the threaded table from 2^15, the serial table
+below that). Lengths up to 2^10 are left out. The 12-thread columns for 2^11 to 2^14
+show what is fastest, but the library uses the serial table there.
+
+What this shows:
+
+*   **The fastest class is stable between runs.** It changes only where two classes are
+    within about 1%: 2^20 and 2^24 with 1 thread (DIF8 and DIF16), 2^14 with 12 threads
+    (DIF4 and DIT4), 2^24 with 12 threads (DIF16 and SixStep). The odd 2^19 and 2^21
+    results of the 12-thread run on the 9950X do not repeat here.
+*   **1 thread.** DIF4 is fastest at 2^12 to 2^14 and 2^16 to 2^18, DIF8 at 2^15, DIF16 at
+    2^11 and 2^19 (DIF8 within 6%), SixStep at 2^21 and 2^22, and DIF16 or DIF8 at 2^23 and
+    2^24. The fork's serial table is 1.51x slower than the fastest at 2^17 and 2^18, 1.31x
+    at 2^21, and at most 1.10x elsewhere from 2^13 (2^12 is 1.93x, but at 0.016 ms).
+    SixStep is fastest here at 2^21 and 2^22, unlike on the 9950X.
+*   **12 threads.** SixStep is fastest at 2^18 and from 2^20 to 2^23, and the fork picks
+    it there. Below 2^18 the serial DIF4 or DIF8 beats the threaded classes, including
+    SixStep: the fork's threaded pick is 2.23x slower at 2^17 (DIT8), 1.28x at 2^16
+    (SixStep) and 1.35x at 2^15 (DIT8). At 2^19 DIF16 is 1.06x faster than SixStep.
+*   **AVX (1 thread, r1).** The same classes as AVX2 except 2^19 (DIT16 instead of DIF16,
+    within 5%) and 2^24 (DIF8, as in two AVX2 runs). The best AVX time is 0% to 14% slower
+    than the best AVX2 time, 1.14x at 2^21 and at most 1.09x at the other sizes from 2^11.
+
+Limits: one CPU, one compiler (GCC 15.2.0), governor `schedutil` (not `performance`),
+threads not pinned (12 of 24 logical CPUs used, not necessarily one per core), AVX
+measured once. Run-to-run differences under 5% are noise. The Intel notebook and the
+9950X are compared in their own sections; the library was not built or run with these
+data in any other way.
+
+Raw results: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/tune/`
+(`tune-avx2-t1-r1..r3`, `tune-avx2-t12-r1..r3`, `tune-avx-t1-r1`, each as `.log` with
+the full table and `.txt` with the suggested `case` lines).
+
 Algorithm table change: effect on the Intel notebook
 ----------------------------------------------------
 
