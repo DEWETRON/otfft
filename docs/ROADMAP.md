@@ -13,8 +13,11 @@ Milestone 1: Foundations
     `docs/benchmarks.md`. Compared with FFTW, PocketFFT and KissFFT.
 *   [x] **R1.2** Remove dependencies: Boost.Test replaced by vendored doctest
     (D8). The library itself never depended on Boost.
-*   [ ] **R1.3** Add examples: small buildable programs for the complex,
+*   [x] **R1.3** Add examples: small buildable programs for the complex,
     real, DCT and Bluestein transforms, built by CMake.
+    Done: `examples/` (D18, BLD-8). Each program checks its own result and
+    `ctest` runs it. Not covered: the C++ API of a project that uses the
+    library through `add_subdirectory` (no example project yet).
 
 Milestone 1b: Fixes and speed found by the benchmarks
 -----------------------------------------------------
