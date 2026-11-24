@@ -47,6 +47,10 @@ Rules
     factors, or alone) are correct and as fast per point as lengths with 3 and 5.
     (`otfft_radix7_test: TestRadix7Only, TestRadix7WithOtherFactors,
     TestRadix7AboveOpenMpThreshold`)
+*   **CFFT-10** `[done]` Lengths with the prime factors 3 and 5, alone or
+    together with 2, 4, 8 and 7, are correct, also above the OpenMP threshold.
+    (`otfft_radix35_test: TestRadix3Only, TestRadix5Only,
+    TestRadix3And5WithOtherFactors, TestRadix3And5AboveOpenMpThreshold`)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)
@@ -64,6 +68,7 @@ Decided
 *   D13: lengths with a prime factor above 100 use Bluestein.
 *   D14: two algorithm tables, chosen by the thread count.
 *   D15: radix-7 butterfly in the symmetric form (speed only, no change of results).
+*   D16: radix-3 and radix-5 butterflies in the symmetric form (speed only).
 
 Questions
 ---------
