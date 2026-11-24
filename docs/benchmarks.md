@@ -1447,6 +1447,93 @@ Limits:
 *   The exp kernels start an OpenMP parallel region on every call, also with one thread.
     The cost of that was not separated from the effect of the kernels.
 
+OpenMP structure of the eight-step and six-step code (R1.10): effect on the Intel notebook
+------------------------------------------------------------------------------------------
+
+Roadmap R1.10, issue #19, decision D20. The power-of-two class SixStep runs the square
+six-step code for even log2 N and the eight-step code for odd log2 N. Three changes from
+upstream 11.6e: (1) the eight-step code from N = 2^19 runs in **one** `omp parallel` region;
+(2) the six-step square code has a static schedule from 2^14 and a guided schedule above a
+second threshold; (3) the eight-step code uses `omp sections` for its eight sub-transforms
+below 2^19.
+
+**The bug behind (1).** From 2^19 the fork called the six-step `part2` eight times *outside*
+any parallel region. `part2` consists of orphaned `omp for` loops, which run on one thread
+when no region is open, so most of the eight-step transform ran serially while the other
+threads waited. That is the "SixStep does not scale at odd powers of 2 from 2^19" seen on the
+Ryzen (ratio 0.93 to 1.09 with 12 threads at 2^19, 2^21, 2^23). Upstream wraps the whole
+step in one region.
+
+Method: `ffttune --backend avx2 --threads T` (T = 4 and 8) and `otfft_bench --kinds
+complex,real,dct --sizes pow2 --min-n 65536 --lib OTFFT --threads 8`, a library built from
+`master` before the change against the changed one, alternately, 3 runs each, medians; MSVC,
+native Windows (Core Ultra 7 268V, 8 cores). Raw data in
+`docs/benchmark-data/2026-11-24-intel/omp/`.
+
+**SixStep class, odd log2 N (eight-step code), time old / time new**
+
+| log2 N | 4 threads | 8 threads |
+| ---: | ---: | ---: |
+| 19 | 9,331 us -> 4,112 us (2.27x) | 9,401 -> 6,294 (1.49x) |
+| 21 | 41,013 -> 16,733 (2.45x) | 40,433 -> 21,664 (1.87x) |
+| 23 | 237,009 -> 151,628 (1.56x) | 256,416 -> 126,689 (2.02x) |
+
+The run-to-run ranges do not overlap (2^21 with 4 threads: 39,983 to 43,328 old, 16,652 to
+18,771 new). Below 2^19 (2^14 to 2^17, sections instead of an `omp for` over the eight
+blocks) nothing measurable changed (0.86x to 1.42x with wide ranges; 0.98x in the repeat).
+
+**SixStep class, even log2 N (six-step code, guided schedule from 2^18)**
+
+| log2 N | 4 threads | 8 threads |
+| ---: | ---: | ---: |
+| 18 | 0.84x, 0.96x | 1.27x, 1.11x |
+| 20 | 0.91x | 1.13x |
+| 22 | 1.14x | 1.44x |
+
+(Two numbers: the first full run and the repeat after the threshold change below.) With 4
+threads the guided schedule is neutral to slightly slower at 2^18 to 2^20, with 8 threads
+faster; upstream's own threshold is 2^16, where the guided schedule was **0.70x (8 threads)
+and 0.81x (4 threads) of the static speed**, so the threshold is 2^17 here, which means
+"from 2^18" (the square code exists for even log2 N only). After that change SixStep at 2^16
+is 0.98x (8 threads) and 1.10x (4 threads) of the old speed, the same code as before.
+
+**Through the library (`otfft_bench`, 8 threads, MFLOPS, final build against `master`)**
+
+| N | complex | real | DCT |
+| ---: | ---: | ---: | ---: |
+| 65,536 | 1.14x | 1.01x | 1.01x |
+| 262,144 | 0.98x | 0.90x | 1.10x |
+| 1,048,576 | 1.09x | 1.19x | 1.38x |
+| 4,194,304 | 1.19x | 1.82x | 1.58x |
+
+65,536 is the median of 15 alternating pairs; the other rows are 3 runs, with ranges up to
+1.4x at 262,144 (real: 13,877 to 19,156 MFLOPS old, 12,439 to 18,470 new; 2.9x in the
+first round), so 0.90x to 1.10x there is noise. The threaded table of D14 uses SixStep from 2^19 up, which is where the gains
+are; at N = 4,194,304 the real FFT goes from 8,397 to 15,253 MFLOPS.
+
+What this shows:
+
+*   The eight-step code now scales: 1.5x to 2.5x faster SixStep from 2^19 with 4 and 8 threads.
+    That is the item "scale better above the break-even" of R1.6 and issue #19 for the lengths
+    where the library uses SixStep. Complex N = 4,194,304 on 8 threads: 1.19x, real 1.82x,
+    DCT 1.58x.
+*   The best class per length mostly did not change (DIF8 wins most large lengths on this CPU
+    with 4 and 8 threads, before and after), so the library gain depends on the table: SixStep
+    is still **not** the fastest class at 2^19 to 2^23 with 4 or 8 threads here (DIF8 or DIF16
+    are, by 1.1x to 2.1x). The threaded table (the upstream table) is therefore still wrong for
+    this CPU above 2^19 (R1.8); the gain above is the gain for a table that picks SixStep.
+
+Limits:
+
+*   One CPU with 4 and 8 threads, MSVC. Not run on the Ryzen with 12 or 16 threads, where the
+    problem was seen, and not with GCC (the build passes with GCC 15.2, see the pull request).
+*   The target in the roadmap item (real and DCT with 12 threads from N = 262,144 at 0.5 to 0.8
+    of upstream) was not compared with upstream again; at 262,144 the library did not change
+    measurably.
+*   The thresholds 2^14 (static) and 2^17 (guided) are from this CPU. The guided threshold is
+    a deviation from upstream (2^16).
+*   `firstprivate` clauses on the parallel regions (fork specific, not in upstream) are kept.
+
 Problems found
 --------------
 
@@ -1475,7 +1562,11 @@ Problems found
     serial table is used below 2^15 with several threads; the scaling above is
     not improved yet. See "Thread break-even and the OpenMP thresholds".
     The exp kernels of roadmap R1.9 (large N) are ported; on the Intel notebook they
-    change the best class by 0.93x to 1.13x, see "Exp kernels (R1.9)".
+    change the best class by 0.93x to 1.13x, see "Exp kernels (R1.9)". The eight-step
+    code from N = 2^19 ran its six-step parts on one thread (a missing `omp parallel`);
+    fixed in R1.10: SixStep 1.5x to 2.5x faster there, complex N = 4,194,304 with 8
+    threads 1.19x, real 1.82x, DCT 1.58x (see "OpenMP structure of the eight-step and
+    six-step code (R1.10)").
 4.  **AVX2.** No gain over AVX in these tests, so the AVX2 backend adds
     build time for no measured benefit.
 5.  **DCT scale.** OTFFT's DCT-II output is 0.5 times FFTW's and PocketFFT's

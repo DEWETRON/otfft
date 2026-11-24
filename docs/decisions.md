@@ -304,3 +304,30 @@ D19: exp kernels for the large radix-8 and radix-16 transforms
     12% slower than before for that class while DIF16 and DIT16 became up to 35% faster.
 *   **Revisit when:** the Ryzen result is in; then retune the table (R1.8) and decide a
     threshold per class.
+
+D20: one parallel region for the eight-step code, guided schedule from 2^18
+---------------------------------------------------------------------------
+*   **What:** in `src/otfft_eightstep.h`, from N = 2^19 (`OMP_THRESHOLD2`) the whole step
+    runs in one `omp parallel` region (as upstream 11.6e); below it the eight sub-transforms
+    are `omp sections`; the last loop is `nowait`. In `src/otfft_sixstepsq.h` there are two
+    thresholds: `OMP_THRESHOLD1 = 2^14` (one thread below), a static schedule from there
+    (`part2`) and a guided schedule from `OMP_THRESHOLD2 = 2^17` (`part3`, new), that is
+    from 2^18 because the square code exists for even log2 N only. The weight-table set-up in
+    `src/otfft_algo_sixstep.cpp` uses `OMP_THRESHOLD1` (same value as before). Roadmap R1.10,
+    issue #19, spec CFFT-13.
+*   **Why:** the eight-step code called the six-step `part2` outside a parallel region, so its
+    `omp for` loops ran on one thread; one region fixes that (SixStep 1.5x to 2.5x faster at
+    2^19 to 2^23 with 4 and 8 threads). The guided schedule balances the triangular loops over
+    block pairs. See `docs/benchmarks.md`, "OpenMP structure of the eight-step and six-step
+    code (R1.10)".
+*   **Rejected:** upstream's guided threshold 2^16 (the guided schedule was 0.70x to 0.81x of
+    static at N = 2^16 with 8 and 4 threads on the Intel notebook; library speed there did
+    not change with the static one); removing the fork's `firstprivate` clauses (not part of
+    the problem, kept); changing the algorithm table in the same step (the table is R1.8).
+*   **Limit:** one CPU (8 cores, MSVC) with 4 and 8 threads; not run on the Ryzen with 12 or
+    16 threads, nor with GCC for speed. With 4 threads the guided schedule is neutral to
+    16% slower at 2^18 to 2^20 and with 8 threads up to 1.44x faster. SixStep is still not the
+    best class at 2^19 and above on this CPU, so `createComplexFFT` gains only where the table
+    selects it.
+*   **Revisit when:** the Ryzen result is in (the guided threshold may be lower there), or
+    the threaded table is retuned (R1.8).

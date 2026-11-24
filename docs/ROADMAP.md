@@ -46,9 +46,12 @@ Milestone 1b: Fixes and speed found by the benchmarks
     Done: the first part (D17): per-class thresholds at the measured break-even and
     the serial table below 2^15 with several threads (N=16,384 with 4 and 8
     threads on the Intel notebook: from a collapse to the 1-thread speed). Still
-    open: scaling above the break-even, thresholds of the eight-step, mixed
-    radix, real FFT, DCT and Bluestein code, and a check on the Ryzen with the
-    changed library.
+    open: thresholds of the eight-step, mixed radix, real FFT, DCT and
+    Bluestein code, and a check on the Ryzen with the changed library. Scaling
+    above the break-even improved for the lengths where the table uses SixStep
+    (R1.10: SixStep 1.5x to 2.5x faster from 2^19, N = 4,194,304 with 8 threads
+    1.19x complex, 1.82x real); the table still picks SixStep where DIF8 is
+    faster on the Intel notebook (R1.8).
 *   [ ] **R1.7** Decide whether the AVX2 backend is worth keeping (no gain over
     AVX in the benchmarks); recheck after R2.1.
 
@@ -81,11 +84,19 @@ Background and measurements: `docs/upstream-comparison.md`.
     Intel notebook the best class changes by 0.93x to 1.13x (DIT16 is faster on both
     compilers, DIF16 only with GCC); the Ryzen, where the gap to FFTW is largest,
     has not been run. The table is not retuned for the new kernels (see R1.8).
-*   [ ] **R1.10** Port the OpenMP changes of 11.6e: two six-step thresholds,
+*   [x] **R1.10** Port the OpenMP changes of 11.6e: two six-step thresholds,
     `schedule(static)` and `guided`, `omp sections` in the eight-step; then
     re-measure for issue [#19](https://github.com/DEWETRON/otfft/issues/19).
     Measured target: real and DCT with 12 threads from N = 262,144 are 0.5 to
     0.8 of upstream.
+    Done (D20, CFFT-13): the three changes and a test of every variant. The
+    eight-step code from 2^19 ran its six-step parts on one thread (a missing
+    `omp parallel`, not in upstream); now SixStep is 1.5x to 2.5x faster there
+    (4 and 8 threads, Intel notebook), and through the library with 8 threads
+    N = 4,194,304 is 1.19x (complex), 1.82x (real) and 1.58x (DCT) faster. The
+    guided threshold is 2^17, not upstream's 2^16 (0.7x to 0.8x at N = 2^16).
+    Not done: the comparison with upstream at 12 threads and a run on the Ryzen;
+    at N = 262,144 nothing changed measurably.
 *   [ ] **R1.11** After R1.8 to R1.10: update the version strings (still
     11.4xv) and the sync statement in the README. Try to get upstream 11.5e
     (the download link returned 404) to find which changes came when.

@@ -171,10 +171,24 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
                 for (int p = 0; p < N1; p += 2) {
                     fft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
-                #pragma omp for schedule(static)
-                for (int i = 0; i < 8; i++) {
-                    const int iN1 = i*N1;
-                    OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+iN1, x+iN1, Wm, Ws);
+                #pragma omp sections
+                {
+                    #pragma omp section
+                    OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N0, x+N0, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N1, x+N1, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N2, x+N2, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N3, x+N3, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N4, x+N4, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N5, x+N5, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N6, x+N6, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part1(iv, y+N7, x+N7, Wm, Ws);
                 }
                 #pragma omp for schedule(static) nowait
                 for (int p = 0; p < N1; p += 2) {
@@ -182,8 +196,11 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
                 }
             }
             else
+            // One parallel region for the whole step: the six-step parts below contain
+            // orphaned "omp for" loops, which run on one thread outside of a region.
+            #pragma omp parallel firstprivate(iv,x,y,W,Ws)
             {
-                #pragma omp parallel for schedule(static) firstprivate(x,y,W)
+                #pragma omp for schedule(static)
                 for (int p = 0; p < N1; p += 2) {
                     fft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
@@ -195,7 +212,7 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
                 OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N5, x+N5, Wm, Ws);
                 OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N6, x+N6, Wm, Ws);
                 OTFFT_SixStep::fwdffts<log_N-3,scale_1>::part2(iv, y+N7, x+N7, Wm, Ws);
-                #pragma omp parallel for schedule(static) firstprivate(x,y)
+                #pragma omp for schedule(static) nowait
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);
                 }
@@ -314,18 +331,36 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
                 for (int p = 0; p < N1; p += 2) {
                     ifft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
-                #pragma omp for schedule(static)
-                for (int i = 0; i < 8; i++) {
-                    const int iN1 = i*N1;
-                    OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+iN1, x+iN1, Wm, Ws);
+                #pragma omp sections
+                {
+                    #pragma omp section
+                    OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N0, x+N0, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N1, x+N1, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N2, x+N2, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N3, x+N3, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N4, x+N4, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N5, x+N5, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N6, x+N6, Wm, Ws);
+                    #pragma omp section
+                    OTFFT_SixStep::invffts<log_N-3,scale_1>::part1(iv, y+N7, x+N7, Wm, Ws);
                 }
                 #pragma omp for schedule(static) nowait
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);
                 }
             }
-            else {
-                #pragma omp parallel for schedule(static) firstprivate(x,y,W)
+            else
+            // One parallel region for the whole step: the six-step parts below contain
+            // orphaned "omp for" loops, which run on one thread outside of a region.
+            #pragma omp parallel firstprivate(iv,x,y,W,Ws)
+            {
+                #pragma omp for schedule(static)
                 for (int p = 0; p < N1; p += 2) {
                     ifft_and_mult_twiddle_factor_kernel(p, x, y, W);
                 }
@@ -337,7 +372,7 @@ constexpr int OMP_THRESHOLD2 = 1<<19;
                 OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N5, x+N5, Wm, Ws);
                 OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N6, x+N6, Wm, Ws);
                 OTFFT_SixStep::invffts<log_N-3,scale_1>::part2(iv, y+N7, x+N7, Wm, Ws);
-                #pragma omp parallel for schedule(static) firstprivate(x,y)
+                #pragma omp for schedule(static) nowait
                 for (int p = 0; p < N1; p += 2) {
                     transpose_kernel(p, y, x);
                 }
