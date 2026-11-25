@@ -112,10 +112,14 @@ Background and measurements: `docs/upstream-comparison.md`.
     guided threshold is 2^17, not upstream's 2^16 (0.7x to 0.8x at N = 2^16).
     Not done: the comparison with upstream at 12 threads and a run on the Ryzen;
     at N = 262,144 nothing changed measurably.
-*   [ ] **R1.11** After R1.8 to R1.10: update the version strings (still
+*   [x] **R1.11** After R1.8 to R1.10: update the version strings (still
     11.4xv) and the sync statement in the README. Try to get upstream 11.5e
-    (the download link returned 404; on 2026-11-25 the download page links
-    `otfft-11.5e.tar.gz` of 2019-09-09, not downloaded) to find which changes came when.
+    to find which changes came when.
+    Done (D26): the README states which parts come from 11.6e. The version strings are
+    not changed: no file is identical to 11.6e, so `11.6e` in a header would claim a sync
+    that is not there. 11.5e: the download page links `otfft-11.5e.tar.gz`, but the server
+    answers 404 (checked 2026-11-25), so it could not be compared. R1.8 is still open, which
+    the item's "after" did not wait for.
 *   [x] **R1.12** Report the `(i*j)%k` overflow and the O(N^2) generic radix
     (issues #16 to #18) to the upstream author; the code is identical in
     11.6e.
