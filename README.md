@@ -26,9 +26,14 @@ The fork uses the original source code with these changes:
 * benchmarks against FFTW, PocketFFT and KissFFT
 
 ## Status
-Relevant changes from upstream version 11.5 are merged. The latest upstream
-release is 11.6e (2023-12-21), which this fork does not follow yet. The
-original classes (`OTFFT::FFT`, `RFFT`, `DCT`, `Bluestein`, `FFT0`, `DCT0`)
+The kernels come from upstream OTFFT 11.4x; the files still say `11.4xv` in their
+headers. The latest upstream release is 11.6e (2023-12-21). From it the fork has
+the `exp` kernels for large lengths and the OpenMP changes (six-step thresholds,
+`schedule(static)` and `guided`, `omp sections` in the eight-step code). Not taken
+over: upstream's per-size algorithm table (the fork has its own tables, tuned
+with `tools/ffttune`), the C99 and Fortran 2003 interfaces and the upstream
+benchmark programs. No file is identical to 11.6e any more; see
+[docs/upstream-comparison.md](docs/upstream-comparison.md). The original classes (`OTFFT::FFT`, `RFFT`, `DCT`, `Bluestein`, `FFT0`, `DCT0`)
 are internal here; use the factory functions below.
 
 Planned work is in [docs/ROADMAP.md](docs/ROADMAP.md): newer AMD64 extensions,

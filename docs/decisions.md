@@ -436,3 +436,20 @@ D25: DIF4 at 2^16 and 2^17 in the threaded table
     with this change. The tuning file (D22) overrides the table on a machine where it is wrong.
 *   **Revisit when:** another CPU or compiler picks a different class at these lengths, or a
     threaded retune of the whole table is done.
+
+D26: keep the `11.4xv` version strings, state the sync in the README
+--------------------------------------------------------------------
+*   **What:** the version line in the file headers (`Version 11.4xv`) is not changed, except in
+    the files ported from 11.6e, which already say `11.6e` (`otfft_avx{dif,dit}{8,16}exp.h`).
+    The README "Status" says what comes from 11.6e and what does not. Roadmap R1.11.
+*   **Why:** compared with upstream 11.6e (whitespace ignored, version lines removed) every file in
+    `src/` and `inc/` that has a counterpart differs, from about 100 changed words
+    (`otfft_avxdit16omp.h`, `otfft_sixstepsq.h`, `otfft_eightstep.h`) to several thousand
+    (`otfft_mixedradix.h`, `otfft_avxdit8.h`). A header that says `11.6e` would claim an identity
+    that does not exist. `11.4xv` names the upstream version the file was taken from.
+*   **Rejected:** setting all headers to `11.6e` (false); a fork version scheme in the headers
+    (nothing reads it, and the library version is in CMake).
+*   **Limit:** a file with ported parts from 11.6e (the six-step and eight-step files, R1.10) still
+    says `11.4xv`. 11.5e could not be downloaded (404), so which changes came in 11.5e is not known.
+*   **Revisit when:** the fork syncs a whole file from a newer upstream release.
+
