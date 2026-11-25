@@ -37,13 +37,13 @@ Rules
 *   **CFFT-8** `[done]` For a power-of-two length the algorithm is chosen in
     `setup(n)` from a table per length. There are two tables: one for a
     configured OpenMP thread count of 1 (tuned with `tools/ffttune` on an
-    Intel and an AMD CPU) and one for more than 1 thread (the upstream table,
-    not re-tuned), used from length 2^15 up; below 2^15 the serial table is
+    Intel and an AMD CPU) and one for more than 1 thread (the upstream table
+    except 2^16 and 2^17, which are DIF4, D25), used from length 2^15 up; below 2^15 the serial table is
     used also with several threads. The thread count is read when the plan is made, so a plan
     keeps its algorithm if `omp_set_num_threads` is called later. The result
     does not depend on the table. (`otfft_algorithm_table_test:
     TestPowerOfTwoOneThread, TestPowerOfTwoSeveralThreads,
-    TestPlanSurvivesThreadCountChange`)
+    TestPlanSurvivesThreadCountChange, TestThreadedLengthsWithDif4`)
 *   **CFFT-9** `[done]` Lengths with a prime factor 7 (together with other small
     factors, or alone) are correct and as fast per point as lengths with 3 and 5.
     (`otfft_radix7_test: TestRadix7Only, TestRadix7WithOtherFactors,

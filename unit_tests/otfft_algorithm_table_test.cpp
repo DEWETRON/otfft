@@ -111,4 +111,31 @@ TEST_CASE("TestPlanSurvivesThreadCountChange")
     }
 }
 
+TEST_CASE("TestThreadedLengthsWithDif4")
+{
+    // 2^16 and 2^17 use DIF4 from the threaded table (D25); check the spectrum and the round
+    // trip at thread counts above and below the OpenMP threshold of DIF4 (2^18).
+    for (int threads : {2, 4, 12})
+    {
+        ThreadCount count(threads);
+        for (int log_n : {15, 16, 17, 18})
+        {
+            CAPTURE(threads);
+            CAPTURE(log_n);
+            checkLength(log_n);
+            const int n = 1 << log_n;
+            const auto input = makeSignal(n);
+            auto spectrum = input;
+            auto fft = OTFFT::Factory::createComplexFFT(n);
+            fft->fwd(OTFFT::complex_vector{spectrum.data()});
+            fft->inv(OTFFT::complex_vector{spectrum.data()});
+            for (std::size_t i = 0; i < spectrum.size(); i += 97)
+            {
+                CHECK_SMALL(spectrum[i].Re - input[i].Re, 1e-8);
+                CHECK_SMALL(spectrum[i].Im - input[i].Im, 1e-8);
+            }
+        }
+    }
+}
+
 }

@@ -420,3 +420,19 @@ D24: do not mark the six-step kernels noinline
 *   **Limit:** GCC 15.2.0 on one CPU. MSVC and Clang were not measured.
 *   **Revisit when:** a default path uses SixStep with one thread, or the cost of moving data between
     cores falls (for example with the few-exchanges algorithm) so that the kernels matter at several threads.
+
+D25: DIF4 at 2^16 and 2^17 in the threaded table
+------------------------------------------------
+*   **What:** `ALGORITHM_THREADED` in `src/otfft_algo.cpp` picks DIF4 at 2^16 and 2^17 (was
+    SixStep and DIT8, the upstream values). All other entries are unchanged. Roadmap R1.8, spec CFFT-8.
+*   **Why:** `ffttune --backend avx2 --threads T`, two runs each for T = 2, 4, 8, 12 and 24 on the
+    Ryzen 9 3900X (GCC 15.2.0): DIF4 was the fastest class at 2^16 and 2^17 in every run with 4 or more
+    threads. The earlier 12-thread A/B run (`docs/benchmarks.md`) measured the old picks 1.67x (2^16)
+    and 2.51x (2^17) slower than DIF4.
+*   **Rejected:** also changing 2^15 (the winner changes with the thread count: SixStep, DIF4, DIT4,
+    DIF8) and 2^19, 2^20 and 2^24 (the winner changes between runs or the classes are within 5%).
+*   **Limit:** one CPU, one compiler, AVX2. Raw runs: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/threaded-table/` (`tT-rN.txt`, T threads, run N). With 2 threads the winner at 2^16 was DIT4 and at 2^17
+    DIT16 or DIT4, so DIF4 may lose a little there. The Intel notebook and the 9950X were not run
+    with this change. The tuning file (D22) overrides the table on a machine where it is wrong.
+*   **Revisit when:** another CPU or compiler picks a different class at these lengths, or a
+    threaded retune of the whole table is done.

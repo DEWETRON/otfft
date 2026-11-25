@@ -79,11 +79,13 @@ namespace OTFFT_NAMESPACE
         // 1 DIF4, 2 DIT4, 3 DIF8, 4 DIT8, 5 DIF16, 6 DIT16, 7 SixStep.
         //
         // Used when more than one OpenMP thread is configured and the length is at least
-        // THREADED_MIN_LOG: the upstream table (see upstream otfft_gen_*.h), not re-tuned.
-        // From 2^18 it is SixStep, the algorithm that scales with threads (12 threads on
-        // the Ryzen: SixStep is fastest at most lengths from 2^13, see docs/benchmarks.md).
+        // THREADED_MIN_LOG: the upstream table (see upstream otfft_gen_*.h), except 2^16 and
+        // 2^17 (D25). From 2^18 it is SixStep, the algorithm that scales with threads (12
+        // threads on the Ryzen: SixStep is fastest at most lengths from 2^18, see
+        // docs/benchmarks.md). At 2^16 and 2^17 DIF4 was fastest with 4 to 24 threads on the
+        // Ryzen 9 3900X; the upstream picks (SixStep, DIT8) were 1.7x and 2.5x slower.
         const int ALGORITHM_THREADED[25] = {0,
-            2, 1, 4, 1, 4, 3, 5, 3, 3, 1, 5, 4, 3, 4, 4, 7, 4, 7, 7, 7, 7, 7, 7, 7};
+            2, 1, 4, 1, 4, 3, 5, 3, 3, 1, 5, 4, 3, 4, 4, 1, 1, 7, 7, 7, 7, 7, 7, 7};
 
         // Used with one thread. Measured with tools/ffttune on an Intel Core Ultra 7 268V
         // (MSVC) and an AMD Ryzen 9 9950X (GCC), see docs/benchmarks.md ("Algorithm

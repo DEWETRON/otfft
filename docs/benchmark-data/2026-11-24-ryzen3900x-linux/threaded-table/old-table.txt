@@ -1,0 +1,3 @@
+otfft-tuning 1
+avx2 threaded 16 SixStep
+avx2 threaded 17 DIT8

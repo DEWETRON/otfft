@@ -1,0 +1,31 @@
+# ffttune: backend avx2, 12 thread(s), median of 9 batches of about 20 ms
+# time in microseconds of one forward plus one inverse transform; '-' = wrong result
+ log2N       DIF4       DIT4       DIF8       DIT8      DIF16      DIT16    SixStep  fastest
+    13     36.375     39.523     43.961     49.029     78.751     84.766     99.727  1 (DIF4)
+    14     81.798     81.950     89.063        122        171        227        145  1 (DIF4) tie within 5%
+    15        216        218        186        254        389        404        282  3 (DIF8)
+    16        421       1216       1039       1043        584        598        483  1 (DIF4)
+    17        938       2777       2005       2013       1485       1521       1038  1 (DIF4)
+    18       5109       5234       3445       3392       2954       2982       2419  7 (SixStep)
+    19      12251      12381       8267       8334       5905       5928       6328  5 (DIF16) tie within 5%
+    20      22996      22983      16866      16858      10976      11262       9550  7 (SixStep)
+    21      64220      64850      37743      38259      36420      36150      30084  7 (SixStep)
+    22     163410     164619     121746     122320      91600      91846      71463  7 (SixStep)
+    23     373896     374590     246648     246439     185018     183387     160648  7 (SixStep)
+    24     751758     750870     494263     497917     379179     378179     388161  6 (DIT16) tie within 5%
+
+# suggested lines for the switch in FFT0::setup (src/otfft_algo.cpp):
+case 13: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 14: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 15: obj = FFT3::instance(); obj->setup2(log_N); break;
+case 16: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 17: obj = FFT1::instance(); obj->setup2(log_N); break;
+case 18: obj = FFT7::instance(); obj->setup2(log_N); break;
+case 19: obj = FFT5::instance(); obj->setup2(log_N); break;
+case 20: obj = FFT7::instance(); obj->setup2(log_N); break;
+case 21: obj = FFT7::instance(); obj->setup2(log_N); break;
+case 22: obj = FFT7::instance(); obj->setup2(log_N); break;
+case 23: obj = FFT7::instance(); obj->setup2(log_N); break;
+case 24: obj = FFT6::instance(); obj->setup2(log_N); break;
+
+# wrote /tmp/claude-1000/-home-glaure-Development-otfft/1b753059-a36c-4f35-a627-2700c99cb51a/scratchpad/tune/t12-r1.txt (threaded table) and the library accepts it
