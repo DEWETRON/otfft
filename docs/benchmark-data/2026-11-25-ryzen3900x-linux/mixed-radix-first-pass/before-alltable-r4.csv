@@ -1,0 +1,13 @@
+library,kind,category,n,threads,median_ns,min_ns,mflops,plan_us,rel_error,scale,status
+OTFFT-avx2,complex,smooth,480,1,1314.0,1295.6,16268.8,31.8,6.55e-16,1,ok
+PocketFFT,complex,smooth,480,1,3631.2,3598.1,5886.8,10.0,0,1,ok
+OTFFT-avx2,complex,smooth,1000,1,3244.4,3236.6,15358.5,14.2,4.88e-16,1,ok
+PocketFFT,complex,smooth,1000,1,7779.3,7744.8,6405.3,10.0,0,1,ok
+OTFFT-avx2,complex,smooth,3000,1,10823.4,10804.0,16008.0,67.2,9.87e-16,1,ok
+PocketFFT,complex,smooth,3000,1,24999.3,24928.6,6930.6,33.7,0,1,ok
+OTFFT-avx2,complex,smooth,10080,1,40814.7,40603.8,16422.5,247.1,1.08e-15,1,ok
+PocketFFT,complex,smooth,10080,1,162205.5,161404.6,4132.3,202.8,0,1,ok
+OTFFT-avx2,complex,smooth,100000,1,546068.8,541876.2,15208.4,2380.9,1.55e-15,1,ok
+PocketFFT,complex,smooth,100000,1,1803295.5,1791881.0,4605.4,3208.3,0,1,ok
+OTFFT-avx2,complex,smooth,1000000,1,16370619.0,16188866.0,6087.6,27374.0,6.39e-16,1,ok
+PocketFFT,complex,smooth,1000000,1,30372090.0,29831044.0,3281.2,44790.2,0,1,ok

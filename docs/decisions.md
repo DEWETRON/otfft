@@ -496,3 +496,31 @@ D28: AVX versions of the radix-3, 5 and 7 core passes of the mixed radix code
     butterfly fails the test, checked by hand).
 *   **Revisit when:** the end passes and the first pass are vectorised, or AVX-512 is added.
 
+D29: AVX version of the first pass (s = 1) of radix 8 and 4 of the mixed radix code
+-----------------------------------------------------------------------------------
+*   **What:** the `s == 1` branch of `fwdcore8`, `invcore8`, `fwdcore4`, `invcore4` and their OpenMP
+    versions in `src/otfft_mixedradix.h` works on two values of `p` at once (`core8s1Y`, `core4s1Y`,
+    `OTFFT_MIXED_YMM`). The inputs of `p` and `p+1` are adjacent, the two halves of a result go to
+    two places 8 (or 4) points apart. With an odd number of `p` the last one uses the scalar code.
+    The twiddle factors w1 to w3 are loaded from the table, w4 to w7 are products (as in the
+    `s >= 2` branch). Roadmap R1.5, spec CFFT-14, follows D28.
+*   **Why:** the first pass was 28% of the passes at N = 10,080 and cost 1.35 ns per point against
+    0.3 to 0.5 for the same radix with `s` = 8 (`docs/benchmarks.md`). One thread, Ryzen 9 3900X,
+    GCC 15.2.0, AVX2, one forward transform, 5 alternating rounds against the library of D28:
+    1.23x (N = 480), 1.20x (1,000), 1.17x (3,000), 1.16x (10,080), 1.11x (100,000), 0.99x
+    (1,000,000).
+*   **Rejected:** all seven twiddle factors from the table: faster for small N (1.31x, 1.26x, 1.23x,
+    1.19x, 1.10x at the same lengths) but 0.93x at N = 1,000,000, where the pass is memory bound
+    and the table is read in seven strided streams; products of w1 only (the same arithmetic as the
+    scalar code, bit-identical): 1.40x for the pass alone against 1.7x to 2.0x for the table
+    variant (prototype, `docs/benchmark-data/2026-11-25-ryzen3900x-linux/mixed-radix-first-pass/`);
+    radix 2 and radix 3, 5, 7 with `s` = 1 (the radix-2 first pass costs 0.39 ns per point, and with
+    an odd `s` all passes of the radix 3, 5, 7 stay scalar: a different change, over `p`).
+*   **Limit:** results are not bit-identical to the scalar first pass (w1 to w3 from the table, not
+    products; in the prototype with all seven twiddle factors from the table the differences to the old result
+    were up to 3e-14 absolute, not measured for the kept variant; the table values are the more
+    accurate ones). Lengths with an odd part only (no factor 2) and the first pass of radix 2
+    are unchanged. One CPU, one compiler, AVX2. The test breaks when the butterfly of any of the
+    four functions is changed (a changed add/sub in the first output of each, checked by hand).
+*   **Revisit when:** the end passes or the odd-`s` passes are vectorised, or AVX-512 is added.
+
