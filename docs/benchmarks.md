@@ -2466,3 +2466,44 @@ end passes and the passes with an odd `s` are still scalar.
 
 Raw results: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/mixed-radix-first-pass/`
 (`before-rN.csv`, `after-rN.csv`, the table variant `*-alltable-rN.csv`, `proto2.cpp`, `proto2-run.txt`).
+
+Lengths with factors 3, 5 and 7 against FFTW after the AVX passes (R1.5, D28, D29)
+------------------------------------------------------------------------------------
+
+The FFTW comparison of the section "Lengths with factors 3, 5 and 7 against FFTW on the Ryzen 9
+3900X", repeated after the AVX passes of D28 and D29 (library at `1929f76`). Measured on 2026-11-25,
+same machine and settings: GCC 15.2.0, Release, `schedutil` governor, one thread, FFTW 3.3.10 (the
+distribution package `sse2-avx`, `FFTW_MEASURE`, the same as before), `otfft_bench --kinds complex
+--sizes smooth --lib NAME --threads 1`, `OTFFT-avx2` and `FFTW-measure` run alternately, three
+rounds. Load average 0.6 to 0.95 at the start of each run (`load.txt`). One forward transform,
+median of the 3 rounds. "Before" is the table of that section (the library before D15 and D16 had
+the earlier numbers, listed there).
+
+| N | Factors | OTFFT now (us) | OTFFT now (MFLOPS) | FFTW now (us) | FFTW now (MFLOPS) | OTFFT time over FFTW now | before | Per round (now) | OTFFT time over PocketFFT now | before |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: |
+| 480 | 2^5 3 5 | 1.06 | 20,194 | 0.76 | 28,154 | 1.39x | 2.09x | 1.39, 1.36, 1.40 | 0.29x | 0.45x |
+| 1,000 | 2^3 5^3 | 2.69 | 18,496 | 1.95 | 25,497 | 1.38x | 2.15x | 1.37, 1.36, 1.38 | 0.35x | 0.56x |
+| 3,000 | 2^3 3 5^3 | 9.12 | 18,992 | 6.53 | 26,525 | 1.40x | 2.31x | 1.38, 1.38, 1.40 | 0.37x | 0.62x |
+| 10,080 | 2^5 3^2 5 7 | 35.34 | 18,965 | 28.92 | 23,180 | 1.22x | 1.80x | 1.22, 1.18, 1.23 | 0.22x | 0.31x |
+| 100,000 | 2^5 5^5 | 493.37 | 16,833 | 380.02 | 21,854 | 1.30x | 1.99x | 1.30, 1.27, 1.32 | 0.27x | 0.42x |
+| 1,000,000 | 2^6 5^6 | 16,657 | 5,983 | 10,766 | 9,256 | 1.55x | 1.58x | 1.58, 1.45, 1.55 | 0.54x | 0.54x |
+
+What this shows:
+
+*   **The gap to FFTW is now 1.2x to 1.4x for N = 480 to 100,000** (before 1.8x to 2.3x for these
+    lengths), N = 10,080 1.22x (before 1.80x). The rounds agree within 0.05x (0.1x at N = 100,000).
+*   **N = 1,000,000 did not change**: 1.55x (before 1.58x), rounds from 1.45x to 1.58x. D28 and D29
+    do not help there (one thread, memory bound); this is now the largest gap in the table.
+*   **PocketFFT**: OTFFT needs 0.22x to 0.37x of its time up to N = 100,000 (before 0.31x to 0.62x) and
+    0.54x at N = 1,000,000 (unchanged).
+*   With these numbers the "2x" of the roadmap item R1.5 is about 1.2x to 1.4x up to N = 100,000.
+
+Limits: same as the earlier section: one CPU, one thread, one compiler, AVX2 backend; the FFTW package
+is `sse2-avx`, not an AVX2 build with FMA. Six lengths
+only; lengths with factors 11 and 13 were not run. The "before" column is the earlier measurement,
+not repeated with the old library today (its own rounds agreed within 0.15x). The FFTW MFLOPS differ
+from the earlier table by up to 3% (N = 10,080: 23,180 against 22,753) between the two runs.
+
+Raw results: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/fftw-after-avx-passes/`
+(`otfft-rN.csv`, `fftw-rN.csv`, logs, `load.txt`).
+
