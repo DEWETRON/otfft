@@ -1,0 +1,120 @@
+diff --git a/src/otfft_algo.cpp b/src/otfft_algo.cpp
+index 3e571f0..e0a03a3 100644
+--- a/src/otfft_algo.cpp
++++ b/src/otfft_algo.cpp
+@@ -22,6 +22,8 @@
+ #include <iostream>
+ #ifdef _OPENMP
+ #include <omp.h>
++#include <cstdint>
++#include <cstdlib>
+ #endif
+ 
+ namespace OTFFT_NAMESPACE
+@@ -236,6 +238,25 @@ namespace OTFFT_NAMESPACE
+         }
+     }
+ 
++    namespace
++    {
++        // EXPERIMENT (to be removed): offset of the work buffer from x modulo 4096 bytes
++        int workOffsetBytes()
++        {
++            static const int v = []() { const char* e = std::getenv("OTFFT_WORK_OFFSET"); return e ? std::atoi(e) : 512; }();
++            return v;
++        }
++    }
++
++    complex_t* FFT::workFor(complex_vector x) const noexcept
++    {
++        const std::uintptr_t page = 4096;
++        const std::uintptr_t want = (reinterpret_cast<std::uintptr_t>(x) + static_cast<std::uintptr_t>(workOffsetBytes())) & (page - 1);
++        const std::uintptr_t have = reinterpret_cast<std::uintptr_t>(y) & (page - 1);
++        const std::uintptr_t shift = ((want - have) & (page - 1)) & ~static_cast<std::uintptr_t>(31);
++        return reinterpret_cast<complex_t*>(reinterpret_cast<char*>(y) + shift);
++    }
++
+     FFT::FFT() noexcept : fft(), work(), y(0), bluestein() {}
+ 
+     FFT::FFT(int n) : fft(), work(), y(0), bluestein()
+@@ -257,56 +278,56 @@ namespace OTFFT_NAMESPACE
+         }
+         bluestein.reset();
+         fft.setup(n);
+-        work.setup(n);
++        work.setup(n + 4096 / static_cast<int>(sizeof(complex_t)));   // room to move the buffer, see workFor
+         y = &work;
+     }
+ 
+     void FFT::fwd(complex_vector  x) const noexcept
+     {
+         if (bluestein) return bluestein->fwd(x);
+-        fft.fwd(x, y);
++        fft.fwd(x, workFor(x));
+     }
+ 
+     void FFT::fwd0(complex_vector x) const noexcept
+     {
+         if (bluestein) return bluestein->fwd0(x);
+-        fft.fwd0(x, y);
++        fft.fwd0(x, workFor(x));
+     }
+ 
+     void FFT::fwdu(complex_vector x) const noexcept
+     {
+         if (bluestein) return bluestein->fwdu(x);
+-        fft.fwdu(x, y);
++        fft.fwdu(x, workFor(x));
+     }
+ 
+     void FFT::fwdn(complex_vector x) const noexcept
+     {
+         if (bluestein) return bluestein->fwdn(x);
+-        fft.fwdn(x, y);
++        fft.fwdn(x, workFor(x));
+     }
+ 
+     void FFT::inv(complex_vector  x) const noexcept
+     {
+         if (bluestein) return bluestein->inv(x);
+-        fft.inv(x, y);
++        fft.inv(x, workFor(x));
+     }
+ 
+     void FFT::inv0(complex_vector x) const noexcept
+     {
+         if (bluestein) return bluestein->inv0(x);
+-        fft.inv0(x, y);
++        fft.inv0(x, workFor(x));
+     }
+ 
+     void FFT::invu(complex_vector x) const noexcept
+     {
+         if (bluestein) return bluestein->invu(x);
+-        fft.invu(x, y);
++        fft.invu(x, workFor(x));
+     }
+ 
+     void FFT::invn(complex_vector x) const noexcept
+     {
+         if (bluestein) return bluestein->invn(x);
+-        fft.invn(x, y);
++        fft.invn(x, workFor(x));
+     }
+ 
+     /******************************************************************************
+diff --git a/src/otfft_base.h b/src/otfft_base.h
+index 173b193..5be5d5e 100644
+--- a/src/otfft_base.h
++++ b/src/otfft_base.h
+@@ -52,6 +52,10 @@ public:
+     void invn(complex_vector x) const noexcept override;
+ 
+ private:
++    // The work buffer, moved inside its allocation so that its distance to x is a fixed value
++    // modulo 4096 bytes (decision D31).
++    complex_t* workFor(complex_vector x) const noexcept;
++
+     FFT0 fft;
+     simd_array<complex_t> work;
+     complex_t* y;

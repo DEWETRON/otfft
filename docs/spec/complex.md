@@ -85,6 +85,13 @@ Rules
     thread count, and on several threads from there on; the result does not depend on the thread count.
     (D30.) (`otfft_omp_threshold_test: TestMixedRadixAroundThreshold`; the speed is measured in
     `docs/benchmarks.md`, not by a test.)
+*   **CFFT-16** `[done]` The work buffer of the complex FFT (every algorithm, and the real FFT, the DCT
+    and Bluestein through it) is placed inside its allocation so that its distance to the input is
+    1728 bytes modulo 4096, at each call; the plan allocates 4 KB more for it. The result does not depend
+    on where the input is. (D31.) (`otfft_placement_test: TestPowerOfTwoAtEveryPageOffset,
+    TestMixedRadixAtEveryPageOffset, TestBluesteinPathAtEveryPageOffset,
+    TestRealFftAndDctAtEveryPageOffset`: the input at every multiple of 32 bytes inside a page; the
+    speed is measured in `docs/benchmarks.md`, not by a test.)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)

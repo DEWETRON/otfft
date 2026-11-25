@@ -22,6 +22,8 @@
 #include <iostream>
 #ifdef _OPENMP
 #include <omp.h>
+#include <cstdint>
+#include <cstdlib>
 #endif
 
 namespace OTFFT_NAMESPACE
@@ -236,6 +238,25 @@ namespace OTFFT_NAMESPACE
         }
     }
 
+    namespace
+    {
+        // Distance of the work buffer from x, modulo 4096 bytes (decision D31). The speed of the
+        // transforms depends on it: the same transform takes up to 3.4x longer at the worst distance
+        // (0 is among the worst) than at the best; 1728 bytes was within 1.07x of the best for 151
+        // lengths on a Ryzen 9 3900X (docs/benchmarks.md).
+        constexpr std::uintptr_t WORK_OFFSET_BYTES = 1728;
+        constexpr std::uintptr_t PAGE_BYTES = 4096;
+    }
+
+    complex_t* FFT::workFor(complex_vector x) const noexcept
+    {
+        const std::uintptr_t want = (reinterpret_cast<std::uintptr_t>(x) + WORK_OFFSET_BYTES) & (PAGE_BYTES - 1);
+        const std::uintptr_t have = reinterpret_cast<std::uintptr_t>(y) & (PAGE_BYTES - 1);
+        // a multiple of 32 bytes keeps the alignment of the work buffer; at most 4064 bytes
+        const std::uintptr_t shift = ((want - have) & (PAGE_BYTES - 1)) & ~static_cast<std::uintptr_t>(31);
+        return reinterpret_cast<complex_t*>(reinterpret_cast<char*>(y) + shift);
+    }
+
     FFT::FFT() noexcept : fft(), work(), y(0), bluestein() {}
 
     FFT::FFT(int n) : fft(), work(), y(0), bluestein()
@@ -257,56 +278,56 @@ namespace OTFFT_NAMESPACE
         }
         bluestein.reset();
         fft.setup(n);
-        work.setup(n);
+        work.setup(n + 4096 / static_cast<int>(sizeof(complex_t)));   // room to move the buffer, see workFor
         y = &work;
     }
 
     void FFT::fwd(complex_vector  x) const noexcept
     {
         if (bluestein) return bluestein->fwd(x);
-        fft.fwd(x, y);
+        fft.fwd(x, workFor(x));
     }
 
     void FFT::fwd0(complex_vector x) const noexcept
     {
         if (bluestein) return bluestein->fwd0(x);
-        fft.fwd0(x, y);
+        fft.fwd0(x, workFor(x));
     }
 
     void FFT::fwdu(complex_vector x) const noexcept
     {
         if (bluestein) return bluestein->fwdu(x);
-        fft.fwdu(x, y);
+        fft.fwdu(x, workFor(x));
     }
 
     void FFT::fwdn(complex_vector x) const noexcept
     {
         if (bluestein) return bluestein->fwdn(x);
-        fft.fwdn(x, y);
+        fft.fwdn(x, workFor(x));
     }
 
     void FFT::inv(complex_vector  x) const noexcept
     {
         if (bluestein) return bluestein->inv(x);
-        fft.inv(x, y);
+        fft.inv(x, workFor(x));
     }
 
     void FFT::inv0(complex_vector x) const noexcept
     {
         if (bluestein) return bluestein->inv0(x);
-        fft.inv0(x, y);
+        fft.inv0(x, workFor(x));
     }
 
     void FFT::invu(complex_vector x) const noexcept
     {
         if (bluestein) return bluestein->invu(x);
-        fft.invu(x, y);
+        fft.invu(x, workFor(x));
     }
 
     void FFT::invn(complex_vector x) const noexcept
     {
         if (bluestein) return bluestein->invn(x);
-        fft.invn(x, y);
+        fft.invn(x, workFor(x));
     }
 
     /******************************************************************************

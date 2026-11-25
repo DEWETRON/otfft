@@ -2617,3 +2617,90 @@ and the Bluestein thresholds were not changed.
 Raw results: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/omp-thresholds/` (`thr.cpp`, `sweep*.sh`,
 `sweep-r1.txt`, `sweep-r2.txt`, `sweep2.txt` before, `sweep3.txt` after, `load*.txt`).
 
+Where the work buffer sits: the speed depends on its distance to the input (R1.5, D31)
+------------------------------------------------------------------------------------
+
+The side finding of the section "OpenMP break-even of the mixed radix code, the real FFT and the DCT": the
+same transform takes up to 3.4x longer depending on the addresses of its buffers. Measured on 2026-11-25
+on the Ryzen 9 3900X (one NUMA node, 12 cores; GCC 15.2.0, Release, AVX2, one thread, `schedutil`
+governor). Raw data and programs: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/work-buffer-placement/`.
+
+**1. One pass sequence, buffers placed by hand** (`place.cpp`, `place1.cpp`: `fwdfft` of the mixed radix code
+on three buffers x, y (the work buffer) and W (the twiddle table) at chosen offsets inside one 4096-byte
+aligned allocation, best of 25 runs for each offset).
+
+*   N = 15,360: 41.2 to 57.9 us over the offsets (x 1.40); with a step of 16 bytes 43.8 us at best, 65.4 us at
+    worst (1.49x), slow when y is 16 to 150 bytes above x (modulo 4096), fast at 0. The offset of
+    W had no effect (every W offset has a fast y offset).
+*   N = 98,304: 291 us at best; slow (to 1.61x) for y 0 to 448 bytes and 3,840 to 4,032 bytes above x.
+*   N = 10,080 and 100,000: no offset is more than 10% slower than the best. N = 15,360, 30,720 and
+    98,304 have eight input streams in the first pass that are 2,048 or 4,096 bytes apart (N/8 times 16
+    bytes); N = 10,080 and 100,000 have not. That fits 4 KB aliasing or the sets of the L1 cache,
+    but the cause was **not isolated**.
+
+**2. Through the library, the work buffer at a chosen distance** (`scanlib.cpp` with the patch
+`experiment-env-offset.patch` that reads the distance from an environment variable; `scan-complex.txt`:
+71 lengths, 64 offsets each, one thread, best of 40 runs; `scan-heldout.txt`: 93 random lengths
+2^a 3^b 5^c 7^d from 600 to 1.2 million and powers of two, 80 of them new).
+
+*   104 of the 151 distinct lengths vary by more than 10% over the offsets (median of the 71 chosen lengths
+    1.93x, of the 93 held-out lengths 1.15x), the largest 3.43x (N = 86,016). Offset 0 (the work buffer page
+    aligned to the input) is among the worst: median 1.10x, largest 3.43x over the best.
+*   Over the 71 lengths the fixed distance 1728 bytes (modulo 4096) is within 1.06x of the best for
+    each; for the 80 other lengths within 1.07x (mean 1.030x). Offsets 1216 and 2368 are as good; 19 of 64
+    offsets are within 1.10x of the best for all 71 lengths. Offsets next to 1728 are not all good
+    (1536 and 1792 are 2.0x slower for one length each), so the value was checked on the lengths it was
+    not chosen on.
+
+**3. With the change (D31)**, `sweep4.txt` (`thr.cpp`, one thread, four plans per length with the buffers
+shifted by a dummy allocation, best and worst of the four) against `sweep2.txt` (the same, before the
+change, run earlier the same day, not alternated):
+
+| Kind | N | Before: best / worst of 4 (us) | After: best / worst of 4 (us) | Worst before over worst after | Best before over best after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bluestein | 2,053 | 89.3 / 115.2 | 74.6 / 85.0 | 1.35x | 1.20x |
+| bluestein | 8,209 | 394.8 / 414.5 | 315.7 / 334.6 | 1.24x | 1.25x |
+| bluestein | 65,537 | 7,069.9 / 7,140.6 | 5,841.8 / 5,900.2 | 1.21x | 1.21x |
+| dct | 16,384 | 44.0 / 48.8 | 38.6 / 43.2 | 1.13x | 1.14x |
+| dct | 65,536 | 192.3 / 205.8 | 164.4 / 189.1 | 1.09x | 1.17x |
+| mixed15 | 15,360 | 56.7 / 71.4 | 43.3 / 44.6 | 1.60x | 1.31x |
+| mixed15 | 61,440 | 284.7 / 424.2 | 194.8 / 218.2 | 1.94x | 1.46x |
+| mixed15 | 245,760 | 1,212.7 / 1,479.5 | 864.3 / 907.5 | 1.63x | 1.40x |
+| mixed15 | 491,520 | 3,599.9 / 5,543.8 | 3,087.2 / 3,241.6 | 1.71x | 1.17x |
+| mixed3 | 12,288 | 35.7 / 45.0 | 32.9 / 34.2 | 1.31x | 1.09x |
+| mixed3 | 49,152 | 213.8 / 265.1 | 149.2 / 155.2 | 1.71x | 1.43x |
+| mixed3 | 98,304 | 438.1 / 876.2 | 318.0 / 333.9 | 2.62x | 1.38x |
+| mixed3 | 196,608 | 1,021.5 / 1,879.6 | 700.6 / 728.6 | 2.58x | 1.46x |
+| mixed3 | 393,216 | 2,384.6 / 4,101.5 | 1,714.4 / 1,731.5 | 2.37x | 1.39x |
+| pow2 | 8,192 | 27.7 / 31.9 | 25.1 / 25.9 | 1.23x | 1.10x |
+| pow2 | 16,384 | 43.7 / 58.6 | 36.7 / 52.5 | 1.12x | 1.19x |
+| pow2 | 65,536 | 204.1 / 224.5 | 179.0 / 188.0 | 1.19x | 1.14x |
+| pow2 | 131,072 | 718.4 / 747.1 | 507.0 / 512.1 | 1.46x | 1.42x |
+| real | 16,384 | 31.5 / 43.8 | 40.6 / 42.2 | 1.04x | 0.78x |
+| real | 65,536 | 179.0 / 195.1 | 168.4 / 176.8 | 1.10x | 1.06x |
+| real | 262,144 | 925.6 / 999.6 | 864.6 / 899.2 | 1.11x | 1.07x |
+
+Over all 54 lengths of the sweep (mixed radix, real FFT, DCT, Bluestein, power of two): worst of four placements, before over after: median 1.12x, largest 2.62x; best of four: median 1.10x, from 0.78x to 1.51x; worst over best placement: before median 1.07, largest 2.00; after median 1.04, largest 1.43.
+
+What this shows:
+
+*   **Mixed radix lengths with a large power-of-two factor gain the most**: 1.6x to 2.6x in the worst case
+    (N = 98,304: 876 to 334 us), 1.3x to 1.5x in the best case. Real FFT, DCT and Bluestein gain 1.0x to 1.35x.
+    Lengths that were not sensitive (N = 3,072, 6,144, 3,840) do not change.
+*   **Remaining**: the power-of-two FFT of N = 16,384 varies by 1.43x between the four placements after the
+    change (36.7 to 52.5 us; 1.34x before); the real FFT of N = 16,384 lost its lucky placement (best 31.5 us
+    before, 40.6 us after; the worst 43.8 us before, 42.2 us after); the DCT of N = 32,768 and 65,536 varies
+    by 1.15x. The twiddle table and the buffers of the real FFT and the DCT are not placed.
+*   **Compared with FFTW (R1.5)** (`fftw-after-fix/`, the benchmark of the section "Lengths with factors 3, 5 and
+    7 against FFTW after the AVX passes", three rounds, one thread, same FFTW): OTFFT time over FFTW before and
+    after the change: N = 480 1.39x and 1.42x, 1,000 1.38x and 1.42x, 3,000 1.40x and 1.41x, 10,080 1.22x and 1.25x,
+    **100,000 1.30x and 1.13x** (493 to 424 us), 1,000,000 1.55x and 1.55x. These six lengths are mostly not
+    sensitive to the placement, so the earlier FFTW comparison stands; the lengths with a large power-of-two
+    factor (3 * 2^k, 15 * 2^k) were not compared with FFTW.
+
+Limits: one CPU, one compiler, one thread; the "before" columns come from an earlier sweep of the same day
+(each value moves by up to 10% between runs of the same binary); 1728 bytes was chosen on this CPU and **is not
+known to be good on others** (4 KB aliasing exists on Intel CPUs too, but the offsets of the bad bands depend on
+the CPU); the cause was not isolated; the real FFT, DCT and Bluestein were not scanned for their own best
+distance, they only got the one of the complex FFT.
+
