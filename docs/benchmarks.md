@@ -2378,3 +2378,42 @@ the comparison above. The SSE2 backend has no 256-bit registers; its passes stay
 
 Raw results and the two programs: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/mixed-radix-passes/`.
 
+
+AVX passes in the library (R1.5, D28)
+-------------------------------------
+
+The prototype of the section above is in `src/otfft_mixedradix.h` for the radix-3, 5 and 7 core
+passes (forward and inverse, serial and OpenMP), for even `s`. Measured on 2026-11-25, Ryzen 9
+3900X, GCC 15.2.0, Release, `schedutil` governor, one thread. `otfft_bench --kinds complex
+--sizes smooth --lib OTFFT-avx2 --threads 1`, the benchmark binary of the library before the
+change (`master` at `80d928f`) and after, alternately, five rounds, OTFFT rows only. Time for one
+forward transform (`fwd0`, without the 1/N scaling), median of the 5 rounds. The inverse
+transform has the same kind of passes (`invcore3`, `invcore5`, `invcore7`) but was not timed.
+
+| N | Factors | Before (us) | After (us) | Speedup | Per round |
+| ---: | --- | ---: | ---: | ---: | --- |
+| 480 | 2^5 3 5 | 1.5 | 1.3 | 1.15x | 1.20, 1.15, 1.18, 1.15, 1.15 |
+| 1,000 | 2^3 5^3 | 4.1 | 3.2 | 1.26x | 1.25, 1.27, 1.30, 1.24, 1.27 |
+| 3,000 | 2^3 3 5^3 | 14.7 | 10.8 | 1.37x | 1.36, 1.35, 1.41, 1.35, 1.39 |
+| 10,080 | 2^5 3^2 5 7 | 51.5 | 40.7 | 1.27x | 1.25, 1.23, 1.31, 1.26, 1.28 |
+| 100,000 | 2^5 5^5 | 732.9 | 548.9 | 1.34x | 1.35, 1.36, 1.34, 1.35, 1.30 |
+| 1,000,000 | 2^6 5^6 | 16,208.6 | 16,701.5 | 0.97x | 0.98, 0.97, 1.01, 0.98, 0.97 |
+
+What this shows:
+
+*   **1.15x to 1.37x faster for the lengths up to 100,000**, the rounds agree within 0.1x. At
+    N = 10,080 the sum of the passes fell from 48 to 37 us when timed alone (the harness of the
+    section above, rerun with the library code), and the transform from 51.5 to 40.7 us: both fall by about
+    11 us. The estimate of the section above (53 to 37 us for the forward transform with the
+    1/N scaling) was a little too high for the gain (the end pass of radix 7 stays scalar).
+*   **N = 1,000,000 did not change** (0.97x, rounds from 0.97x to 1.01x): the arrays are 16 MB and
+    the passes wait for memory, not for the arithmetic.
+*   **The gap to FFTW** (N = 10,080: 1.8x, FFTW 29.5 us) is not re-measured here; against the same
+    FFTW time it would be 40.7 / 29.5 = about 1.4x. Not measured: FFTW was not run after the change.
+
+Limits: one CPU, one compiler, AVX2, one thread. The other passes (end passes, radix 2, 4 and 8, the
+first pass) are unchanged. The OpenMP variants are used from N = 2^15 also with one thread (as in
+the 100,000 and 1,000,000 rows); runs with several threads were not made.
+
+Raw results: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/mixed-radix-avx-passes/`
+(`old-rN.csv` and `new-rN.csv`).
