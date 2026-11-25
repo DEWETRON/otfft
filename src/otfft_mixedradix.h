@@ -235,6 +235,124 @@ constexpr int OMP_THRESHOLD = 1<<15;
             coreY<R, DIR>(N1, s, q + sp, q + sp*R, w, x, y);
         }
     }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // The first pass (s = 1) of radix 8 and 4: two values of p at once (roadmap R1.5, D29)
+    //
+    // With s = 1 the inputs of p and p+1 are adjacent (x[p + N1*k], x[p+1 + N1*k]), so one
+    // register holds both. The twiddle factors w1 to w3 come from the table (W[k*p] and
+    // W[k*(p+1)]), w4 to w7 are products as in the s >= 2 branch; loading all seven from the
+    // table is faster for small N but reads seven strided streams of the table, which made
+    // N = 10^6 7% slower (D29). The outputs of p and p+1 are 8 (or 4) points apart: the two
+    // halves of a register go to two places.
+    ///////////////////////////////////////////////////////////////////////////////
+
+    static inline ymm loadTwiddle2(const_complex_vector W, const int k, const int p) noexcept
+    {
+        const __m128d lo = _mm_loadu_pd(&W[k*p].Re);
+        const __m128d hi = _mm_loadu_pd(&W[k*(p+1)].Re);
+        return _mm256_insertf128_pd(_mm256_castpd128_pd256(lo), hi, 1);
+    }
+
+    // W[k*p] of the forward transform, its conjugate for the inverse
+    template <int DIR> static inline ymm twiddle2(const_complex_vector W, const int k, const int p) noexcept
+    {
+        const ymm w = loadTwiddle2(W, k, p);
+        return DIR < 0 ? w : cnjpz2(w);
+    }
+
+    // low half to y0, high half to y1
+    static inline void storeSplit2(complex_vector y0, complex_vector y1, const ymm v) noexcept
+    {
+        _mm_storeu_pd(&y0->Re, _mm256_castpd256_pd128(v));
+        _mm_storeu_pd(&y1->Re, _mm256_extractf128_pd(v, 1));
+    }
+
+    template <int DIR>
+    static inline void core8s1Y(const int N1, const int p,
+                                complex_vector x, complex_vector y, const_complex_vector W) noexcept
+    {
+        complex_vector x_p  = x + p;
+        complex_vector y_8p = y + 8*p;
+        const ymm w1p = twiddle2<DIR>(W, 1, p);
+        const ymm w2p = twiddle2<DIR>(W, 2, p);
+        const ymm w3p = twiddle2<DIR>(W, 3, p);
+        const ymm w4p = mulpz2(w2p, w2p);
+        const ymm w5p = mulpz2(w2p, w3p);
+        const ymm w6p = mulpz2(w3p, w3p);
+        const ymm w7p = mulpz2(w3p, w4p);
+        const ymm x0 = getpz2(x_p);
+        const ymm x1 = getpz2(x_p + N1);
+        const ymm x2 = getpz2(x_p + N1*2);
+        const ymm x3 = getpz2(x_p + N1*3);
+        const ymm x4 = getpz2(x_p + N1*4);
+        const ymm x5 = getpz2(x_p + N1*5);
+        const ymm x6 = getpz2(x_p + N1*6);
+        const ymm x7 = getpz2(x_p + N1*7);
+        const ymm  a04 =       addpz2(x0, x4);
+        const ymm  s04 =       subpz2(x0, x4);
+        const ymm  a26 =       addpz2(x2, x6);
+        const ymm js26 = jxpz2(subpz2(x2, x6));
+        const ymm  a15 =       addpz2(x1, x5);
+        const ymm  s15 =       subpz2(x1, x5);
+        const ymm  a37 =       addpz2(x3, x7);
+        const ymm js37 = jxpz2(subpz2(x3, x7));
+        const ymm    a04_p1_a26 =        addpz2(a04,  a26);
+        const ymm    s04_mj_s26 =        subpz2(s04, js26);
+        const ymm    a04_m1_a26 =        subpz2(a04,  a26);
+        const ymm    s04_pj_s26 =        addpz2(s04, js26);
+        const ymm    a15_p1_a37 =        addpz2(a15,  a37);
+        const ymm w8_s15_mj_s37 = w8xpz2(subpz2(s15, js37));
+        const ymm  j_a15_m1_a37 =  jxpz2(subpz2(a15,  a37));
+        const ymm v8_s15_pj_s37 = v8xpz2(addpz2(s15, js37));
+        storeSplit2(y_8p + 0, y_8p + 8 + 0,             addpz2(a04_p1_a26,    a15_p1_a37));
+        storeSplit2(y_8p + 4, y_8p + 8 + 4, mulpz2(w4p, subpz2(a04_p1_a26,    a15_p1_a37)));
+        if (DIR < 0) {
+            storeSplit2(y_8p + 1, y_8p + 8 + 1, mulpz2(w1p, addpz2(s04_mj_s26, w8_s15_mj_s37)));
+            storeSplit2(y_8p + 2, y_8p + 8 + 2, mulpz2(w2p, subpz2(a04_m1_a26,  j_a15_m1_a37)));
+            storeSplit2(y_8p + 3, y_8p + 8 + 3, mulpz2(w3p, subpz2(s04_pj_s26, v8_s15_pj_s37)));
+            storeSplit2(y_8p + 5, y_8p + 8 + 5, mulpz2(w5p, subpz2(s04_mj_s26, w8_s15_mj_s37)));
+            storeSplit2(y_8p + 6, y_8p + 8 + 6, mulpz2(w6p, addpz2(a04_m1_a26,  j_a15_m1_a37)));
+            storeSplit2(y_8p + 7, y_8p + 8 + 7, mulpz2(w7p, addpz2(s04_pj_s26, v8_s15_pj_s37)));
+        }
+        else {
+            storeSplit2(y_8p + 1, y_8p + 8 + 1, mulpz2(w1p, addpz2(s04_pj_s26, v8_s15_pj_s37)));
+            storeSplit2(y_8p + 2, y_8p + 8 + 2, mulpz2(w2p, addpz2(a04_m1_a26,  j_a15_m1_a37)));
+            storeSplit2(y_8p + 3, y_8p + 8 + 3, mulpz2(w3p, subpz2(s04_mj_s26, w8_s15_mj_s37)));
+            storeSplit2(y_8p + 5, y_8p + 8 + 5, mulpz2(w5p, subpz2(s04_pj_s26, v8_s15_pj_s37)));
+            storeSplit2(y_8p + 6, y_8p + 8 + 6, mulpz2(w6p, subpz2(a04_m1_a26,  j_a15_m1_a37)));
+            storeSplit2(y_8p + 7, y_8p + 8 + 7, mulpz2(w7p, addpz2(s04_mj_s26, w8_s15_mj_s37)));
+        }
+    }
+
+    template <int DIR>
+    static inline void core4s1Y(const int N1, const int p,
+                                complex_vector x, complex_vector y, const_complex_vector W) noexcept
+    {
+        complex_vector x_p  = x + p;
+        complex_vector y_4p = y + 4*p;
+        const ymm w1p = twiddle2<DIR>(W, 1, p);
+        const ymm w2p = twiddle2<DIR>(W, 2, p);
+        const ymm w3p = twiddle2<DIR>(W, 3, p);
+        const ymm a = getpz2(x_p);
+        const ymm b = getpz2(x_p + N1);
+        const ymm c = getpz2(x_p + N1*2);
+        const ymm d = getpz2(x_p + N1*3);
+        const ymm  apc =       addpz2(a, c);
+        const ymm  amc =       subpz2(a, c);
+        const ymm  bpd =       addpz2(b, d);
+        const ymm jbmd = jxpz2(subpz2(b, d));
+        storeSplit2(y_4p + 0, y_4p + 4 + 0,             addpz2(apc,  bpd));
+        storeSplit2(y_4p + 2, y_4p + 4 + 2, mulpz2(w2p, subpz2(apc,  bpd)));
+        if (DIR < 0) {
+            storeSplit2(y_4p + 1, y_4p + 4 + 1, mulpz2(w1p, subpz2(amc, jbmd)));
+            storeSplit2(y_4p + 3, y_4p + 4 + 3, mulpz2(w3p, addpz2(amc, jbmd)));
+        }
+        else {
+            storeSplit2(y_4p + 1, y_4p + 4 + 1, mulpz2(w1p, addpz2(amc, jbmd)));
+            storeSplit2(y_4p + 3, y_4p + 4 + 3, mulpz2(w3p, subpz2(amc, jbmd)));
+        }
+    }
 #endif // __AVX__
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -373,7 +491,13 @@ constexpr int OMP_THRESHOLD = 1<<15;
             }
         }
         else {
+#ifdef OTFFT_MIXED_YMM
+            for (int i = 0; i < (m + 1)/2; i++) {
+                const int p = 2*i;
+                if (p + 1 < m) { core4s1Y<-1>(N1, p, x, y, W); continue; }
+#else
             for (int p = 0; p < m; p++) {
+#endif
                 complex_vector x_p  = x + p;
                 complex_vector y_4p = y + 4*p;
                 const xmm w1p = getpz(W[p]);
@@ -538,7 +662,13 @@ constexpr int OMP_THRESHOLD = 1<<15;
             }
         }
         else {
+#ifdef OTFFT_MIXED_YMM
+            for (int i = 0; i < (m + 1)/2; i++) {
+                const int p = 2*i;
+                if (p + 1 < m) { core8s1Y<-1>(N1, p, x, y, W); continue; }
+#else
             for (int p = 0; p < m; p++) {
+#endif
                 complex_vector x_p  = x + p;
                 complex_vector y_8p = y + 8*p;
                 const xmm w1p = getpz(W[p]);
@@ -1008,7 +1138,13 @@ constexpr int OMP_THRESHOLD = 1<<15;
             }
         }
         else {
+#ifdef OTFFT_MIXED_YMM
+            for (int i = 0; i < (m + 1)/2; i++) {
+                const int p = 2*i;
+                if (p + 1 < m) { core4s1Y<1>(N1, p, x, y, W); continue; }
+#else
             for (int p = 0; p < m; p++) {
+#endif
                 complex_vector x_p  = x + p;
                 complex_vector y_4p = y + 4*p;
                 const xmm w1p = cnjpz(getpz(W[p]));
@@ -1173,7 +1309,13 @@ constexpr int OMP_THRESHOLD = 1<<15;
             }
         }
         else {
+#ifdef OTFFT_MIXED_YMM
+            for (int i = 0; i < (m + 1)/2; i++) {
+                const int p = 2*i;
+                if (p + 1 < m) { core8s1Y<1>(N1, p, x, y, W); continue; }
+#else
             for (int p = 0; p < m; p++) {
+#endif
                 complex_vector x_p  = x + p;
                 complex_vector y_8p = y + 8*p;
                 const xmm w1p = cnjpz(getpz(W[p]));
@@ -1609,8 +1751,15 @@ constexpr int OMP_THRESHOLD = 1<<15;
             }
         }
         else {
+#ifdef OTFFT_MIXED_YMM
+#pragma omp for schedule(static)
+            for (int i = 0; i < (m + 1)/2; i++) {
+                const int p = 2*i;
+                if (p + 1 < m) { core4s1Y<-1>(N1, p, x, y, W); continue; }
+#else
 #pragma omp for schedule(static)
             for (int p = 0; p < m; p++) {
+#endif
                 complex_vector x_p  = x + p;
                 complex_vector y_4p = y + 4*p;
                 const xmm w1p = getpz(W[p]);
@@ -1780,8 +1929,15 @@ constexpr int OMP_THRESHOLD = 1<<15;
             }
         }
         else {
+#ifdef OTFFT_MIXED_YMM
+#pragma omp for schedule(static)
+            for (int i = 0; i < (m + 1)/2; i++) {
+                const int p = 2*i;
+                if (p + 1 < m) { core8s1Y<-1>(N1, p, x, y, W); continue; }
+#else
 #pragma omp for schedule(static)
             for (int p = 0; p < m; p++) {
+#endif
                 complex_vector x_p  = x + p;
                 complex_vector y_8p = y + 8*p;
                 const xmm w1p = getpz(W[p]);
@@ -2228,8 +2384,15 @@ constexpr int OMP_THRESHOLD = 1<<15;
             }
         }
         else {
+#ifdef OTFFT_MIXED_YMM
+#pragma omp for schedule(static)
+            for (int i = 0; i < (m + 1)/2; i++) {
+                const int p = 2*i;
+                if (p + 1 < m) { core4s1Y<1>(N1, p, x, y, W); continue; }
+#else
 #pragma omp for schedule(static)
             for (int p = 0; p < m; p++) {
+#endif
                 complex_vector x_p  = x + p;
                 complex_vector y_4p = y + 4*p;
                 const xmm w1p = cnjpz(getpz(W[p]));
@@ -2399,8 +2562,15 @@ constexpr int OMP_THRESHOLD = 1<<15;
             }
         }
         else {
+#ifdef OTFFT_MIXED_YMM
+#pragma omp for schedule(static)
+            for (int i = 0; i < (m + 1)/2; i++) {
+                const int p = 2*i;
+                if (p + 1 < m) { core8s1Y<1>(N1, p, x, y, W); continue; }
+#else
 #pragma omp for schedule(static)
             for (int p = 0; p < m; p++) {
+#endif
                 complex_vector x_p  = x + p;
                 complex_vector y_8p = y + 8*p;
                 const xmm w1p = cnjpz(getpz(W[p]));

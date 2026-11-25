@@ -1,0 +1,14 @@
+radix 8 n=2520    m=315    (odd m)  max diff 0.0e+00   now     3.18 us   ymm     3.18 us   1.00x
+   table twiddles: 3.30 us (1.96x), max diff to old 2.5e-14
+radix 8 n=5040    m=630              max diff 0.0e+00   now     6.48 us   ymm     4.62 us   1.40x
+   table twiddles: 7.08 us (1.84x), max diff to old 2.8e-14
+radix 8 n=10080   m=1260             max diff 0.0e+00   now    13.02 us   ymm     9.07 us   1.44x
+   table twiddles: 76.90 us (1.69x), max diff to old 2.5e-14
+radix 8 n=100000  m=12500            max diff 0.0e+00   now   129.86 us   ymm    93.61 us   1.39x
+   table twiddles: 0.04 us (1.92x), max diff to old 1.1e-14
+radix 8 n=64      m=8                max diff 0.0e+00   now     0.08 us   ymm     0.06 us   1.39x
+radix 8 n=24      m=3      (odd m)  max diff 0.0e+00   now     0.03 us   ymm     0.03 us   1.00x
+radix 4 n=1260    m=315              max diff 8.9e-15   now     1.03 us   ymm     0.64 us   1.60x
+radix 4 n=12      m=3                max diff 8.9e-16   now     0.01 us   ymm     0.01 us   1.14x
+radix 4 n=100     m=25               max diff 7.1e-15   now     0.08 us   ymm     0.05 us   1.64x
+radix 4 n=44100   m=11025            max diff 1.6e-14   now    36.65 us   ymm    23.69 us   1.55x

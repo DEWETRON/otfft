@@ -1,9 +1,10 @@
-// The AVX passes of the mixed radix code (roadmap R1.5, decision D28): the radix-3, 5 and 7
+// The AVX passes of the mixed radix code (roadmap R1.5, decisions D28 and D29): the radix-3, 5 and 7
 // core passes work on two values of q at once when s is even, forward and inverse, serial
 // (N < 2^15) and OpenMP (N >= 2^15). Every point of the result is compared with the
 // Bluestein transform of the same length, which does not use these passes, for lengths where
 // a factor 3, 5 or 7 comes after a factor 2 (so that s is even in that pass, and the pass is
-// not the last one).
+// not the last one). The first pass (s = 1) of radix 8 and radix 4 works on two values of p at
+// once; the last p is done by the scalar code when m is odd.
 #include "otfft_dft_check.h"
 
 #include <algorithm>
@@ -99,6 +100,31 @@ TEST_CASE("TestAvxPassesAboveOpenMpThreshold")
         ThreadCount count(threads);
         CAPTURE(threads);
         for (int n : {4096 * 9, 4096 * 15, 2048 * 25, 2048 * 21, 1024 * 35, 1024 * 49, 512 * 105, 2048 * 45, 1024 * 75})
+        {
+            checkAgainstBluestein(n);
+        }
+    }
+}
+
+TEST_CASE("TestAvxFirstPassSerial")
+{
+    // radix 8 first (a multiple of 8): m = N/8 odd (72, 120, 360, 2520) and even (144, 240, 5040);
+    // radix 4 first (4 times an odd number): m = N/4 is always odd (12, 36, 60, 420, 1260, 4 * 25 * 49);
+    // radix 2 first (2 times an odd number, scalar)
+    for (int n : {24, 72, 120, 360, 2520, 144, 240, 5040, 8 * 7 * 7, 12, 36, 60, 420, 1260, 4 * 25 * 49, 4 * 3 * 3 * 7 * 5, 18, 90, 630})
+    {
+        checkAgainstBluestein(n);
+    }
+}
+
+TEST_CASE("TestAvxFirstPassAboveOpenMpThreshold")
+{
+    // N >= 2^15 runs the OpenMP versions: m odd and even, with one thread and with several
+    for (int threads : {1, 4})
+    {
+        ThreadCount count(threads);
+        CAPTURE(threads);
+        for (int n : {8 * 4725, 3 * 32768, 8 * 5 * 5 * 5 * 5 * 7, 4 * 10125, 4 * 8505, 4 * 3 * 3 * 3 * 5 * 7 * 5 * 7 * 7})
         {
             checkAgainstBluestein(n);
         }

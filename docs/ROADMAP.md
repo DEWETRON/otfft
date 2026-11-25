@@ -47,8 +47,10 @@ Milestone 1b: Fixes and speed found by the benchmarks
     bit-identical; the first pass (radix 8, s = 1) is 28% of the passes and 3 to 4 times slower
     per point than the later ones, cause not isolated. Done (D28): the AVX passes for the radix 3, 5 and 7 core passes, forward and
     inverse, serial and OpenMP: 1.15x to 1.37x faster for N = 480 to 100,000, N = 10,080
-    1.27x; N = 1,000,000 unchanged. Still open: the end passes, the first pass (radix 8,
-    s = 1), a radix-9 pass, and the FFTW comparison after the change.
+    1.27x; N = 1,000,000 unchanged. First pass (radix 8 and 4 with s = 1) with two values of p at once
+    (D29): a further 1.11x to 1.23x for N = 480 to 100,000, N = 1,000,000 unchanged. Still open:
+    the end passes, the passes with an odd s (odd lengths, and radix 3, 5, 7 passes before any
+    factor 2), a radix-9 pass, and the FFTW comparison after the change.
 *   [ ] **R1.6** OpenMP: do not thread below the break-even size (N=16,384 is
     2.5x slower with 12 threads) and scale better above it (1.8x at 4M points,
     [#19](https://github.com/DEWETRON/otfft/issues/19)).

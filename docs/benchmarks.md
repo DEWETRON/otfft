@@ -2417,3 +2417,52 @@ the 100,000 and 1,000,000 rows); runs with several threads were not made.
 
 Raw results: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/mixed-radix-avx-passes/`
 (`old-rN.csv` and `new-rN.csv`).
+
+First pass (s = 1) of radix 8 and 4 with two values of p at once (R1.5, D29)
+-----------------------------------------------------------------------------
+
+Measured on 2026-11-25, Ryzen 9 3900X, GCC 15.2.0, Release, one thread (load average 4.9 before
+the runs, mostly the editor). Two steps.
+
+1.  **Prototype of the pass alone** (`proto2.cpp`, output `proto2-run.txt`): the `s` = 1 pass with two
+    values of `p` in one register, against the existing pass on the same input. With the
+    twiddle factors as products of w1 (same arithmetic as the scalar code): result bit-identical,
+    1.40x faster (radix 8: N = 5,040 from 6.6 to 4.7 us, N = 10,080 from 13.2 to 9.4 us, N = 100,000
+    from 134 to 96 us). With
+    all seven twiddle factors loaded from the table: 1.7x to 2.0x faster (N = 10,080: 13.2 us to
+    7.1 us), differences to the old result about 2.5e-14. Radix 4 (table twiddle factors, odd `m`
+    with a scalar tail): 1.44x to 1.63x (N = 1,260: 1.03 us to 0.64 us).
+2.  **In the library**, `otfft_bench --kinds complex --sizes smooth --lib OTFFT-avx2 --threads 1`,
+    binary of `master` (after D28, `8ca0c36`) and after the change, alternately, five rounds, OTFFT
+    rows only, one forward transform, median:
+
+| N | Factors | First pass | Before (us) | After (us) | Speedup | Per round |
+| ---: | --- | --- | ---: | ---: | ---: | --- |
+| 480 | 2^5 3 5 | radix 8, odd m | 1.30 | 1.05 | 1.23x | 1.26, 1.25, 0.82, 1.22, 1.22 |
+| 1,000 | 2^3 5^3 | radix 8, odd m | 3.22 | 2.69 | 1.20x | 1.20, 1.25, 1.18, 1.18, 1.20 |
+| 3,000 | 2^3 3 5^3 | radix 8, odd m | 10.65 | 9.08 | 1.17x | 1.22, 1.20, 1.17, 1.16, 1.18 |
+| 10,080 | 2^5 3^2 5 7 | radix 8, even m | 40.73 | 35.06 | 1.16x | 1.19, 1.18, 1.15, 1.13, 1.13 |
+| 100,000 | 2^5 5^5 | radix 8, odd m | 549.25 | 493.95 | 1.11x | 1.13, 1.14, 1.11, 1.05, 1.10 |
+| 1,000,000 | 2^6 5^6 | radix 8, even m | 16,399 | 16,528 | 0.99x | 0.99, 1.00, 1.00, 0.96, 1.06 |
+
+The variant with all seven twiddle factors from the table (not kept) gave 1.31x, 1.26x, 1.23x, 1.19x,
+1.10x and 0.93x at the same lengths (rounds 0.90 to 0.98 at N = 1,000,000), files `*-alltable-r*.csv`.
+
+What this shows:
+
+*   **1.11x to 1.23x faster for N = 480 to 100,000** on top of the AVX passes of D28. Against the
+    library before D28 (table in the section "AVX passes in the library", other runs, same
+    machine) the two changes together give 1.43x (N = 480), 1.52x (1,000), 1.62x (3,000), 1.47x
+    (10,080: 51.5 to 35.1 us) and 1.48x (100,000). The "before" of this table (40.7 us at N =
+    10,080) is the "after" of that one (40.7 us).
+*   **N = 1,000,000 is unchanged**, which is why the twiddle factors w4 to w7 stay products: the
+    table is 16 MB and the pass is memory bound.
+*   **FFTW**: 29.5 us at N = 10,080 (earlier section); 35.1 us is 1.19x of it (the earlier gap was 1.8x).
+    FFTW was not run again, so this compares with the old FFTW measurement.
+
+Limits: one CPU, one compiler, AVX2, one thread, forward transform only (the inverse passes were
+tested but not timed); the rounds at N = 480 have one outlier (0.82x). The radix-2 first pass, the
+end passes and the passes with an odd `s` are still scalar.
+
+Raw results: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/mixed-radix-first-pass/`
+(`before-rN.csv`, `after-rN.csv`, the table variant `*-alltable-rN.csv`, `proto2.cpp`, `proto2-run.txt`).

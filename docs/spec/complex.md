@@ -76,9 +76,11 @@ Rules
     mixed radix code (a factor 3, 5 or 7 that is not the last one) work on two values of q at
     once when s is even, forward and inverse, serial and OpenMP (N >= 2^15), and give the same
     result as the Bluestein transform of the same length, at every point. With an odd s (no
-    factor 2 before) and in the SSE2 backend the scalar passes are used. (D28.)
+    factor 2 before) and in the SSE2 backend the scalar passes are used. (D28.) The same holds for the
+    first pass (s = 1) of radix 8 and radix 4, which works on two values of p at once; with an odd
+    number of p the last one uses the scalar code. (D29.)
     (`otfft_mixed_avx_test: TestAvxPassesSerial, TestAvxPassesOddS,
-    TestAvxPassesAboveOpenMpThreshold`)
+    TestAvxPassesAboveOpenMpThreshold, TestAvxFirstPassSerial, TestAvxFirstPassAboveOpenMpThreshold`)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)
