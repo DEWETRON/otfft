@@ -74,13 +74,17 @@ Rules
     threads the eight sections and the guided chunks split unevenly.)
 *   **CFFT-14** `[done]` In the AVX and AVX2 backends the radix-3, 5 and 7 core passes of the
     mixed radix code (a factor 3, 5 or 7 that is not the last one) work on two values of q at
-    once when s is even, forward and inverse, serial and OpenMP (N >= 2^15), and give the same
+    once when s is even, forward and inverse, serial and OpenMP (N >= 2^19, D30), and give the same
     result as the Bluestein transform of the same length, at every point. With an odd s (no
     factor 2 before) and in the SSE2 backend the scalar passes are used. (D28.) The same holds for the
     first pass (s = 1) of radix 8 and radix 4, which works on two values of p at once; with an odd
     number of p the last one uses the scalar code. (D29.)
     (`otfft_mixed_avx_test: TestAvxPassesSerial, TestAvxPassesOddS,
     TestAvxPassesAboveOpenMpThreshold, TestAvxFirstPassSerial, TestAvxFirstPassAboveOpenMpThreshold`)
+*   **CFFT-15** `[done]` The mixed radix code runs on one thread below N = 2^19 whatever the
+    thread count, and on several threads from there on; the result does not depend on the thread count.
+    (D30.) (`otfft_omp_threshold_test: TestMixedRadixAroundThreshold`; the speed is measured in
+    `docs/benchmarks.md`, not by a test.)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)

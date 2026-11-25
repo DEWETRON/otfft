@@ -82,7 +82,7 @@ public:
     void invn(complex_vector x, double_vector y) const noexcept override;
 
 private:
-    static const int OMP_THRESHOLD   = 1<<15;
+    static const int OMP_THRESHOLD   = 1<<20;
     static const int OMP_THRESHOLD_W = 1<<16;
 
     int N;
@@ -97,7 +97,7 @@ private:
 
 struct DCT0
 {
-    static const int OMP_THRESHOLD   = 1<<15;
+    static const int OMP_THRESHOLD   = 1<<20;
     static const int OMP_THRESHOLD_W = 1<<16;
 
     int N;

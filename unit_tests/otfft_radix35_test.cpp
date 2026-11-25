@@ -1,7 +1,7 @@
 // Lengths with the prime factors 3 and 5 (roadmap R1.5): the radix-3 and radix-5
 // butterflies use the symmetric form with real constants. Forward and inverse
 // transforms are compared with the direct DFT sum in some bins, for the butterflies
-// alone, with the other radices around them, and above the OpenMP threshold (2^15).
+// alone, with the other radices around them, and above 2^15 and above the OpenMP threshold (2^19, D30).
 #include "otfft_dft_check.h"
 
 using OTFFT::test::checkComplexLength;
@@ -36,8 +36,9 @@ TEST_CASE("TestRadix3And5WithOtherFactors")
 
 TEST_CASE("TestRadix3And5AboveOpenMpThreshold")
 {
-    // N >= 2^15 runs the OpenMP versions of the passes
-    for (int n : {3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3, 5 * 5 * 5 * 5 * 5 * 5 * 5, 3 * 16384, 5 * 8192, 100000, 3375 * 10})
+    // 2^15 <= N < 2^19 is serial since D30; N >= 2^19 runs the OpenMP versions of the passes
+    for (int n : {3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3, 5 * 5 * 5 * 5 * 5 * 5 * 5, 3 * 16384, 5 * 8192, 100000, 3375 * 10,
+                  3 * 524288, 5 * 131072, 1000000, 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3, 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5 * 5})
     {
         checkComplexLength(n);
     }
