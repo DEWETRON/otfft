@@ -549,3 +549,33 @@ D30: OpenMP thresholds of the mixed radix code, the real FFT and the DCT
 *   **Revisit when:** another CPU gives a different break-even, or the threaded table is retuned per thread
     count (R1.8).
 
+D31: place the work buffer of the complex FFT 1728 bytes from the input, modulo 4096
+-------------------------------------------------------------------------------------
+*   **What:** `FFT::workFor(x)` (`src/otfft_algo.cpp`) returns the work buffer moved, inside its
+    allocation, so that `(work - x) mod 4096 == 1728` (a multiple of 32 bytes, so the alignment is
+    kept). All eight transform functions of `FFT` use it. `FFT::setup` allocates 4096 bytes more
+    for the buffer (at most 4064 are used for the shift). The real FFT, the DCT and Bluestein call
+    `FFT` and get it too. Roadmap R1.5, spec CFFT-16.
+*   **Why:** the speed of the complex transforms depends on the distance between the input and
+    the work buffer modulo 4096 bytes (`docs/benchmarks.md`, "Where the work buffer sits"). Over the 64
+    offsets that are multiples of 64 bytes, 104 of 151 lengths (power-of-two and mixed radix, 71 chosen
+    by hand and 80 random ones) varied by more than 10% between the best and the worst, up to 3.4x
+    (offset 0 is among the worst). 1728 was within 1.06x of the best offset for each of the 71
+    lengths used to choose it and within 1.07x for each of the 80 other lengths, on a Ryzen 9 3900X.
+    With it the worst of four placements got faster by a median of 1.12x and up to 2.6x, and the
+    best by a median of 1.1x (mixed radix up to 1.5x), because the fixed offset also beats the best
+    of four random placements.
+*   **Rejected:** moving the input (not ours: the caller owns it); one offset per length (the plan
+    does not know `x`, and the table would be per CPU); allocating the buffer at a fixed page offset
+    (the input moves relative to it); changing the loop order of the passes (a code change for each
+    class and not needed).
+*   **Limit:** measured on one CPU (Ryzen 9 3900X, GCC 15.2.0, AVX2, one thread). The bad offsets
+    are those of 4 KB aliasing and cache sets on this CPU; **1728 is not known to be good on
+    another CPU** (the Intel notebook was not measured; `docs/benchmark-data/2026-11-25-ryzen3900x-linux/work-buffer-placement/experiment-env-offset.patch`
+    and `scanoff.sh` repeat the scan). The twiddle table and the buffers of the real FFT and the DCT are not
+    placed: the power-of-two FFT of N = 16,384 still varies by 1.43x between placements and the real FFT
+    of N = 16,384 lost its lucky best case (31.5 us, now 40.6 us; the worst case 43.8 to 42.2 us). The cause of the
+    sensitivity (4 KB aliasing, L1 cache sets) was not isolated.
+*   **Revisit when:** another CPU gives a different best offset (then it would be chosen at run time or
+    per backend), or the passes are changed to use streams that do not alias.
+

@@ -54,6 +54,10 @@ Milestone 1b: Fixes and speed found by the benchmarks
     FFTW comparison after D28 and D29 (`docs/benchmarks.md`, 2026-11-25, Ryzen 9 3900X, one
     thread): OTFFT is 1.2x to 1.4x behind FFTW for N = 480 to 100,000 (before 1.8x to 2.3x),
     N = 1,000,000 1.55x (unchanged, now the largest gap).
+    Placement of the work buffer (D31): the speed depended on the distance between the input and the
+    work buffer by up to 3.4x; with a fixed distance the worst case of mixed radix lengths with a large
+    power-of-two factor is 1.6x to 2.6x faster, N = 100,000 1.16x (1.30x to 1.13x behind FFTW). Not
+    measured on another CPU.
 *   [ ] **R1.6** OpenMP: do not thread below the break-even size (N=16,384 is
     2.5x slower with 12 threads) and scale better above it (1.8x at 4M points,
     [#19](https://github.com/DEWETRON/otfft/issues/19)).

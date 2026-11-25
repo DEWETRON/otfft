@@ -52,6 +52,10 @@ public:
     void invn(complex_vector x) const noexcept override;
 
 private:
+    // The work buffer, moved inside its allocation so that its distance to x is a fixed value
+    // modulo 4096 bytes (decision D31).
+    complex_t* workFor(complex_vector x) const noexcept;
+
     FFT0 fft;
     simd_array<complex_t> work;
     complex_t* y;
