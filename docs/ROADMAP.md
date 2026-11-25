@@ -40,8 +40,13 @@ Milestone 1b: Fixes and speed found by the benchmarks
     "2x to 11x" of this item is now about 2x. The FFTW comparison on the Ryzen 9
     3900X (`docs/benchmarks.md`, "Lengths with factors 3, 5 and 7 against FFTW"):
     1.6x to 2.3x behind FFTW, N = 10,080 from 11.3x to 1.8x. Still open: close the
-    rest of the gap (pass structure, radix 9, AVX versions of the passes; not
-    analysed yet).
+    rest of the gap.
+    Analysed (`docs/benchmarks.md`, "Where the time goes in the mixed radix code"): the
+    radix 3, 5 and 7 passes are two thirds of the time and work on one complex number at a time;
+    a prototype with two values at once (256-bit) is 1.9x to 2.2x faster per pass and
+    bit-identical; the first pass (radix 8, s = 1) is 28% of the passes and 3 to 4 times slower
+    per point than the later ones, cause not isolated. Not done: the AVX passes in the library
+    (forward and inverse, end and core, serial and OpenMP), the first pass.
 *   [ ] **R1.6** OpenMP: do not thread below the break-even size (N=16,384 is
     2.5x slower with 12 threads) and scale better above it (1.8x at 4M points,
     [#19](https://github.com/DEWETRON/otfft/issues/19)).

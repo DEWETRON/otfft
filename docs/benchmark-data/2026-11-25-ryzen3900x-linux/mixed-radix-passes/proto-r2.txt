@@ -1,0 +1,8 @@
+radix 3 n=63    s=160   N=10080    max diff 0.0e+00   now     7.40 us   ymm     3.89 us   1.90x
+radix 3 n=21    s=480   N=10080    max diff 0.0e+00   now     7.51 us   ymm     3.91 us   1.92x
+radix 5 n=315   s=32    N=10080    max diff 0.0e+00   now    10.23 us   ymm     5.21 us   1.96x
+radix 5 n=625   s=160   N=100000   max diff 0.0e+00   now   103.15 us   ymm    52.51 us   1.96x
+radix 5 n=25    s=4000  N=100000   max diff 0.0e+00   now   102.49 us   ymm    51.32 us   2.00x
+radix 7 n=49    s=4     N=196      max diff 0.0e+00   now     0.26 us   ymm     0.14 us   1.86x
+radix 7 n=63    s=160   N=10080    max diff 0.0e+00   now    13.09 us   ymm     6.09 us   2.15x
+radix 3 n=9     s=2     N=18       max diff 0.0e+00   now     0.02 us   ymm     0.01 us   1.09x
