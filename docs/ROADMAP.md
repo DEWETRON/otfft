@@ -129,8 +129,9 @@ Background and measurements: `docs/upstream-comparison.md`.
     11.6e sources (prime N up to 30,011 correct and O(N^2); from N = 50,021 a segmentation
     fault). The finished report is `docs/upstream-report-prime-lengths.md`; send it if a
     contact turns up. The fork is not affected (D13).
-*   [ ] **R1.13** Decide whether to take over the C99 and Fortran 2003
+*   [x] **R1.13** Decide whether to take over the C99 and Fortran 2003
     interfaces, and the upstream benchmark programs, from 11.6e.
+    Decided: none of them (D27). Reopen when a user needs a C or Fortran interface.
 
 Milestone 2: Platforms
 ----------------------

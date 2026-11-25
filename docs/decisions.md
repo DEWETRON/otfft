@@ -453,3 +453,23 @@ D26: keep the `11.4xv` version strings, state the sync in the README
     says `11.4xv`. 11.5e could not be downloaded (404), so which changes came in 11.5e is not known.
 *   **Revisit when:** the fork syncs a whole file from a newer upstream release.
 
+D27: do not take over the C99 and Fortran 2003 interfaces and the upstream benchmark programs
+---------------------------------------------------------------------------------------------
+*   **What:** from upstream 11.6e the fork takes over neither the C99 interface (`otfft_c.h`,
+    `otfft_c.cpp`, directory `C99/`), nor the Fortran 2003 interface (`otfft.f03`, directory
+    `Fortran2003/`), nor the benchmark and check programs (`fftbench1` to `fftbench5`, `fftcheck`,
+    `fftcheck2`, `bstcheck`, `dctcheck`). Roadmap R1.13.
+*   **Why:** both interfaces wrap upstream's classes (`FFT0`, `RFFT`, `DCT`, `Bluestein`), which are
+    internal in the fork (README); a port is new code on top of `OTFFT::Factory`, with its own
+    tests and build, and no user, issue or roadmap item asks for it. The benchmark programs are
+    covered: `benchmarks/` compares with FFTW, PocketFFT and KissFFT, and builds upstream OTFFT in
+    its own executable (`benchmarks/bench.cpp`); the checks are covered by the doctest suites in
+    `unit_tests/`.
+*   **Rejected:** copying the C99 and Fortran files as they are (they call upstream's classes, which the
+    fork does not export, and would drift from the library); porting `fftbench1` to `fftbench5`
+    (`otfft_bench` already covers the comparison with other libraries; upstream's README says
+    `fftbench5` needs Ooura's `fftsg.c`, which is not vendored).
+*   **Limit:** a C or Fortran caller has no interface. A C wrapper is small if needed (the factory
+    functions return abstract classes, so it needs opaque handles and `extern "C"` functions).
+*   **Revisit when:** a user needs the library from C or Fortran.
+
