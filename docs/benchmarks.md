@@ -2295,3 +2295,86 @@ one compiler; the load of the machine was not logged for this run.
 Raw results: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/threaded-table/` (`tT-rN.txt` and
 `.log` from `ffttune`, `old-rN.csv` and `new-rN.csv`).
 
+Where the time goes in the mixed radix code, and what AVX passes would give (R1.5, issue #18)
+----------------------------------------------------------------------------------------------
+
+Question left open above: where does the remaining gap to FFTW (1.6x to 2.3x, lengths with
+factors 3, 5 and 7) come from? Measured on 2026-11-25 on the Ryzen 9 3900X (GCC 15.2.0, `-O3
+-mavx2 -mfma`, one thread, `schedutil` governor, about 0.6 load average before the runs).
+**Nothing was changed in the library.**
+
+Method: two small programs that include `src/otfft_mixedradix.h` as the AVX2 backend does
+(`docs/benchmark-data/2026-11-25-ryzen3900x-linux/mixed-radix-passes/`).
+
+1.  `passes.cpp` runs the passes of the forward transform in the order `fwdfft` chooses them
+    (radix 8, 4, 2, 5, 3, 7 by divisibility) and times each pass alone on its own arrays, best of 9
+    batches of at least 3 ms. Three runs (`passes-r1..r3.txt`); run-to-run differences are below 3%.
+2.  `proto.cpp` has a prototype of `fwdcore3`, `fwdcore5` and `fwdcore7` that works on two values of
+    `q` at once with 256-bit registers (`ymm`: `getpz2`, `mulpz2`, `jxpz2` of `otfft_misc.h`, the
+    twiddle factor broadcast with `duppz2`), for even `s`. It is checked against the existing pass
+    on the same input (maximum difference 0 in every case) and timed against it
+    (`proto-r1..r3.txt`).
+
+**Time per pass, forward transform, one thread** (run 2; ns/point = pass time over N)
+
+| N | Pass (radix, `s`) | Time (us) | ns per point |
+| ---: | --- | ---: | ---: |
+| 10,080 | 8, s=1 | 13.6 | 1.35 |
+| | 4, s=8 | 3.1 | 0.31 |
+| | 5, s=32 | 10.0 | 0.99 |
+| | 3, s=160 | 7.1 | 0.70 |
+| | 3, s=480 | 7.1 | 0.70 |
+| | 7, s=1440 (last pass) | 7.2 | 0.72 |
+| | sum of the passes | 48.0 | 4.76 |
+| 100,000 | 8, s=1 | 136.2 | 1.36 |
+| | 4, s=8 | 36.8 | 0.37 |
+| | 5, s=32, 160, 800, 4000 | 98.8 to 100.9 | 0.99 to 1.01 |
+| | 5, s=20000 (last pass) | 58.7 | 0.59 |
+| | sum of the passes | 630.7 | 6.31 |
+
+The sum for N = 10,080 (48 us) is close to the 53 us that the 12,635 MFLOPS of the table above
+mean for N = 10,080 (the transform also scales the result by 1/N, one more pass).
+
+**Two-values-at-once prototype against the existing pass** (median of 3 runs, speedup of the pass)
+
+| Pass | N | Existing (us) | Prototype (us) | Speedup (runs 1, 2, 3) |
+| --- | ---: | ---: | ---: | --- |
+| radix 3, s=160 | 10,080 | 7.3 | 3.9 | 1.89x, 1.90x, 1.91x |
+| radix 3, s=480 | 10,080 | 7.4 | 3.9 | 1.89x, 1.92x, 1.91x |
+| radix 5, s=32 | 10,080 | 10.2 | 5.1 | 2.01x, 1.96x, 1.98x |
+| radix 5, s=160 | 100,000 | 103.7 | 52.3 | 1.98x, 1.96x, 1.92x |
+| radix 5, s=4000 | 100,000 | 99.6 | 48.7 | 2.04x, 2.00x, 1.93x |
+| radix 7, s=160 | 10,080 | 12.7 | 5.9 | 2.16x, 2.15x, 2.12x |
+| radix 7, s=4 | 196 | 0.25 | 0.14 | 1.84x, 1.86x, 1.84x |
+| radix 3, s=2 | 18 | 0.01 | 0.01 | 1.08x, 1.09x, 1.00x |
+
+What this shows:
+
+*   **The passes of radix 3, 5 and 7 are the time.** At N = 10,080 they are 31 of the 48 us, at
+    N = 100,000 the five radix-5 passes are 458 of 631 us. Each costs 0.7 to 1.0 ns per point, about
+    3 to 4 cycles at the clock of this CPU, and the code works on one complex number (128 bits) at a
+    time, with a 256-bit CPU.
+*   **Two values at once make the pass 1.9x to 2.2x faster**, and the result is bit-identical. The
+    gain is the same at `s` = 4 to 4,000, so it does not depend on the size of the data (an array is 160 KB at
+    N = 10,080 and 1.6 MB at N = 100,000, so both sizes are served from L2 and L3, not L1). With `s` = 2 there is nothing to gain (the loop over `p`
+    dominates).
+*   **The first pass (radix 8, `s` = 1) is the second largest cost**: 1.35 ns per point at both
+    lengths, 28% of the passes at N = 10,080, and 3 to 4 times slower per point than the radix-8 or
+    radix-4 passes with `s` = 8 (0.3 to 0.46 ns). With `s` = 1 the loop over `q` has one iteration, so
+    nothing vectorises over `q`, and the twiddle factors are loaded for every butterfly. The cause
+    was not isolated (not measured). The inputs of this pass at neighbouring `p` are adjacent in
+    memory, so a version over two values of `p` looks possible; it was not prototyped.
+*   **Estimate, not measured**: with the radix-3, 5 and 7 passes at 1.9x to 2.0x (the passes of
+    the table above, N = 10,080), the sum of the passes falls from 48 us to about 33 us, the whole
+    forward transform from about 53 us to about 37 us (about 18,000 MFLOPS against FFTW's 22,753),
+    that is from 1.8x to about 1.3x behind FFTW. The last pass (radix 7 with `s` = 1,440 here, no
+    twiddle factors, "end" form), the inverse transform and the OpenMP variants of the passes (the
+    transform uses them from N = 2^15, also with one thread) were not prototyped.
+
+Limits: one CPU, GCC 15.2.0, AVX2 build, two lengths, forward transform only, passes timed alone
+with the data in cache (in the transform each pass reads what the previous one wrote). A pass
+that is faster alone may gain less in the transform. The `proto.cpp` passes have no tests beyond
+the comparison above. The SSE2 backend has no 256-bit registers; its passes stay as they are.
+
+Raw results and the two programs: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/mixed-radix-passes/`.
+

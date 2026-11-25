@@ -1,0 +1,17 @@
+N=10080
+  radix 8  n=10080  s=1          13.99 us  (1.39 ns/point)
+  radix 4  n=1260   s=8           3.29 us  (0.33 ns/point)
+  radix 5  n=315    s=32         10.03 us  (0.99 ns/point)
+  radix 3  n=63     s=160         7.29 us  (0.72 ns/point)
+  radix 3  n=21     s=480         7.27 us  (0.72 ns/point)
+  radix 7  n=7      s=1440        7.36 us  (0.73 ns/point)
+  sum of passes 49.23 us
+N=100000
+  radix 8  n=100000 s=1         139.91 us  (1.40 ns/point)
+  radix 4  n=12500  s=8          38.70 us  (0.39 ns/point)
+  radix 5  n=3125   s=32        102.99 us  (1.03 ns/point)
+  radix 5  n=625    s=160       103.06 us  (1.03 ns/point)
+  radix 5  n=125    s=800       102.64 us  (1.03 ns/point)
+  radix 5  n=25     s=4000      102.29 us  (1.02 ns/point)
+  radix 5  n=5      s=20000      60.52 us  (0.61 ns/point)
+  sum of passes 650.11 us
