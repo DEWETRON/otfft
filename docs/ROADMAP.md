@@ -114,10 +114,17 @@ Background and measurements: `docs/upstream-comparison.md`.
     at N = 262,144 nothing changed measurably.
 *   [ ] **R1.11** After R1.8 to R1.10: update the version strings (still
     11.4xv) and the sync statement in the README. Try to get upstream 11.5e
-    (the download link returned 404) to find which changes came when.
-*   [ ] **R1.12** Report the `(i*j)%k` overflow and the O(N^2) generic radix
+    (the download link returned 404; on 2026-11-25 the download page links
+    `otfft-11.5e.tar.gz` of 2019-09-09, not downloaded) to find which changes came when.
+*   [x] **R1.12** Report the `(i*j)%k` overflow and the O(N^2) generic radix
     (issues #16 to #18) to the upstream author; the code is identical in
     11.6e.
+    Closed without sending (2026-11-25): the author (Takuya Okahisa, "OK Ojisan") lists no
+    email address, tracker or account on the download page, in the 11.6e README or in
+    `LICENSE.txt`, so there is no channel. Both bugs were confirmed on the unmodified
+    11.6e sources (prime N up to 30,011 correct and O(N^2); from N = 50,021 a segmentation
+    fault). The finished report is `docs/upstream-report-prime-lengths.md`; send it if a
+    contact turns up. The fork is not affected (D13).
 *   [ ] **R1.13** Decide whether to take over the C99 and Fortran 2003
     interfaces, and the upstream benchmark programs, from 11.6e.
 
