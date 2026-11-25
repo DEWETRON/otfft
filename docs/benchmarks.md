@@ -2273,3 +2273,25 @@ smaller sizes. Options: `--kinds complex,real,dct,roundtrip`,
 The raw results and logs of this run are in
 `docs/benchmark-data/2026-11-23/`; the upstream comparison is in
 `docs/benchmark-data/2026-11-24/` (`up-*` main runs, `large-*` repeats).
+
+### Threaded table: DIF4 at 2^16 and 2^17 (R1.8, D25)
+
+Ryzen 9 3900X, GCC 15.2.0, AVX2, 12 threads, 2026-11-25. Library with the new table against the
+same library with `old-table.txt` (a tuning file that sets the old picks, SixStep at 2^16 and DIT8
+at 2^17), `otfft_bench --kinds complex --sizes pow2all --lib OTFFT-avx2 --threads 12 --min-n 65536`,
+alternating, three rounds. Time for one forward plus one inverse transform, median of 3 rounds.
+
+| log2 N | Old pick | New pick | Old (us) | New (us) | Speedup | Rounds (old / new) |
+| ---: | --- | --- | ---: | ---: | ---: | --- |
+| 16 | SixStep | DIF4 | 368.3 | 218.5 | 1.69x | 368, 372, 367 / 228, 219, 218 |
+| 17 | DIT8 | DIF4 | 1,146.7 | 537.2 | 2.13x | 1,169, 1,147, 1,147 / 537, 515, 538 |
+
+Which class is fastest per thread count (`ffttune`, two runs each for 2, 4, 8, 12 and 24 threads):
+DIF4 at 2^16 and 2^17 for 4 or more threads in every run; the winner at 2^15, 2^19, 2^20 and 2^24
+changes with the thread count or between runs. The earlier tuning-file A/B had 2.51x at 2^17; this run
+gives 2.13x (the cause of the difference was not investigated). Limits: one CPU,
+one compiler; the load of the machine was not logged for this run.
+
+Raw results: `docs/benchmark-data/2026-11-24-ryzen3900x-linux/threaded-table/` (`tT-rN.txt` and
+`.log` from `ffttune`, `old-rN.csv` and `new-rN.csv`).
+

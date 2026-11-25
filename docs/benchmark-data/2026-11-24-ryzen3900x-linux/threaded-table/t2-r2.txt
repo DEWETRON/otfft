@@ -1,0 +1,18 @@
+otfft-tuning 1
+# written by ffttune; load it with OTFFT::loadTuningFile
+# cpu: AMD Ryzen 9 3900X 12-Core Processor
+# compiler: GCC 15.2.0
+# backend avx2, 2 thread(s), table threaded, median of 9 batches of about 20 ms
+# the library uses the threaded table from length 2^15 only
+avx2 threaded 13 DIF4
+avx2 threaded 14 DIF4
+avx2 threaded 15 SixStep
+avx2 threaded 16 DIT4
+avx2 threaded 17 DIT4
+avx2 threaded 18 DIF4
+avx2 threaded 19 DIT16   # tie within 5%
+avx2 threaded 20 DIF16   # tie within 5%
+avx2 threaded 21 SixStep
+avx2 threaded 22 SixStep
+avx2 threaded 23 SixStep
+avx2 threaded 24 DIF8   # tie within 5%
