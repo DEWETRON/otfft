@@ -579,3 +579,30 @@ D31: place the work buffer of the complex FFT 1728 bytes from the input, modulo 
 *   **Revisit when:** another CPU gives a different best offset (then it would be chosen at run time or
     per backend), or the passes are changed to use streams that do not alias.
 
+D32: an opt-in AVX-512 backend, built from the AVX2 code, never chosen automatically
+-------------------------------------------------------------------------------------
+*   **What:** `-DOTFFT_WITH_AVX512=ON` (default OFF) adds a fourth backend library `otfft_avx512`, built
+    from the same sources as the others with `-mavx2 -mfma -mavx512f -mavx512dq -mavx512vl`
+    (`/arch:AVX512` for MSVC) and `OTFFT_NAMESPACE=OTFFT_AVX512` (`src/otfft_avx512.h`).
+    `OptimizationType::OPTIMIZED_FFT_AVX512` exists only then. `sysinfo` detects it from CPUID leaf 7
+    (AVX512F bit 16, DQ bit 17, VL bit 31), AVX2 with FMA, and XCR0 bits 1, 2, 5, 6 and 7 (the operating system saves
+    the SSE, AVX, opmask and ZMM state). A request that the CPU cannot serve throws `std::domain_error`
+    like the other backends; `OPTIMIZED_FFT_AUTO` does not consider it. The tuning file accepts the
+    backend name `avx512` (its own tables). Roadmap R2.1, spec FAC-14, FAC-15, BLD-10.
+*   **Why:** it is the part of R2.1 that can be built and tested on a machine without AVX-512 (the
+    Ryzen 9 3900X, where this was written): the build, the detection, the selection and the failure
+    path. The 512-bit kernels need AVX-512 hardware to be written and checked, and upstream 11.6e has
+    none to port (only helper functions in `otfft_misc.h`).
+*   **Rejected:** letting `AUTO` choose it now (the code is the AVX2 code, so there is nothing to gain and
+    on some Intel CPUs heavy 512-bit use lowers the clock; to be decided with measurements); writing the
+    512-bit kernels without being able to run them; ON by default (a fourth backend library and
+    more build time for no benefit yet); support for the Intel compiler (not available to us).
+*   **Limit:** **nothing in this backend has run on AVX-512 hardware.** The compiler is free to emit
+    EVEX encodings of the 256-bit code; whether that changes the speed, or the results in the last bit,
+    is not known. Only GCC 15.2 was used for building; the Clang and MSVC branches are untested. The
+    detection reads CPUID and XGETBV directly; it was written from the Intel documentation and has not
+    been checked on a CPU where the bits are set (the test uses `__builtin_cpu_supports` as a second opinion on
+    GCC and Clang, and fails if the two disagree on such a CPU).
+*   **Revisit when:** a run on AVX-512 hardware exists (then FAC-15 can become `[done]` and `AUTO` can be
+    decided), or the 512-bit kernels are written.
+

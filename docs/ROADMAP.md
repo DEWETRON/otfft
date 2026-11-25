@@ -158,6 +158,14 @@ Milestone 2: Platforms
 *   [ ] **R2.1** Support newer AMD64 instruction set extensions (beyond
     SSE2, AVX and AVX2, for example AVX-512), selected at run time like the
     existing backends (D3).
+    Done (D32, spec FAC-14, BLD-10): the groundwork. `-DOTFFT_WITH_AVX512=ON` builds a fourth backend
+    (the AVX2 code compiled for AVX512F, DQ and VL), run-time detection including the operating
+    system state, `OPTIMIZED_FFT_AVX512` (explicit only, never `AUTO`), the `avx512` name in tuning
+    files, and tests; built and tested with GCC on a CPU **without** AVX-512. Still open: the 512-bit
+    kernels (upstream 11.6e has none, only helper functions in `otfft_misc.h`), a run on AVX-512
+    hardware (the Ryzen 9 9950X; the test of FAC-15 has never run), a benchmark against AVX2,
+    the decision whether `AUTO` may choose it (frequency effects on some Intel CPUs), the Clang and
+    MSVC builds, and `ffttune` and `otfft_bench` support for the backend.
 *   [ ] **R2.2** Support ARM64 (NEON), including a CI job and the same
     run-time backend choice.
 

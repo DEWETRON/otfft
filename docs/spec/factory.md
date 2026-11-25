@@ -18,6 +18,17 @@ Rules
 *   **FAC-5** `[done]` A caller may force `SSE2`, `AVX` or `AVX2`. The values
     exist only if the library was built with that backend.
     (`otfft_optimization_test`)
+*   **FAC-14** `[done]` The AVX-512 backend exists only if the library was built with
+    `-DOTFFT_WITH_AVX512=ON`. `OPTIMIZED_FFT_AUTO` never picks it; a caller gets it with
+    `OPTIMIZED_FFT_AVX512`. If the CPU cannot run it (it needs AVX512F, AVX512DQ, AVX512VL, AVX2 and
+    FMA, and an operating system that saves the AVX-512 registers) the request throws
+    `std::domain_error`, as a request for any other backend that the CPU lacks, and `AUTO` plans
+    still work. (D32.) (`otfft_avx512_test: TestAutoStillWorks, TestComplexFftOnRequest,
+    TestBluesteinOnRequest, TestRealFftAndDctOnRequest`; the throwing half runs on a CPU without
+    AVX-512 and was run on a Ryzen 9 3900X)
+*   **FAC-15** `[built]` On a CPU that can run it, the AVX-512 backend gives the same results as the
+    default backend (complex, Bluestein, real FFT and DCT). The test exists
+    (`otfft_avx512_test`, same cases) but has **not been run on AVX-512 hardware**.
 *   **FAC-6** `[built]` All transform methods are `const noexcept`, but a
     complex, real or DCT object owns an internal work buffer (`FFT::work` in
     `src/otfft_base.h`) that every call uses. **Do not share one object between
@@ -34,7 +45,7 @@ Rules
     (`otfft_tuning_test: TestLoadSetsListedEntriesOnly`, `TestNothingLoadedByDefault`)
 *   **FAC-10** `[done]` File format, one entry per line, `#` starts a comment, empty lines
     are ignored. The first line is the header `otfft-tuning 1`. An entry is
-    `<backend> <table> <log2 N> <algorithm>`: backend `sse2`, `avx` or `avx2`; table
+    `<backend> <table> <log2 N> <algorithm>`: backend `sse2`, `avx`, `avx2` or `avx512`; table
     `serial` (one OpenMP thread) or `threaded` (more than one, used from length 2^15,
     see CFFT-8); log2 N from 1 to 24; algorithm `DIF4`, `DIT4`, `DIF8`, `DIT8`, `DIF16`,
     `DIT16` or `SixStep`. If a backend, table and length are listed twice the last entry

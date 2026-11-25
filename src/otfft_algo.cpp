@@ -10,6 +10,9 @@
 #ifdef USE_AVX2
 #include "otfft_avx2.h"
 #endif
+#ifdef USE_AVX512
+#include "otfft_avx512.h"
+#endif
 #ifdef USE_AVX
 #include "otfft_avx.h"
 #endif
@@ -41,6 +44,15 @@ namespace OTFFT_NAMESPACE
     bool compiledWithAvx2()
     {
 #ifdef __AVX2__
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool compiledWithAvx512()
+    {
+#if defined(__AVX512F__) && defined(__AVX512DQ__) && defined(__AVX512VL__)
         return true;
 #else
         return false;
@@ -113,7 +125,9 @@ namespace OTFFT_NAMESPACE
 #else
             const bool threaded = false;
 #endif
-#if defined(USE_AVX2)
+#if defined(USE_AVX512)
+            const Tuning::Backend backend = Tuning::BACKEND_AVX512;
+#elif defined(USE_AVX2)
             const Tuning::Backend backend = Tuning::BACKEND_AVX2;
 #elif defined(USE_AVX)
             const Tuning::Backend backend = Tuning::BACKEND_AVX;
