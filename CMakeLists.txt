@@ -70,6 +70,10 @@ endif(OPENMP_FOUND)
 
 #
 # compile options
+# The AVX-512 backend is opt-in (roadmap R2.1, decision D32): it is chosen at run time only when
+# a caller asks for OPTIMIZED_FFT_AVX512, and it has no AVX-512 kernels yet.
+option(OTFFT_WITH_AVX512 "Build the AVX-512 backend (64 bit only, needs AVX512F, AVX512DQ and AVX512VL; not chosen automatically)" OFF)
+
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(OTFFT_WITH_SSE2 TRUE)
   set(OTFFT_WITH_AVX  TRUE)
@@ -78,6 +82,10 @@ else()
   set(OTFFT_WITH_SSE2 TRUE)
   set(OTFFT_WITH_AVX  FALSE)
   set(OTFFT_WITH_AVX2 FALSE)
+  if (OTFFT_WITH_AVX512)
+    message(WARNING "OTFFT_WITH_AVX512 is ignored for a 32 bit build")
+    set(OTFFT_WITH_AVX512 FALSE)
+  endif()
 endif()
 
 #
@@ -107,6 +115,7 @@ set(OTFFT_HEADER_FILES
   src/otfft_config.h.in
   src/otfft_avx.h
   src/otfft_avx2.h
+  src/otfft_avx512.h
   src/otfft_sse2.h
   src/otfft_avxdif4.h
   src/otfft_avxdif4omp.h
@@ -203,6 +212,16 @@ if (OTFFT_WITH_AVX2)
   list(APPEND OTFFT_BACKENDS ${LIBNAME}_avx2)
 endif()
 
+if (OTFFT_WITH_AVX512)
+  add_library(${LIBNAME}_avx512 STATIC
+    ${PUBLIC_OTFFT_HEADER_FILES}
+    ${OTFFT_HEADER_FILES}
+    ${OTFFT_SOURCE_FILES_ALGO}
+    )
+  set_property(TARGET ${LIBNAME}_avx512 APPEND_STRING PROPERTY COMPILE_PDB_NAME ${LIBNAME}_avx512)
+  list(APPEND OTFFT_BACKENDS ${LIBNAME}_avx512)
+endif()
+
 MESSAGE("Using backends ${OTFFT_BACKENDS}")
 
 include(mergestaticlibs)
@@ -243,6 +262,11 @@ if (CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
       " ${OTFFT_BACKENDS_FLAGS} -DUSE_AVX2 "
     )
   endif()
+  if (OTFFT_WITH_AVX512)
+    set(OTFFT_BACKENDS_FLAGS
+      " ${OTFFT_BACKENDS_FLAGS} -DUSE_AVX512 "
+    )
+  endif()
   # -fsignaling-nans exists only in GCC; Clang warns that it ignores it
   set(OTFFT_SNAN_FLAG "")
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -261,6 +285,11 @@ if (CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
   # as MSVC defines it for /arch:AVX2) and is chosen at run time only if the CPU has FMA too (D21).
   set(AVX2_FLAGS
     " ${DEFAULT_FLAGS} -mavx2 -mfma -DUSE_AVX2 -DOTFFT_NAMESPACE=OTFFT_AVX2 "
+  )
+  # The AVX-512 backend: the code of the AVX2 backend compiled for AVX-512 (VEX and EVEX encodings, the
+  # compiler keeps 256-bit vectors by default); it needs AVX512F, AVX512DQ and AVX512VL at run time.
+  set(AVX512_FLAGS
+    " ${DEFAULT_FLAGS} -mavx2 -mfma -mavx512f -mavx512dq -mavx512vl -DUSE_AVX512 -DOTFFT_NAMESPACE=OTFFT_AVX512 "
   )
 # Intel C++ Compiler
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "Intel")
@@ -292,6 +321,9 @@ elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "Intel")
   set(AVX2_FLAGS
     " ${DEFAULT_FLAGS} -mavx2 -DUSE_AVX2 -DOTFFT_NAMESPACE=OTFFT_AVX2 "
   )
+  if (OTFFT_WITH_AVX512)
+    message(FATAL_ERROR "OTFFT_WITH_AVX512 is not supported with the Intel compiler yet")
+  endif()
 # Microsoft Visual C++ Compiler
 elseif (MSVC OR ${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
   message(STATUS "Optimize for MSVC compiler")
@@ -318,6 +350,11 @@ elseif (MSVC OR ${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
       " ${OTFFT_BACKENDS_FLAGS} /DUSE_AVX2 "
     )
   endif()
+  if (OTFFT_WITH_AVX512)
+    set(OTFFT_BACKENDS_FLAGS
+      " ${OTFFT_BACKENDS_FLAGS} /DUSE_AVX512 "
+    )
+  endif()
   if (CMAKE_CL_64)
     set(DEFAULT_FLAGS
       " ${ADDITIONAL_FLAGS} /Oi /favor:INTEL64 ${OpenMP_CXX_FLAGS} "
@@ -338,6 +375,9 @@ elseif (MSVC OR ${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
   )
   set(AVX2_FLAGS
     " ${DEFAULT_FLAGS} /arch:AVX2 /DUSE_AVX2 /DOTFFT_NAMESPACE=OTFFT_AVX2 "
+  )
+  set(AVX512_FLAGS
+    " ${DEFAULT_FLAGS} /arch:AVX512 /DUSE_AVX512 /DOTFFT_NAMESPACE=OTFFT_AVX512 "
   )
 endif()
 
@@ -361,6 +401,12 @@ if (OTFFT_WITH_AVX2)
   set_property(TARGET ${LIBNAME}_avx2 APPEND_STRING PROPERTY
     COMPILE_FLAGS
     " ${AVX2_FLAGS} "
+  )
+endif()
+if (OTFFT_WITH_AVX512)
+  set_property(TARGET ${LIBNAME}_avx512 APPEND_STRING PROPERTY
+    COMPILE_FLAGS
+    " ${AVX512_FLAGS} "
   )
 endif()
 

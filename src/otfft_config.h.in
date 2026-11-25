@@ -11,3 +11,5 @@
 #cmakedefine OTFFT_WITH_AVX
 
 #cmakedefine OTFFT_WITH_AVX2
+
+#cmakedefine OTFFT_WITH_AVX512

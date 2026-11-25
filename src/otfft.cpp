@@ -41,6 +41,10 @@
 #endif
 
 
+#ifdef OTFFT_WITH_AVX512
+#include "otfft_avx512.h"
+#endif
+
 #ifdef OTFFT_WITH_AVX2
 #include "otfft_avx2.h"
 #endif
@@ -111,6 +115,7 @@ namespace
             , CPU_FEATURE_SSE42(false)
             , CPU_FEATURE_AVX(false)
             , CPU_FEATURE_AVX2(false)
+            , CPU_FEATURE_AVX512(false)
             , CPU_FEATURE_FMA(false)
         {
             const auto cpu_info_0 = CPUID(0);
@@ -135,6 +140,15 @@ namespace
 
                     // The AVX2 backend is compiled with FMA (D21), so it needs both.
                     CPU_FEATURE_AVX2 = ((cpu_info_7[1] & 0x00000020) != 0) && CPU_FEATURE_FMA;
+
+                    // The AVX-512 backend (D32) is the AVX2 code compiled for AVX512F, AVX512DQ and
+                    // AVX512VL, so it needs AVX2 with FMA and these three, and the operating system
+                    // must save the opmask and ZMM registers (XCR0 bits 5, 6 and 7, with SSE and AVX).
+                    CPU_FEATURE_AVX512 = CPU_FEATURE_AVX2
+                        && ((cpu_info_7[1] & 0x00010000) != 0)    // AVX512F
+                        && ((cpu_info_7[1] & 0x00020000) != 0)    // AVX512DQ
+                        && ((cpu_info_7[1] & 0x80000000) != 0)    // AVX512VL
+                        && ((cpu_info_xcr & 0xE6) == 0xE6);
                 }
             }
         }
@@ -203,6 +217,7 @@ namespace
         bool CPU_FEATURE_SSE42;
         bool CPU_FEATURE_AVX;
         bool CPU_FEATURE_AVX2;
+        bool CPU_FEATURE_AVX512;
         bool CPU_FEATURE_FMA;
     };
 }
@@ -211,6 +226,13 @@ namespace OTFFT
 {
     void unique_ptr_delete::operator()(ComplexFFT *raw_pointer)
     {
+#ifdef OTFFT_WITH_AVX512
+            if (sysinfo::instance()->CPU_FEATURE_AVX512)
+            {
+                return OTFFT_AVX512::unique_ptr_deleter(raw_pointer);
+            }
+#endif
+
 #ifdef OTFFT_WITH_AVX2
             if (sysinfo::instance()->CPU_FEATURE_AVX2)
             {
@@ -236,6 +258,13 @@ namespace OTFFT
 
     void unique_ptr_delete::operator()(RealFFT *raw_pointer)
     {
+#ifdef OTFFT_WITH_AVX512
+            if (sysinfo::instance()->CPU_FEATURE_AVX512)
+            {
+                return OTFFT_AVX512::unique_ptr_deleter(raw_pointer);
+            }
+#endif
+
 #ifdef OTFFT_WITH_AVX2
             if (sysinfo::instance()->CPU_FEATURE_AVX2)
             {
@@ -261,6 +290,13 @@ namespace OTFFT
 
     void unique_ptr_delete::operator()(RealDCT *raw_pointer)
     {
+#ifdef OTFFT_WITH_AVX512
+            if (sysinfo::instance()->CPU_FEATURE_AVX512)
+            {
+                return OTFFT_AVX512::unique_ptr_deleter(raw_pointer);
+            }
+#endif
+
 #ifdef OTFFT_WITH_AVX2
             if (sysinfo::instance()->CPU_FEATURE_AVX2)
             {
@@ -288,6 +324,15 @@ namespace OTFFT
     {
         ComplexFFTPtr createComplexFFT(int n, OptimizationType t)
         {
+#ifdef OTFFT_WITH_AVX512
+            // only on request (D32): OPTIMIZED_FFT_AUTO does not choose it
+            if (sysinfo::instance()->CPU_FEATURE_AVX512 &&
+                t == OptimizationType::OPTIMIZED_FFT_AVX512)
+            {
+                return ComplexFFTPtr(OTFFT_AVX512::Factory::createComplexFFT(n));
+            }
+#endif
+
 #ifdef OTFFT_WITH_AVX2
             if (sysinfo::instance()->CPU_FEATURE_AVX2 &&
                 (t == OptimizationType::OPTIMIZED_FFT_AUTO ||
@@ -319,6 +364,15 @@ namespace OTFFT
 
         RealFFTPtr createRealFFT(int n, OptimizationType t)
         {
+#ifdef OTFFT_WITH_AVX512
+            // only on request (D32): OPTIMIZED_FFT_AUTO does not choose it
+            if (sysinfo::instance()->CPU_FEATURE_AVX512 &&
+                t == OptimizationType::OPTIMIZED_FFT_AVX512)
+            {
+                return RealFFTPtr(OTFFT_AVX512::Factory::createRealFFT(n));
+            }
+#endif
+
 #ifdef OTFFT_WITH_AVX2
             if (sysinfo::instance()->CPU_FEATURE_AVX2 &&
                 (t == OptimizationType::OPTIMIZED_FFT_AUTO ||
@@ -350,6 +404,15 @@ namespace OTFFT
 
         RealDCTPtr createDCT(int n, OptimizationType t)
         {
+#ifdef OTFFT_WITH_AVX512
+            // only on request (D32): OPTIMIZED_FFT_AUTO does not choose it
+            if (sysinfo::instance()->CPU_FEATURE_AVX512 &&
+                t == OptimizationType::OPTIMIZED_FFT_AVX512)
+            {
+                return RealDCTPtr(OTFFT_AVX512::Factory::createDCT(n));
+            }
+#endif
+
 #ifdef OTFFT_WITH_AVX2
             if (sysinfo::instance()->CPU_FEATURE_AVX2 &&
                 (t == OptimizationType::OPTIMIZED_FFT_AUTO ||
@@ -382,6 +445,15 @@ namespace OTFFT
 
         ComplexFFTPtr createBluesteinFFT(int n, OptimizationType t)
         {
+#ifdef OTFFT_WITH_AVX512
+            // only on request (D32): OPTIMIZED_FFT_AUTO does not choose it
+            if (sysinfo::instance()->CPU_FEATURE_AVX512 &&
+                t == OptimizationType::OPTIMIZED_FFT_AVX512)
+            {
+                return ComplexFFTPtr(OTFFT_AVX512::Factory::createBluesteinFFT(n));
+            }
+#endif
+
 #ifdef OTFFT_WITH_AVX2
             if (sysinfo::instance()->CPU_FEATURE_AVX2 &&
                 (t == OptimizationType::OPTIMIZED_FFT_AUTO ||

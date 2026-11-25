@@ -9,6 +9,9 @@
 #ifdef USE_AVX2
 #include "otfft_avx2.h"
 #endif
+#ifdef USE_AVX512
+#include "otfft_avx512.h"
+#endif
 #ifdef USE_AVX
 #include "otfft_avx.h"
 #endif

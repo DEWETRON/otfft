@@ -41,6 +41,7 @@ namespace OTFFT
             if (s == "sse2") out = Tuning::BACKEND_SSE2;
             else if (s == "avx") out = Tuning::BACKEND_AVX;
             else if (s == "avx2") out = Tuning::BACKEND_AVX2;
+            else if (s == "avx512") out = Tuning::BACKEND_AVX512;
             else return false;
             return true;
         }
@@ -135,7 +136,7 @@ namespace OTFFT
             int algorithm = 0;
             if (!parseBackend(w[0], backend))
             {
-                error = lineError(line, "unknown backend '" + w[0] + "' (sse2, avx or avx2)");
+                error = lineError(line, "unknown backend '" + w[0] + "' (sse2, avx, avx2 or avx512)");
                 return false;
             }
             if (w[1] != "serial" && w[1] != "threaded")

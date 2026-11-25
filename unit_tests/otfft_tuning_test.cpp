@@ -19,6 +19,7 @@ namespace
 {
     using OTFFT::Tuning::BACKEND_AVX;
     using OTFFT::Tuning::BACKEND_AVX2;
+    using OTFFT::Tuning::BACKEND_AVX512;
     using OTFFT::Tuning::BACKEND_SSE2;
     using OTFFT::Tuning::lookup;
 
@@ -93,7 +94,7 @@ namespace
     std::string everywhere(int log_n, const char* name)
     {
         std::string text = "otfft-tuning 1\n";
-        for (const char* backend : {"sse2", "avx", "avx2"})
+        for (const char* backend : {"sse2", "avx", "avx2", "avx512"})
         {
             for (const char* table : {"serial", "threaded"})
             {
@@ -115,6 +116,18 @@ TEST_CASE("TestNothingLoadedByDefault")
         CHECK(lookup(BACKEND_AVX2, false, log_n) == 0);
         CHECK(lookup(BACKEND_AVX2, true, log_n) == 0);
     }
+}
+
+TEST_CASE("TestLoadAcceptsTheAvx512Backend")
+{
+    TuningGuard guard;
+    std::string error;
+    REQUIRE(load("otfft-tuning 1\navx512 serial 17 DIF4\navx512 threaded 16 DIT8\n", error));
+    CHECK(lookup(BACKEND_AVX512, false, 17) == 1);
+    CHECK(lookup(BACKEND_AVX512, true, 16) == 4);
+    // the other backends keep their built-in tables
+    CHECK(lookup(BACKEND_AVX2, false, 17) == 0);
+    CHECK(lookup(BACKEND_AVX, true, 16) == 0);
 }
 
 TEST_CASE("TestLoadSetsListedEntriesOnly")

@@ -10,7 +10,7 @@ Rules
     and GCC on Linux. CI (GitHub Actions) builds and tests both.
 *   **BLD-3** `[built]` Backends `OTFFT_WITH_SSE2`, `OTFFT_WITH_AVX` and
     `OTFFT_WITH_AVX2` are switched in `CMakeLists.txt`. At least one must be
-    on. Other targets get SSE2 only.
+    on. Other targets get SSE2 only. `OTFFT_WITH_AVX512` is an option, see BLD-10.
 *   **BLD-4** `[built]` OpenMP is the standard one. Thread count follows
     `OMP_NUM_THREADS`.
 *   **BLD-5** `[done]` `ctest` runs the doctest suites in `unit_tests/`. doctest
@@ -46,6 +46,13 @@ Rules
     includes FMA). (`otfft_backend_test: TestSse2BackendUsesNoAvx,
     TestAvxBackendUsesAvxWithoutFma, TestAvx2BackendUsesAvx2AndFma`; the Intel compiler branch
     in `CMakeLists.txt` is not covered.)
+
+*   **BLD-10** `[done]` `-DOTFFT_WITH_AVX512=ON` (default OFF, 64 bit only) builds a fourth backend,
+    `otfft_avx512`, from the same sources: GCC and Clang get `-mavx2 -mfma -mavx512f -mavx512dq
+    -mavx512vl`, MSVC `/arch:AVX512`; the Intel compiler stops with an error. The other backends
+    are not compiled with AVX-512. (D32.) (`otfft_backend_test: TestAvx512BackendUsesAvx512WithAvx2AndFma`
+    and the `compiledWithAvx512` checks of the other backends; the GCC branch was built and tested, the
+    Clang and MSVC branches were **not built**.)
 
 Decided
 -------

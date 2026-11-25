@@ -43,7 +43,11 @@ namespace OTFFT
         OPTIMIZED_FFT_AVX,
 #endif
 #ifdef OTFFT_WITH_AVX2
-        OPTIMIZED_FFT_AVX2
+        OPTIMIZED_FFT_AVX2,
+#endif
+#ifdef OTFFT_WITH_AVX512
+        /// Only used when asked for, never chosen by OPTIMIZED_FFT_AUTO (decision D32)
+        OPTIMIZED_FFT_AVX512
 #endif
     };
 
@@ -203,7 +207,7 @@ namespace OTFFT
     /**
      * @brief Replace the built-in per-length algorithm choice of the complex FFT by a tuning file.
      *
-     * The file lists, for a backend (sse2, avx, avx2), a table (serial or threaded) and a length
+     * The file lists, for a backend (sse2, avx, avx2, avx512), a table (serial or threaded) and a length
      * 2^N, the algorithm to use. Lengths it does not list keep the built-in choice. The file
      * replaces any file loaded before. If it cannot be read or has an error nothing changes,
      * false is returned and `error` says why. Only transform objects created or set up after

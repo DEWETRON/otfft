@@ -12,18 +12,29 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.os }}
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        # every entry is one job; the AVX-512 backend (roadmap R2.1) is built and tested on Linux, the
+        # tests that need AVX-512 hardware run only if the runner has it
+        include:
+          - os: ubuntu-latest
+            name: ubuntu-latest
+            cmake-flags: ""
+          - os: windows-latest
+            name: windows-latest
+            cmake-flags: ""
+          - os: ubuntu-latest
+            name: ubuntu-latest, AVX-512 backend
+            cmake-flags: -DOTFFT_WITH_AVX512=ON
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} ${{ matrix.cmake-flags }}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --parallel

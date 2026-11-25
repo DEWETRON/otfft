@@ -80,6 +80,10 @@ The backend is chosen automatically at run time. To force one, pass an
 `OTFFT::OptimizationType` as second argument, for example
 `createComplexFFT(n, OTFFT::OptimizationType::OPTIMIZED_FFT_AVX)`.
 
+An AVX-512 backend can be built with `-DOTFFT_WITH_AVX512=ON`. It is the AVX2 code compiled for
+AVX-512 (there are no 512-bit kernels yet, roadmap R2.1), it is never chosen automatically, and
+`OPTIMIZED_FFT_AVX512` throws `std::domain_error` on a CPU that cannot run it.
+
 ## Complex-to-complex FFT
 ``` c++
 #include "otfft.h"

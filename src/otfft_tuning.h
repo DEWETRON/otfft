@@ -12,7 +12,8 @@ namespace OTFFT
             BACKEND_SSE2 = 0,
             BACKEND_AVX = 1,
             BACKEND_AVX2 = 2,
-            BACKEND_COUNT = 3
+            BACKEND_AVX512 = 3,
+            BACKEND_COUNT = 4
         };
 
         // Algorithm number (1 to 7, as in otfft_algo.cpp) loaded for this backend, table and
