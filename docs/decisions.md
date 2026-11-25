@@ -473,3 +473,26 @@ D27: do not take over the C99 and Fortran 2003 interfaces and the upstream bench
     functions return abstract classes, so it needs opaque handles and `extern "C"` functions).
 *   **Revisit when:** a user needs the library from C or Fortran.
 
+D28: AVX versions of the radix-3, 5 and 7 core passes of the mixed radix code
+-----------------------------------------------------------------------------
+*   **What:** `fwdcore3`, `fwdcore5`, `fwdcore7`, `invcore3`, `invcore5`, `invcore7` and their OpenMP
+    versions (`...p`) in `src/otfft_mixedradix.h` call a 256-bit version (`corePassY`,
+    `corePassYp`) when `s` is even and the file is compiled with AVX (`OTFFT_MIXED_YMM`). The
+    version handles two values of `q` at once, with the same butterflies operation by operation.
+    The SSE2 backend and passes with an odd `s` are unchanged. Roadmap R1.5, spec CFFT-14.
+*   **Why:** the passes of radix 3, 5 and 7 were two thirds of the time and worked on one complex
+    number per register (`docs/benchmarks.md`, "Where the time goes in the mixed radix code"). Per
+    pass the gain is 1.9x to 2.2x; for the whole forward transform, one thread, Ryzen 9 3900X, GCC 15.2.0,
+    AVX2: 1.15x (N = 480) to 1.37x (N = 3,000), 1.27x at N = 10,080, 1.34x at N = 100,000, five
+    alternating rounds each (`docs/benchmarks.md`, "AVX passes in the library").
+*   **Rejected:** a separate set of functions with their own dispatch (the check `s` even is in
+    the pass, so `fwdfft` is unchanged); wider registers (AVX-512, R2.1); changing the SSE2 backend
+    (it has no 256-bit registers).
+*   **Limit:** the end passes (`...end3`, `...end5`, `...end7`, the last pass), the radix-2, 4 and
+    8 passes and the first pass (`s` = 1) are still scalar; N = 1,000,000 did not change (0.97x
+    to 1.01x, memory bound, one thread). One CPU, one compiler. The AVX passes are not checked
+    against the scalar passes of the same build, but against the Bluestein transform (the test
+    breaks when either butterfly is changed: a sign flipped in the forward radix 3, 5 or 7
+    butterfly fails the test, checked by hand).
+*   **Revisit when:** the end passes and the first pass are vectorised, or AVX-512 is added.
+

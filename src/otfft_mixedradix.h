@@ -56,6 +56,12 @@ constexpr int OMP_THRESHOLD = 1<<15;
     constexpr double R5_C2 = -0.80901699437494742410; // cos(4 pi / 5)
     constexpr double R5_S1 =  0.95105651629515357212; // sin(2 pi / 5)
     constexpr double R5_S2 =  0.58778525229247312917; // sin(4 pi / 5)
+    constexpr double R7_C1 =  0.62348980185873353053; // cos(2 pi / 7)
+    constexpr double R7_C2 = -0.22252093395631440429; // cos(4 pi / 7)
+    constexpr double R7_C3 = -0.90096886790241912624; // cos(6 pi / 7)
+    constexpr double R7_S1 =  0.78183148246802980871; // sin(2 pi / 7)
+    constexpr double R7_S2 =  0.97492791218182360702; // sin(4 pi / 7)
+    constexpr double R7_S3 =  0.43388373911755812048; // sin(6 pi / 7)
 
     // r[k] = k-th output; DIR = -1 forward, +1 inverse
     template <int DIR> static inline void bfly3(const xmm x0, const xmm x1, const xmm x2, xmm* r) noexcept force_inline3;
@@ -96,6 +102,140 @@ constexpr int OMP_THRESHOLD = 1<<15;
             r[2] = addpz(a2, jxpz(b2)); r[3] = addpz(a2, mjxpz(b2));
         }
     }
+
+#if defined(__AVX__) && defined(USE_INTRINSIC)
+    ///////////////////////////////////////////////////////////////////////////////
+    // AVX versions of the radix-3, 5 and 7 passes (roadmap R1.5, decision D28)
+    //
+    // Two values of q at once in one 256-bit register, for an even s. The butterflies
+    // are those above, operation by operation, so the result is the same. With an odd s
+    // (the first passes, when no factor 2 came before) the scalar passes are used.
+    ///////////////////////////////////////////////////////////////////////////////
+
+#define OTFFT_MIXED_YMM 1
+
+    static inline ymm yconst(const double c) noexcept { return _mm256_set1_pd(c); }
+
+    template <int R> struct BflyY;
+
+    template <> struct BflyY<3> {
+        template <int DIR> static inline void apply(const ymm* x, ymm* r) noexcept
+        {
+            const ymm t1 = addpz2(x[1], x[2]);
+            const ymm a1 = addpz2(x[0], mulpd2(yconst(R3_C1), t1));
+            const ymm b1 = mulpd2(yconst(R3_S1), subpz2(x[1], x[2]));
+            r[0] = addpz2(x[0], t1);
+            if (DIR < 0) { r[1] = subpz2(a1, jxpz2(b1)); r[2] = addpz2(a1, jxpz2(b1)); }
+            else         { r[1] = addpz2(a1, jxpz2(b1)); r[2] = subpz2(a1, jxpz2(b1)); }
+        }
+    };
+
+    template <> struct BflyY<5> {
+        template <int DIR> static inline void apply(const ymm* x, ymm* r) noexcept
+        {
+            const ymm c1 = yconst(R5_C1), c2 = yconst(R5_C2), s1 = yconst(R5_S1), s2 = yconst(R5_S2);
+            const ymm t1 = addpz2(x[1], x[4]), d1 = subpz2(x[1], x[4]);
+            const ymm t2 = addpz2(x[2], x[3]), d2 = subpz2(x[2], x[3]);
+            r[0] = addpz2(x[0], addpz2(t1, t2));
+            const ymm a1 = addpz2(x[0], addpz2(mulpd2(c1, t1), mulpd2(c2, t2)));
+            const ymm a2 = addpz2(x[0], addpz2(mulpd2(c2, t1), mulpd2(c1, t2)));
+            const ymm b1 = addpz2(mulpd2(s1, d1), mulpd2(s2, d2));
+            const ymm b2 = subpz2(mulpd2(s2, d1), mulpd2(s1, d2));
+            if (DIR < 0) {
+                r[1] = subpz2(a1, jxpz2(b1)); r[4] = addpz2(a1, jxpz2(b1));
+                r[2] = subpz2(a2, jxpz2(b2)); r[3] = addpz2(a2, jxpz2(b2));
+            }
+            else {
+                r[1] = addpz2(a1, jxpz2(b1)); r[4] = subpz2(a1, jxpz2(b1));
+                r[2] = addpz2(a2, jxpz2(b2)); r[3] = subpz2(a2, jxpz2(b2));
+            }
+        }
+    };
+
+    template <> struct BflyY<7> {
+        template <int DIR> static inline void apply(const ymm* x, ymm* r) noexcept
+        {
+            const ymm c1 = yconst(R7_C1), c2 = yconst(R7_C2), c3 = yconst(R7_C3);
+            const ymm s1 = yconst(R7_S1), s2 = yconst(R7_S2), s3 = yconst(R7_S3);
+            const ymm t1 = addpz2(x[1], x[6]), d1 = subpz2(x[1], x[6]);
+            const ymm t2 = addpz2(x[2], x[5]), d2 = subpz2(x[2], x[5]);
+            const ymm t3 = addpz2(x[3], x[4]), d3 = subpz2(x[3], x[4]);
+            r[0] = addpz2(x[0], addpz2(t1, addpz2(t2, t3)));
+            const ymm a1 = addpz2(x[0], addpz2(mulpd2(c1, t1), addpz2(mulpd2(c2, t2), mulpd2(c3, t3))));
+            const ymm a2 = addpz2(x[0], addpz2(mulpd2(c2, t1), addpz2(mulpd2(c3, t2), mulpd2(c1, t3))));
+            const ymm a3 = addpz2(x[0], addpz2(mulpd2(c3, t1), addpz2(mulpd2(c1, t2), mulpd2(c2, t3))));
+            const ymm b1 = addpz2(mulpd2(s1, d1), addpz2(mulpd2(s2, d2), mulpd2(s3, d3)));
+            const ymm b2 = subpz2(subpz2(mulpd2(s2, d1), mulpd2(s3, d2)), mulpd2(s1, d3));
+            const ymm b3 = addpz2(subpz2(mulpd2(s3, d1), mulpd2(s1, d2)), mulpd2(s2, d3));
+            if (DIR < 0) {
+                r[1] = subpz2(a1, jxpz2(b1)); r[6] = addpz2(a1, jxpz2(b1));
+                r[2] = subpz2(a2, jxpz2(b2)); r[5] = addpz2(a2, jxpz2(b2));
+                r[3] = subpz2(a3, jxpz2(b3)); r[4] = addpz2(a3, jxpz2(b3));
+            }
+            else {
+                r[1] = addpz2(a1, jxpz2(b1)); r[6] = subpz2(a1, jxpz2(b1));
+                r[2] = addpz2(a2, jxpz2(b2)); r[5] = subpz2(a2, jxpz2(b2));
+                r[3] = addpz2(a3, jxpz2(b3)); r[4] = subpz2(a3, jxpz2(b3));
+            }
+        }
+    };
+
+    // One butterfly of two values of q: x and y index as in the scalar passes
+    // (x[q_sp + N1*k], y[q_sRp + s*k]); w[k] is the twiddle factor of output k.
+    template <int R, int DIR>
+    static inline void coreY(const int N1, const int s, const int q_sp, const int q_sRp, const ymm* w,
+                             complex_vector x, complex_vector y) noexcept
+    {
+        ymm a[R], r[R];
+        for (int k = 0; k < R; k++) a[k] = getpz2(x + (q_sp + N1*k));
+        BflyY<R>::template apply<DIR>(a, r);
+        setpz2(y + q_sRp, r[0]);
+        for (int k = 1; k < R; k++) setpz2(y + (q_sRp + s*k), mulpz2(r[k], w[k]));
+    }
+
+    template <int R, int DIR> static inline ymm twiddleY(const int N, const int k, const int sp,
+                                                        const_complex_vector W) noexcept
+    {
+        return duppz2(getpz(DIR < 0 ? W[k*sp] : W[N-k*sp]));
+    }
+
+    // Serial pass for an even s.
+    template <int R, int DIR>
+    static inline void corePassY(const int n, const int s,
+                                 complex_vector x, complex_vector y, const_complex_vector W) noexcept
+    {
+        const int N  = n*s;
+        const int N1 = N/R;
+        const int m  = n/R;
+        for (int p = 0; p < m; p++) {
+            const int sp = s*p;
+            ymm w[R];
+            for (int k = 1; k < R; k++) w[k] = twiddleY<R, DIR>(N, k, sp, W);
+            for (int q = 0; q < s; q += 2)
+                coreY<R, DIR>(N1, s, q + sp, q + sp*R, w, x, y);
+        }
+    }
+
+    // OpenMP pass for an even s: called by every thread of a parallel region.
+    template <int R, int DIR>
+    static inline void corePassYp(const int n, const int s,
+                                  complex_vector x, complex_vector y, const_complex_vector W) noexcept
+    {
+        const int N  = n*s;
+        const int N1 = N/R;
+        const int ms = N/R/2;
+#pragma omp for schedule(static)
+        for (int h = 0; h < ms; h++) {
+            const int i = 2*h;
+            const int p = i / s;
+            const int q = i % s;
+            const int sp = s*p;
+            ymm w[R];
+            for (int k = 1; k < R; k++) w[k] = twiddleY<R, DIR>(N, k, sp, W);
+            coreY<R, DIR>(N1, s, q + sp, q + sp*R, w, x, y);
+        }
+    }
+#endif // __AVX__
 
     ///////////////////////////////////////////////////////////////////////////////
     // Forward Butterfly Operation
@@ -460,6 +600,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void fwdcore5(const int n, const int s,
                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassY<5, -1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int N1 = N/5;
         const int m  = n/5;
@@ -499,6 +642,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void fwdcore3(const int n, const int s,
                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassY<3, -1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int N1 = N/3;
         const int m  = n/3;
@@ -528,13 +674,6 @@ constexpr int OMP_THRESHOLD = 1<<15;
     // (upper sign: forward, lower: inverse). That is 18 multiplications of a complex
     // number by a real constant instead of 36 complex multiplications.
     ///////////////////////////////////////////////////////////////////////////////
-
-    constexpr double R7_C1 =  0.62348980185873353053; // cos(2 pi / 7)
-    constexpr double R7_C2 = -0.22252093395631440429; // cos(4 pi / 7)
-    constexpr double R7_C3 = -0.90096886790241912624; // cos(6 pi / 7)
-    constexpr double R7_S1 =  0.78183148246802980871; // sin(2 pi / 7)
-    constexpr double R7_S2 =  0.97492791218182360702; // sin(4 pi / 7)
-    constexpr double R7_S3 =  0.43388373911755812048; // sin(6 pi / 7)
 
     // r[k] = k-th output; DIR = -1 forward, +1 inverse
     template <int DIR> static inline void bfly7(const xmm x0, const xmm x1, const xmm x2, const xmm x3,
@@ -586,6 +725,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void fwdcore7(const int n, const int s,
                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassY<7, -1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int m  = n/7;
         const int N1 = N/7;
@@ -1093,6 +1235,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void invcore5(const int n, const int s,
                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassY<5, 1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int N1 = N/5;
         const int m  = n/5;
@@ -1132,6 +1277,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void invcore3(const int n, const int s,
                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassY<3, 1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int N1 = N/3;
         const int m  = n/3;
@@ -1167,6 +1315,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void invcore7(const int n, const int s,
                   complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassY<7, 1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int m  = n/7;
         const int N1 = N/7;
@@ -1693,6 +1844,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void fwdcore5p(const int n, const int s,
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassYp<5, -1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int N1 = N/5;
         const int ms = N/5;
@@ -1734,6 +1888,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void fwdcore3p(const int n, const int s,
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassYp<3, -1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int N1 = N/3;
         const int ms = N/3;
@@ -1771,6 +1928,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void fwdcore7p(const int n, const int s,
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassYp<7, -1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int ms = N/7;
         const int N1 = N/7;
@@ -2303,6 +2463,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void invcore5p(const int n, const int s,
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassYp<5, 1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int N1 = N/5;
         const int ms = N/5;
@@ -2344,6 +2507,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void invcore3p(const int n, const int s,
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassYp<3, 1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int N1 = N/3;
         const int ms = N/3;
@@ -2381,6 +2547,9 @@ constexpr int OMP_THRESHOLD = 1<<15;
     void invcore7p(const int n, const int s,
                    complex_vector x, complex_vector y, const_complex_vector W) noexcept
     {
+#ifdef OTFFT_MIXED_YMM
+        if ((s & 1) == 0) { corePassYp<7, 1>(n, s, x, y, W); return; }
+#endif
         const int N  = n*s;
         const int ms = N/7;
         const int N1 = N/7;

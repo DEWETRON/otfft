@@ -72,6 +72,13 @@ Rules
     region around the whole step from 2^19 (D20). (`otfft_sixstep_test:
     TestSixStepOneThread, TestSixStepThreeThreads, TestSixStepEightThreads`; with 3 and 8
     threads the eight sections and the guided chunks split unevenly.)
+*   **CFFT-14** `[done]` In the AVX and AVX2 backends the radix-3, 5 and 7 core passes of the
+    mixed radix code (a factor 3, 5 or 7 that is not the last one) work on two values of q at
+    once when s is even, forward and inverse, serial and OpenMP (N >= 2^15), and give the same
+    result as the Bluestein transform of the same length, at every point. With an odd s (no
+    factor 2 before) and in the SSE2 backend the scalar passes are used. (D28.)
+    (`otfft_mixed_avx_test: TestAvxPassesSerial, TestAvxPassesOddS,
+    TestAvxPassesAboveOpenMpThreshold`)
 *   **CFFT-6** `[built]` No leaks or out-of-bounds access for lengths up to 2^24.
     (`TestValgrind` exists, but is compiled only with
     `VALGRIND_MEM_LEAK_DETECTION`, which CI does not set.)
