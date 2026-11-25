@@ -26,6 +26,10 @@ Rules
     overflow limit of issue #16. Right: as fast as the complex FFT.
     (`otfft_prime_test: TestRealPrimeHalfLengthAboveIntOverflow` checks the
     result only.) The DCT does the same.
+*   **RFFT-7** `[done]` The loops around the complex FFT run on one thread below N = 2^20 whatever
+    the thread count, and on several threads from there on (the complex FFT of length N/2 has its own
+    thresholds, CFFT-11). The result does not depend on the thread count and matches the complex FFT
+    of the same data in a sample of the bins. (D30.) (`otfft_omp_threshold_test: TestRealFftAroundThreshold`)
 
 Seen in upstream
 ----------------

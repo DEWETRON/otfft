@@ -59,9 +59,12 @@ Milestone 1b: Fixes and speed found by the benchmarks
     [#19](https://github.com/DEWETRON/otfft/issues/19)).
     Done: the first part (D17): per-class thresholds at the measured break-even and
     the serial table below 2^15 with several threads (N=16,384 with 4 and 8
-    threads on the Intel notebook: from a collapse to the 1-thread speed). Still
-    open: thresholds of the eight-step, mixed radix, real FFT, DCT and
-    Bluestein code, and a check on the Ryzen with the changed library. Scaling
+    threads on the Intel notebook: from a collapse to the 1-thread speed). Thresholds of the mixed radix code (2^19), the real FFT and the DCT (2^20) at the measured
+    break-even on the Ryzen 9 3900X (D30): the loss with 12 threads of 0.45x to 0.8x between 2^15 and
+    2^18 is gone. Bluestein and the power-of-two classes were checked on the Ryzen with the changed
+    library and show no loss (one length, Bluestein N = 32,771, 0.91x with 12 threads). Still open: the eight-step thresholds (only reachable from 2^15 through the
+    factory, no loss seen), two threads at 2^18 (SixStep 0.83x), and a run on the Intel notebook
+    and the 9950X. Scaling
     above the break-even improved for the lengths where the table uses SixStep
     (R1.10: SixStep 1.5x to 2.5x faster from 2^19, N = 4,194,304 with 8 threads
     1.19x complex, 1.82x real); the table still picks SixStep where DIF8 is

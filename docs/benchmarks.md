@@ -2507,3 +2507,113 @@ from the earlier table by up to 3% (N = 10,080: 23,180 against 22,753) between t
 Raw results: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/fftw-after-avx-passes/`
 (`otfft-rN.csv`, `fftw-rN.csv`, logs, `load.txt`).
 
+OpenMP break-even of the mixed radix code, the real FFT and the DCT (R1.6, issue #19, D30)
+------------------------------------------------------------------------------------------
+
+Question left open by D17: where do threads start to pay off for the code that D17 did not change
+(mixed radix, real FFT, DCT, Bluestein)? Measured on 2026-11-25 on the Ryzen 9 3900X (12 cores, 24
+threads, one NUMA node), GCC 15.2.0, Release, AVX2, `schedutil` governor, threads not pinned,
+library at `1929f76` (before) and with the thresholds of D30 (after).
+
+Method: `thr.cpp` (`docs/benchmark-data/2026-11-25-ryzen3900x-linux/omp-thresholds/`) uses the public
+API only. For each kind, length and thread count it sets `omp_set_num_threads`, makes the plan,
+and times `fwd0` (median of 11 batches of at least 4 ms), for **four plans** per thread count with the
+addresses of the buffers shifted by a dummy allocation; the best of the four is used. The thread
+counts are 1, 2, 4 and 12 (`sweep2.txt` before, `sweep3.txt` after; the table below is 12 threads, 2 and 4
+threads give a similar picture, see the sweep files). A first sweep without the four plans (`sweep-r1.txt`, `sweep-r2.txt`)
+showed why they are needed.
+
+**The speed depends on where the buffers are.** The same mixed radix transform of N = 15,360 took 72
+us with one placement of the buffers and 44 us with another, N = 30,720 167 us and 119 us, with one
+thread and no threading code involved (below 2^15). Over four placements the worst/best ratio of
+the one-thread time was up to 2.0 (N = 98,304, 3 * 2^15), typically 1.2 to 1.5 for the mixed radix
+code, 1.0 to 1.4 for the real FFT, DCT and Bluestein (`spread` in the sweep files). It is the same
+machine and the same code, so it is not NUMA (one node), and the cause was not isolated; 4 KB
+aliasing between the input and the work buffer would fit but is **not shown**. This also means
+that single numbers of this document that compare two binaries are only comparable when both run
+the same allocation sequence, as the D28 and D29 comparisons did.
+
+**Mixed radix, N = 15 * 2^k** (12 threads; time in us for one forward transform; "1 thread" is the best of 4 placements of the run before the change)
+
+| N | 1 thread | 12 threads before | 12 threads after | After over 1 thread | Before over 1 thread |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 30,720 | 121.7 | 123.3 | 123.2 | 0.99x | 0.99x |
+| 61,440 | 284.7 | 491.6 | 256.7 | 1.11x | 0.58x |
+| 122,880 | 639.5 | 1,012.5 | 484.5 | 1.32x | 0.63x |
+| 245,760 | 1,212.7 | 1,965.2 | 955.5 | 1.27x | 0.62x |
+| 491,520 | 3,599.9 | 3,828.0 | 3,659.0 | 0.98x | 0.94x |
+| 983,040 | 16,454.5 | 9,536.7 | 9,328.8 | 1.76x | 1.73x |
+| 1,966,080 | 35,489.3 | 23,014.2 | 23,851.7 | 1.49x | 1.54x |
+
+**Mixed radix, N = 3 * 2^k** (12 threads; time in us for one forward transform; "1 thread" is the best of 4 placements of the run before the change)
+
+| N | 1 thread | 12 threads before | 12 threads after | After over 1 thread | Before over 1 thread |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 24,576 | 81.2 | 80.6 | 80.0 | 1.02x | 1.01x |
+| 49,152 | 213.8 | 410.3 | 177.3 | 1.21x | 0.52x |
+| 98,304 | 438.1 | 745.9 | 443.6 | 0.99x | 0.59x |
+| 196,608 | 1,021.5 | 1,618.0 | 934.0 | 1.09x | 0.63x |
+| 393,216 | 2,384.6 | 3,154.0 | 2,200.4 | 1.08x | 0.76x |
+| 786,432 | 10,725.1 | 5,936.9 | 5,929.1 | 1.81x | 1.81x |
+| 1,572,864 | 27,937.4 | 16,575.7 | 15,451.0 | 1.81x | 1.69x |
+
+**Real FFT, N = 2^k** (12 threads; time in us for one forward transform; "1 thread" is the best of 4 placements of the run before the change)
+
+| N | 1 thread | 12 threads before | 12 threads after | After over 1 thread | Before over 1 thread |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 16,384 | 31.5 | 31.5 | 29.3 | 1.08x | 1.00x |
+| 32,768 | 86.1 | 148.4 | 61.2 | 1.41x | 0.58x |
+| 65,536 | 179.0 | 282.7 | 149.6 | 1.20x | 0.63x |
+| 131,072 | 307.3 | 675.8 | 274.7 | 1.12x | 0.45x |
+| 262,144 | 925.6 | 1,158.4 | 639.9 | 1.45x | 0.80x |
+| 524,288 | 2,394.9 | 2,364.1 | 2,355.7 | 1.02x | 1.01x |
+| 1,048,576 | 7,303.6 | 5,834.0 | 6,255.1 | 1.17x | 1.25x |
+| 2,097,152 | 21,528.3 | 9,108.3 | 8,911.8 | 2.42x | 2.36x |
+| 4,194,304 | 44,492.0 | 24,596.2 | 25,052.3 | 1.78x | 1.81x |
+
+**DCT, N = 2^k** (12 threads; time in us for one forward transform; "1 thread" is the best of 4 placements of the run before the change)
+
+| N | 1 thread | 12 threads before | 12 threads after | After over 1 thread | Before over 1 thread |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 16,384 | 44.0 | 42.2 | 39.7 | 1.11x | 1.04x |
+| 32,768 | 92.0 | 197.5 | 81.9 | 1.12x | 0.47x |
+| 65,536 | 192.3 | 381.9 | 196.1 | 0.98x | 0.50x |
+| 131,072 | 379.5 | 744.0 | 369.6 | 1.03x | 0.51x |
+| 262,144 | 1,085.2 | 1,561.7 | 1,036.4 | 1.05x | 0.69x |
+| 524,288 | 3,511.5 | 3,101.9 | 3,316.1 | 1.06x | 1.13x |
+| 1,048,576 | 10,577.8 | 7,458.1 | 7,331.9 | 1.44x | 1.42x |
+| 2,097,152 | 26,553.4 | 14,680.9 | 14,568.3 | 1.82x | 1.81x |
+| 4,194,304 | 58,727.7 | 36,197.5 | 36,461.9 | 1.61x | 1.62x |
+
+What this shows (12 threads):
+
+*   **Mixed radix: threads lose from 2^15 to about 400,000 and win from about 800,000.** With the old
+    threshold 2^15, N = 61,440 took 492 us with 12 threads against 285 us with one (0.58x), N = 49,152 0.52x,
+    N = 393,216 0.76x. At N = 491,520 it is 0.94x, at N = 786,432 1.81x and at 983,040 1.73x. The new
+    threshold 2^19 puts the break-even between the two.
+*   **Real FFT and DCT: the loss is 0.45x to 0.8x from 2^15 to 2^18, break-even at 2^19 to 2^20.**
+    N = 131,072: real 676 us with 12 threads against 307 us with one (0.45x), DCT 0.51x. The loops
+    around the complex FFT (OMP_THRESHOLD 2^15) were threaded far below the length where it pays off; with
+    2^20 the 12-thread time is the one-thread time (1.0x to 1.1x) up to 2^19 and the gain from 2^20
+    (1.4x to 2.4x) is unchanged. At N = 2^19 the DCT with 12 threads is 7% slower with the new
+    threshold (3,316 us against 3,102 us; the real FFT 2,356 against 2,364 us).
+*   **Not changed**: Bluestein (gains from N = 65,537 on, 1.6x to 2.6x with 12 threads; at N = 32,771 12 threads give
+    0.91x and 2 threads 1.45x, one length), the power-of-two complex FFT (control: 0.95x to 1.06x at 2^14
+    to 2^16 as D17 intended, 1.3x to 3.3x from 2^18 with 4 and 12 threads; 2^17 shows 1.6x for every thread count, which is a placement effect of the one-thread run) and the eight-step code (reached by the factory only from
+    2^15 and measured as part of the power-of-two control).
+*   **Two threads**: at N = 2^18 the power-of-two FFT is 0.83x with 2 threads (SixStep) and 1.3x
+    with 4 and 12; the real FFT of N = 2^19 (complex FFT of 2^18) is 0.75x with 2 threads
+    after the change (4 threads 0.94x). The threaded table is not per thread count (D14).
+
+Limits: one CPU, one compiler, AVX2, threads not pinned (the 3900X has four L3 groups, which can
+change the scaling between 4 and 12 threads), the "1 thread" column of each run is its own best of 4
+placements and moved by up to 40% between the two sweeps for the same length (placement, load average 1
+to 4 during the runs: the sweeps load all cores themselves), so the 12-thread columns are compared
+in absolute time and the ratios use the "before" one-thread time. The Intel notebook was not run; D17 found
+a break-even of the same class that differed by up to 2^4 between two CPUs, so the values are the
+ones of this CPU and a compromise only in the sense that they lose nothing on it. The eight-step thresholds
+and the Bluestein thresholds were not changed.
+
+Raw results: `docs/benchmark-data/2026-11-25-ryzen3900x-linux/omp-thresholds/` (`thr.cpp`, `sweep*.sh`,
+`sweep-r1.txt`, `sweep-r2.txt`, `sweep2.txt` before, `sweep3.txt` after, `load*.txt`).
+

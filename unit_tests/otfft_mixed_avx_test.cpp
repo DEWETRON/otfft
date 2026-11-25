@@ -1,6 +1,6 @@
 // The AVX passes of the mixed radix code (roadmap R1.5, decisions D28 and D29): the radix-3, 5 and 7
 // core passes work on two values of q at once when s is even, forward and inverse, serial
-// (N < 2^15) and OpenMP (N >= 2^15). Every point of the result is compared with the
+// (N < 2^19, D30) and OpenMP (N >= 2^19). Every point of the result is compared with the
 // Bluestein transform of the same length, which does not use these passes, for lengths where
 // a factor 3, 5 or 7 comes after a factor 2 (so that s is even in that pass, and the pass is
 // not the last one). The first pass (s = 1) of radix 8 and radix 4 works on two values of p at
@@ -92,14 +92,28 @@ TEST_CASE("TestAvxPassesOddS")
     }
 }
 
-TEST_CASE("TestAvxPassesAboveOpenMpThreshold")
+TEST_CASE("TestAvxPassesMediumLengths")
 {
-    // N >= 2^15 runs the OpenMP versions of the passes, with one thread and with several
+    // 2^15 <= N < 2^19: serial since D30, also with several threads
     for (int threads : {1, 4})
     {
         ThreadCount count(threads);
         CAPTURE(threads);
         for (int n : {4096 * 9, 4096 * 15, 2048 * 25, 2048 * 21, 1024 * 35, 1024 * 49, 512 * 105, 2048 * 45, 1024 * 75})
+        {
+            checkAgainstBluestein(n);
+        }
+    }
+}
+
+TEST_CASE("TestAvxPassesAboveOpenMpThreshold")
+{
+    // N >= 2^19 runs the OpenMP versions of the passes, with one thread and with several
+    for (int threads : {1, 4})
+    {
+        ThreadCount count(threads);
+        CAPTURE(threads);
+        for (int n : {65536 * 9, 32768 * 21, 32768 * 25, 16384 * 45, 8192 * 105, 16384 * 75})
         {
             checkAgainstBluestein(n);
         }
@@ -117,14 +131,28 @@ TEST_CASE("TestAvxFirstPassSerial")
     }
 }
 
-TEST_CASE("TestAvxFirstPassAboveOpenMpThreshold")
+TEST_CASE("TestAvxFirstPassMediumLengths")
 {
-    // N >= 2^15 runs the OpenMP versions: m odd and even, with one thread and with several
+    // 2^15 <= N < 2^19: serial since D30, m odd and even
     for (int threads : {1, 4})
     {
         ThreadCount count(threads);
         CAPTURE(threads);
         for (int n : {8 * 4725, 3 * 32768, 8 * 5 * 5 * 5 * 5 * 7, 4 * 10125, 4 * 8505, 4 * 3 * 3 * 3 * 5 * 7 * 5 * 7 * 7})
+        {
+            checkAgainstBluestein(n);
+        }
+    }
+}
+
+TEST_CASE("TestAvxFirstPassAboveOpenMpThreshold")
+{
+    // N >= 2^19 runs the OpenMP versions: m odd and even, with one thread and with several
+    for (int threads : {1, 4})
+    {
+        ThreadCount count(threads);
+        CAPTURE(threads);
+        for (int n : {8 * 65625, 3 * 524288, 4 * 212625, 529200})
         {
             checkAgainstBluestein(n);
         }

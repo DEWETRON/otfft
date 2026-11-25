@@ -524,3 +524,28 @@ D29: AVX version of the first pass (s = 1) of radix 8 and 4 of the mixed radix c
     four functions is changed (a changed add/sub in the first output of each, checked by hand).
 *   **Revisit when:** the end passes or the odd-`s` passes are vectorised, or AVX-512 is added.
 
+D30: OpenMP thresholds of the mixed radix code, the real FFT and the DCT
+------------------------------------------------------------------------
+*   **What:** `OMP_THRESHOLD` of the mixed radix code (`src/otfft_mixedradix.h`) is 2^19 (was 2^15),
+    `OMP_THRESHOLD` of `RFFT` and `DCT0` (`src/otfft_base.h`) is 2^20 (was 2^15). The weight tables keep
+    their thresholds (`OMP_THRESHOLD_W`), Bluestein is unchanged. Below the threshold the transform runs
+    on one thread whatever the thread count. Roadmap R1.6, issue #19, spec CFFT-15, RFFT-7, DCT-6.
+*   **Why:** with 12 threads on the Ryzen 9 3900X the mixed radix transform was 0.52x to 0.76x of the
+    one-thread speed from 2^15 to about 400,000, and the real FFT and the DCT 0.45x to 0.8x from 2^15
+    to 2^18 (`docs/benchmarks.md`, "OpenMP break-even of the mixed radix code, the real FFT and the DCT").
+    With the new values the 12-thread time at these lengths is the time of the serial code (0.98x to 1.45x of the
+    best one-thread time of the first sweep; the code is serial, so the differences are the placement
+    of the buffers), and above them the gains are as before (mixed radix 1.5x to
+    1.8x from N = 786,432, real FFT 1.2x to 2.4x, DCT 1.4x to 1.8x from 2^20).
+*   **Rejected:** a threshold per thread count or CPU (D17: the break-even of one class changed by
+    2^4 between two CPUs, and the plan does not know the CPU); 2^19 for the real FFT and the DCT (the real
+    FFT is neutral there; the DCT with the old threshold at 2^19 was 1.13x with 12 threads and 0.86x with 2);
+    raising the thresholds of Bluestein and the power-of-two classes (no loss measured).
+*   **Limit:** one CPU, one compiler. The Intel notebook and the 9950X were not measured; the values may
+    cost a gain there where the break-even is lower. At N = 2^19 the DCT with 12 threads is 7% slower than
+    with the old threshold; with 2 threads the real FFT of N = 2^19 is 0.75x of one thread because of
+    the SixStep class at 2^18 (not changed here). The tests that exercised the OpenMP versions of the mixed
+    radix passes at N >= 2^15 now use lengths from 2^19 (the older lengths stay as serial tests).
+*   **Revisit when:** another CPU gives a different break-even, or the threaded table is retuned per thread
+    count (R1.8).
+

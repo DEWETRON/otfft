@@ -19,6 +19,7 @@ set(UNIT_TEST_SOURCES
   otfft_dct_test.cpp
   otfft_exp_test.cpp
   otfft_mixed_avx_test.cpp
+  otfft_omp_threshold_test.cpp
   otfft_find_peak_test.cpp
   otfft_optimization_test.cpp
   otfft_prime_test.cpp

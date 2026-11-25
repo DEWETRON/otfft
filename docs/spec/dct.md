@@ -15,6 +15,10 @@ Rules
     `inv`, `inv0` do not; `invn` scales by 1/N. There is no unitary variant.
 *   **DCT-5** `[done]` Matches a reference implementation on the optimisation
     test data. (`otfft_optimization_test: TestDCT`)
+*   **DCT-6** `[done]` The loops around the real FFT run on one thread below N = 2^20 whatever the
+    thread count, and on several threads from there on. The result does not depend on the thread
+    count, and `invn` after `fwd0` gives back the input. (D30.)
+    (`otfft_omp_threshold_test: TestDctAroundThreshold`)
 
 Seen in upstream
 ----------------

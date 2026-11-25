@@ -21,7 +21,7 @@ namespace OTFFT_MixedRadix { //////////////////////////////////////////////////
 #ifdef DO_SINGLE_THREAD
 constexpr int OMP_THRESHOLD = 1<<30;
 #else
-constexpr int OMP_THRESHOLD = 1<<15;
+constexpr int OMP_THRESHOLD = 1<<19;
 #endif
 
     struct cpx {
