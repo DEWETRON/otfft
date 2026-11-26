@@ -1,0 +1,5 @@
+library,kind,category,n,threads,median_ns,min_ns,mflops,plan_us,rel_error,scale,status
+FFTW-measure,complex,pow2,65536,16,32202.1,32050.1,162811.5,520851.9,4.23e-16,1,ok
+FFTW-measure,complex,pow2,262144,16,170494.6,168083.6,138379.5,1699949.7,4.8e-16,1,ok
+FFTW-measure,complex,pow2,1048576,16,580645.8,576608.0,180587.9,1041248.3,4.63e-16,1,ok
+FFTW-measure,complex,pow2,4194304,16,6020954.0,5967623.0,76628.0,5065301.2,5.09e-16,1,ok
