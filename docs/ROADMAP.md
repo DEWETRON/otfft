@@ -163,10 +163,12 @@ Milestone 2: Platforms
     system state, `OPTIMIZED_FFT_AVX512` (explicit only, never `AUTO`), the `avx512` name in tuning
     files, and tests; built and tested with GCC on a CPU **without** AVX-512. Still open: the 512-bit
     kernels (upstream 11.6e has none, only helper functions in `otfft_misc.h`), the decision whether `AUTO` may choose it (frequency effects on some Intel CPUs), the Clang and
-    MSVC builds, and `ffttune` and `otfft_bench` support for the backend.
-    Run on the Ryzen 9 9950X (2026-11-26): FAC-15 passes (all 79 test cases) and the backend is as
-    fast as AVX2 within about 15% at 16 lengths, one thread (section "AVX-512 backend on the Ryzen 9
-    9950X" of `docs/benchmarks.md`); a benchmark with `otfft_bench` and more than one thread is still open.
+    MSVC builds, and `ffttune` support for the backend.
+    Run on the Ryzen 9 9950X (2026-11-26): FAC-15 passes (all 79 test cases). `otfft_bench` has the
+    backend (`OTFFT-avx512`): on one thread it is a median 3% faster than AVX2 over 51 cases (up to
+    20% at 2^18 and above), with 16 threads there is no difference, and FFTW with 16 threads is 2.3x to
+    4.3x faster than both at large powers of two (section "AVX-512 backend against AVX2 and FFTW" of
+    `docs/benchmarks.md`).
 *   [ ] **R2.2** Support ARM64 (NEON), including a CI job and the same
     run-time backend choice.
 

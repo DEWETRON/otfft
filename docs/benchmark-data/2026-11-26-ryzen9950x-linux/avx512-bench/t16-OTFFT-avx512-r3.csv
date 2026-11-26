@@ -1,0 +1,5 @@
+library,kind,category,n,threads,median_ns,min_ns,mflops,plan_us,rel_error,scale,status
+OTFFT-avx512,complex,pow2,65536,16,146252.2,144228.4,35848.2,618.3,6.34e-16,1,ok
+OTFFT-avx512,complex,pow2,262144,16,425017.6,412087.2,55510.5,778.6,7e-16,1,ok
+OTFFT-avx512,complex,pow2,1048576,16,2008347.0,1884873.0,52210.9,4296.9,8.09e-16,1,ok
+OTFFT-avx512,complex,pow2,4194304,16,16892429.0,16404474.0,27312.4,22567.7,8.18e-16,1,ok

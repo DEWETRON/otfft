@@ -605,7 +605,9 @@ D32: an opt-in AVX-512 backend, built from the AVX2 code, never chosen automatic
     GCC and Clang, and fails if the two disagree on such a CPU).
 *   **Update 2026-11-26:** the run on a Ryzen 9 9950X exists (GCC 15.2): the whole suite passes, the CPUID
     detection and `__builtin_cpu_supports` agree, and the speed is that of AVX2 within about 15%
-    (`docs/benchmarks.md`). FAC-15 is `[done]`. The limits above that concern Clang, MSVC and Intel CPUs stand.
+    (`docs/benchmarks.md`). FAC-15 is `[done]`. The pinned `otfft_bench` run of the same day (`OTFFT-avx512`) shows
+    it a median 3% faster than AVX2 on one thread (up to 20% from 2^18) and equal with 16 threads; that is
+    not yet a reason to let `AUTO` choose it. The limits above that concern Clang, MSVC and Intel CPUs stand.
 *   **Revisit when:** a run on AVX-512 hardware exists (then FAC-15 can become `[done]` and `AUTO` can be
     decided), or the 512-bit kernels are written.
 

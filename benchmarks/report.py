@@ -11,7 +11,7 @@ import sys
 from collections import defaultdict
 
 MAIN = ["OTFFT", "FFTW-measure", "FFTW-estimate", "PocketFFT", "KissFFT"]
-BACKENDS = ["OTFFT-sse2", "OTFFT-avx", "OTFFT-avx2", "OTFFT"]
+BACKENDS = ["OTFFT-sse2", "OTFFT-avx", "OTFFT-avx2", "OTFFT-avx512", "OTFFT"]
 
 
 def load(path):

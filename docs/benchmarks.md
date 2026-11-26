@@ -2762,3 +2762,55 @@ Limits: one CPU, one compiler (GCC), one thread, forward complex FFT and Blueste
 inverse and the OpenMP code were not timed; `otfft_bench` cannot select this backend yet, so there is no
 comparison with FFTW; the repeated run used a program that is not in the repository. `AUTO` must not choose
 the backend on this evidence (D32).
+
+AVX-512 backend against AVX2 and FFTW
+-------------------------------------
+
+The measurement that the section "AVX-512 backend on the Ryzen 9 9950X" lacked: `otfft_bench` now has the library
+`OTFFT-avx512` (built with `-DOTFFT_WITH_AVX512=ON`; skipped with a message on a CPU that cannot run it).
+Data: `docs/benchmark-data/2026-11-26-ryzen9950x-linux/avx512-bench/` (`summary.txt` is the output of `summarize.py`).
+
+| | |
+|---|---|
+| CPU | AMD Ryzen 9 9950X, `performance` governor, load average 1.0 to 2.8 at the start of each round (`load.txt`) |
+| Software | Ubuntu 26.04, GCC 15.2, commit a21e79e plus the benchmark change, FFTW 3.3.10 (distribution package, `FFTW_MEASURE`) |
+| One thread | `otfft_bench --kinds complex,real,dct --sizes pow2,smooth,prime --lib NAME --threads 1`, pinned to one core, `OTFFT-avx2`, `OTFFT-avx512` and `FFTW-measure` run one after the other, 3 rounds, median of the 3 medians |
+| 16 threads | `--kinds complex --sizes pow2 --min-n 65536 --threads 16`, not pinned, 3 rounds, the same way |
+
+One thread, 51 cases (complex, real, DCT; powers of two, smooth lengths, primes): time of AVX-512 over AVX2 has a
+median of 0.97 and ranges from 0.77 to 1.06; AVX-512 is more than 2% faster in 33 cases and more than 2% slower in
+2. The rounds of one case differ by 0 to 6% (one case, complex N = 100,000, by 18%). Sizes from 2^18 up and the
+Bluestein length gain most:
+
+| Case | AVX2 us | AVX-512 us | AVX-512 over AVX2 | FFTW us |
+|---|---|---|---|---|
+| complex 262,144 | 907 | 733 | 0.81 | 646 |
+| complex 1,048,576 | 5,288 | 4,458 | 0.84 | 5,455 |
+| complex 100,003 (prime) | 3,023 | 2,502 | 0.83 | 1,342 |
+| real 1,048,576 | 2,402 | 1,937 | 0.81 | 1,719 |
+| DCT 262,144 | 566 | 451 | 0.80 | 1,065 |
+| complex 4,096 | 4.8 | 4.5 | 0.93 | 4.5 |
+| complex 1,024 | 0.8 | 0.9 | 1.06 | 0.8 |
+
+Against FFTW, one thread: OTFFT time over FFTW has a median of 1.00 for AVX-512 and 1.06 for AVX2 over all 51 cases.
+The DCT is 0.2x to 0.7x of FFTW's time with both; the complex FFT is mostly 1.0x to 1.3x, 1.6x to 2.2x for the primes
+10,007 and 100,003.
+
+16 threads, complex, powers of two from 65,536: AVX-512 over AVX2 is 0.96 to 1.00, no difference. FFTW is 2.3x to 4.3x
+faster than both (N = 65,536: 148 against 35 us; 262,144: 430 against 189; 1,048,576: 2,008 against 588; 4,194,304:
+17,105 against 6,021).
+
+What this shows:
+
+*   **On one thread the AVX-512 backend is a little faster than AVX2, up to about 20% from N = 2^18, though it has no
+    512-bit kernels.** The earlier ad-hoc timing (section "AVX-512 backend on the Ryzen 9 9950X": ratios from 0.82 to 1.14,
+    unstable) was not pinned and used one round; with a pinned core and three rounds the ratios are steady. Why it is
+    faster was not checked; one possibility is that the compiler uses the 32 vector registers of AVX-512VL and spills
+    less, which would show most in the large passes.
+*   **With 16 threads the gain disappears**: the time there is set by memory and the threading, not by the kernels.
+*   **FFTW is far ahead with 16 threads** (2.3x to 4.3x), as in the comparison of 2026-11-26 with the AVX2 backend.
+
+Limits: one CPU and one compiler (GCC); AVX-512 here is the 256-bit AVX2 code compiled with AVX-512VL; whether the
+gain survives other CPUs (Intel clocks down under 512-bit load, but no 512-bit instructions are used here) is
+unknown; the 16-thread rounds were not pinned and the machine was not idle; the forward transform only. `AUTO` still
+must not choose the backend (D32): a 3% median gain on one CPU is not enough, and a decision needs Intel hardware.

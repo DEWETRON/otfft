@@ -36,6 +36,7 @@
 #include <memory>
 #include <random>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -731,6 +732,18 @@ std::vector<std::unique_ptr<Adapter>> makeAdapters(const Options& o)
 #endif
 #ifdef OTFFT_WITH_AVX2
     a.emplace_back(new OtfftAdapter("OTFFT-avx2", OTFFT::OptimizationType::OPTIMIZED_FFT_AVX2, false, true));
+#endif
+#ifdef OTFFT_WITH_AVX512
+    // never chosen by OPTIMIZED_FFT_AUTO (D32); the library throws std::domain_error if the CPU cannot run it
+    try
+    {
+        OTFFT::Factory::createComplexFFT(16, OTFFT::OptimizationType::OPTIMIZED_FFT_AVX512);
+        a.emplace_back(new OtfftAdapter("OTFFT-avx512", OTFFT::OptimizationType::OPTIMIZED_FFT_AVX512, false, true));
+    }
+    catch (const std::domain_error& e)
+    {
+        std::fprintf(stderr, "OTFFT-avx512 skipped: %s\n", e.what());
+    }
 #endif
     a.emplace_back(new OtfftAdapter("OTFFT-bluestein", OTFFT::OptimizationType::OPTIMIZED_FFT_AUTO, true, true));
 #endif
