@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """Turn otfft_bench CSV files into Markdown tables.
 
-usage: report.py bench-t1.csv [bench-t12.csv ...] > tables.md
+usage: report.py [--no-copy] bench-t1.csv [bench-t12.csv ...] > tables.md
 
 Each table shows equivalent MFLOPS (higher is better; 5 N log2 N for complex,
 2.5 N log2 N for real and DCT). The best library per row is in bold.
+
+OTFFT transforms complex and DCT data in place, so its timed run starts with a copy of the
+input that the other libraries do not need. The column copy_ns of the CSV file holds the time
+of that copy; --no-copy takes it off the time of OTFFT (use it for a user who accepts that
+the input is overwritten). Files from older versions have no such column and are not changed.
 """
 import csv
 import sys
@@ -14,10 +19,18 @@ MAIN = ["OTFFT", "FFTW-measure", "FFTW-estimate", "PocketFFT", "KissFFT"]
 BACKENDS = ["OTFFT-sse2", "OTFFT-avx", "OTFFT-avx2", "OTFFT-avx512", "OTFFT"]
 
 
+NO_COPY = False
+
+
 def load(path):
     rows = []
     with open(path, newline="") as f:
         for r in csv.DictReader(f):
+            copy = float(r.get("copy_ns") or 0)
+            if NO_COPY and copy > 0 and r["status"] == "ok":
+                med = float(r["median_ns"])
+                r["mflops"] = str(float(r["mflops"]) * med / (med - copy))
+                r["median_ns"] = str(med - copy)
             rows.append(r)
     return rows
 
@@ -120,6 +133,10 @@ def main(paths):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    args = sys.argv[1:]
+    if "--no-copy" in args:
+        NO_COPY = True
+        args.remove("--no-copy")
+    if not args:
         sys.exit(__doc__)
-    main(sys.argv[1:])
+    main(args)

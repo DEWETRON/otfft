@@ -142,6 +142,11 @@ public:
     virtual void load(const double* in) = 0;
     // One transform of the loaded input.
     virtual void run() = 0;
+    // True if run() starts with a copy of the input that the other libraries do not need (OTFFT
+    // transforms complex and DCT data in place); runCopyOnly() then does just that copy, so the
+    // harness can report its time (column copy_ns) next to the time of run().
+    virtual bool hasCopy() const { return false; }
+    virtual void runCopyOnly() {}
     // Copy the output out. `out` has outputDoubles() values.
     virtual void result(double* out) = 0;
     // Number of threads the library actually uses with the requested count.
@@ -237,6 +242,13 @@ public:
             m_dct->fwd0(m_work.get());
             break;
         }
+    }
+
+    bool hasCopy() const override { return m_kind == Kind::Complex || m_kind == Kind::DCT; }
+
+    void runCopyOnly() override
+    {
+        std::memcpy(m_work.get(), m_in.get(), (m_kind == Kind::Complex ? 2 * m_n : m_n) * sizeof(double));
     }
 
     void result(double* out) override
@@ -949,7 +961,7 @@ int main(int argc, char** argv)
             return 1;
         }
     }
-    std::fprintf(csv, "library,kind,category,n,threads,median_ns,min_ns,mflops,plan_us,rel_error,scale,status\n");
+    std::fprintf(csv, "library,kind,category,n,threads,median_ns,min_ns,mflops,plan_us,rel_error,scale,status,copy_ns\n");
 
     auto adapters = makeAdapters(o);
     PocketAdapter* reference = nullptr;
@@ -1024,7 +1036,7 @@ int main(int argc, char** argv)
 
                 if (!valid || !scaleOk)
                 {
-                    std::fprintf(csv, "%s,%s,%s,%zu,%d,,,,%.1f,%.3g,%.6g,invalid\n", a->name().c_str(),
+                    std::fprintf(csv, "%s,%s,%s,%zu,%d,,,,%.1f,%.3g,%.6g,invalid,\n", a->name().c_str(),
                                  kindName(kind), sz.category.c_str(), n, a->effectiveThreads(o.threads),
                                  planUs, err, scale);
                     std::fflush(csv);
@@ -1038,7 +1050,7 @@ int main(int argc, char** argv)
                 const double oneRunNs = nowNs() - w0;
                 if (oneRunNs > o.maxRunMs * 1e6)
                 {
-                    std::fprintf(csv, "%s,%s,%s,%zu,%d,,,,%.1f,%.3g,%.6g,too_slow\n", a->name().c_str(),
+                    std::fprintf(csv, "%s,%s,%s,%zu,%d,,,,%.1f,%.3g,%.6g,too_slow,\n", a->name().c_str(),
                                  kindName(kind), sz.category.c_str(), n, a->effectiveThreads(o.threads),
                                  planUs, err, scale);
                     std::fflush(csv);
@@ -1081,9 +1093,26 @@ int main(int argc, char** argv)
                 const double mn = *std::min_element(perRun.begin(), perRun.end());
                 const double mflops = equivalentFlops(kind, n) / med * 1e3;
 
-                std::fprintf(csv, "%s,%s,%s,%zu,%d,%.1f,%.1f,%.1f,%.1f,%.3g,%.6g,ok\n", a->name().c_str(),
+                // the time of the input copy inside run(), measured the same way (0 if there is none)
+                double copyNs = 0.0;
+                if (a->hasCopy())
+                {
+                    std::vector<double> copyRuns;
+                    for (int s = 0; s < samples; ++s)
+                    {
+                        const double t0 = nowNs();
+                        for (std::size_t r = 0; r < reps; ++r)
+                        {
+                            a->runCopyOnly();
+                        }
+                        copyRuns.push_back((nowNs() - t0) / static_cast<double>(reps));
+                    }
+                    copyNs = median(copyRuns);
+                }
+
+                std::fprintf(csv, "%s,%s,%s,%zu,%d,%.1f,%.1f,%.1f,%.1f,%.3g,%.6g,ok,%.1f\n", a->name().c_str(),
                              kindName(kind), sz.category.c_str(), n, a->effectiveThreads(o.threads), med, mn,
-                             mflops, planUs, err, scale);
+                             mflops, planUs, err, scale, copyNs);
                 std::fflush(csv);
                 a->teardown();
             }
