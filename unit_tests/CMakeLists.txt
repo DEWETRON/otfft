@@ -30,6 +30,7 @@ set(UNIT_TEST_SOURCES
   otfft_sixstep_test.cpp
   otfft_transform_test.cpp
   otfft_tuning_test.cpp
+  otfft_twophase_test.cpp
 )
 
 add_executable(${TEST_NAME}

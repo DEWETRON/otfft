@@ -49,9 +49,10 @@ Rules
     `<backend> <table> <log2 N> <algorithm>`: backend `sse2`, `avx`, `avx2` or `avx512`; table
     `serial` (one OpenMP thread) or `threaded` (more than one, used from length 2^15,
     see CFFT-8); log2 N from 1 to 24; algorithm `DIF4`, `DIT4`, `DIF8`, `DIT8`, `DIF16`,
-    `DIT16` or `SixStep`. If a backend, table and length are listed twice the last entry
+    `DIT16`, `SixStep` or `TwoPhase` (only for log2 N from 16 to 22, see CFFT-17; other lengths are an
+    error). If a backend, table and length are listed twice the last entry
     wins. A backend that the library was not built with is accepted and has no effect.
-    (`TestAllAlgorithmNames`, `TestLastEntryWins`)
+    (`TestAllAlgorithmNames`, `TestLastEntryWins`; for TwoPhase `otfft_twophase_test: TestTwoPhaseOtherLengthsAreRefused`)
 *   **FAC-11** `[done]` A file with any error (cannot be opened, no or wrong header, a
     malformed entry) is rejected as a whole: the call returns `false`, `error` names the line
     and the problem, and the tuning loaded before stays. (`TestBadFilesAreRejectedAndChangeNothing`,

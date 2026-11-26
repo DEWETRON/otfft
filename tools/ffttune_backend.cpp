@@ -34,6 +34,7 @@ namespace OTFFT_NAMESPACE
     namespace OTFFT_AVXDIF16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIT16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_SixStep { extern std::unique_ptr<FFT_IF> instance(); }
+    namespace OTFFT_TwoPhase { extern std::unique_ptr<FFT_IF> instance(); }
 }
 
 namespace
@@ -62,7 +63,7 @@ bool FFTTUNE_MEASURE(int log_n, int repeats, double batch_ms, double us[ffttune:
     using namespace OTFFT_NAMESPACE;
     const AlgoFactory factories[ffttune::kAlgorithms] = {
         OTFFT_AVXDIF4::instance, OTFFT_AVXDIT4::instance, OTFFT_AVXDIF8::instance, OTFFT_AVXDIT8::instance,
-        OTFFT_AVXDIF16::instance, OTFFT_AVXDIT16::instance, OTFFT_SixStep::instance};
+        OTFFT_AVXDIF16::instance, OTFFT_AVXDIT16::instance, OTFFT_SixStep::instance, OTFFT_TwoPhase::instance};
 
     const std::size_t n = std::size_t(1) << log_n;
     auto* x = static_cast<OTFFT::complex_t*>(simd_malloc(n * sizeof(OTFFT::complex_t)));

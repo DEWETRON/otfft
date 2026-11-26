@@ -164,6 +164,7 @@ set(OTFFT_SOURCE_FILES_ALGO
   src/otfft_algo_dit8.cpp
   src/otfft_algo_mixed.cpp
   src/otfft_algo_sixstep.cpp
+  src/otfft_algo_twophase.cpp
 )
 
 source_group("Source Files" FILES

@@ -73,6 +73,7 @@ namespace OTFFT_NAMESPACE
     namespace OTFFT_AVXDIF8 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIT8 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_SixStep { extern std::unique_ptr<FFT_IF> instance(); }
+    namespace OTFFT_TwoPhase { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIF16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIT16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_MixedRadix { extern std::unique_ptr<FFT_IF> instance(); }
@@ -86,11 +87,13 @@ namespace OTFFT_NAMESPACE
     namespace FFT6 = OTFFT_AVXDIT16;
     namespace FFT7 = OTFFT_SixStep;
     namespace FFT8 = OTFFT_MixedRadix;
+    namespace FFT_TWOPHASE = OTFFT_TwoPhase;
 
     namespace
     {
         // Algorithm per length 2^log_N (index log_N, 1 to 24), numbered as FFT1 to FFT7 above:
-        // 1 DIF4, 2 DIT4, 3 DIF8, 4 DIT8, 5 DIF16, 6 DIT16, 7 SixStep.
+        // 1 DIF4, 2 DIT4, 3 DIF8, 4 DIT8, 5 DIF16, 6 DIT16, 7 SixStep, 8 TwoPhase (only for the
+        // lengths 2^16 to 2^22, threaded; D35).
         //
         // Used when more than one OpenMP thread is configured and the length is at least
         // THREADED_MIN_LOG: the upstream table (see upstream otfft_gen_*.h), except 2^16 and
@@ -135,10 +138,28 @@ namespace OTFFT_NAMESPACE
             const Tuning::Backend backend = Tuning::BACKEND_SSE2;
 #endif
             // a loaded tuning file (loadTuningFile, D22) wins over the built-in tables
-            const int tuned = Tuning::lookup(backend, threaded, log_N);
+            int tuned = Tuning::lookup(backend, threaded, log_N);
+            // TwoPhase exists for some lengths only (the tuning file loader refuses it elsewhere)
+            if (tuned == 8 && (log_N < Tuning::TWOPHASE_MIN_LOG || log_N > Tuning::TWOPHASE_MAX_LOG)) tuned = 0;
             if (tuned != 0) return tuned;
+#if defined(_OPENMP) && (defined(USE_AVX2) || defined(USE_AVX512))
+            // TwoPhase (D35) with the AVX2 and AVX-512 backends, from 2^18 with any number of threads
+            // and for 2^16 and 2^17 from 8 threads: measured on a Ryzen 9 9950X (AVX2 backend, 2 to 16
+            // threads) it needs 0.55 to 0.95 of the time of the table below there (1.02 at 2^19 with
+            // 6 threads); below 2^18 with fewer than 8 threads it is slower (1.1 to 1.3 with 2 or 4).
+            if (threaded && log_N >= Tuning::TWOPHASE_MIN_LOG && log_N <= Tuning::TWOPHASE_MAX_LOG &&
+                (log_N >= 18 || omp_get_max_threads() >= 8))
+                return 8;
+#endif
             return threaded ? ALGORITHM_THREADED[log_N] : ALGORITHM_SERIAL[log_N];
         }
+    }
+
+    // The algorithm number (see ALGORITHM_THREADED) that a new plan of length 2^log_N gets now, with the
+    // current thread count and tuning; checked by unit_tests/otfft_twophase_test.cpp (D35).
+    int selectedAlgorithm(int log_N) noexcept
+    {
+        return selectAlgorithm(log_N);
     }
 
     /******************************************************************************
@@ -175,6 +196,7 @@ namespace OTFFT_NAMESPACE
                 case 4: obj = FFT4::instance(); break;
                 case 5: obj = FFT5::instance(); break;
                 case 6: obj = FFT6::instance(); break;
+                case 8: obj = FFT_TWOPHASE::instance(); break;
                 default: obj = FFT7::instance(); break;
                 }
                 obj->setup2(log_N);
