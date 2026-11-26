@@ -1,6 +1,6 @@
-// Checks of one algorithm class of one backend at a time (DIF8, DIT8, DIF16, DIT16, SixStep),
+// Checks of one algorithm class of one backend at a time (DIF8, DIT8, DIF16, DIT16, SixStep, TwoPhase),
 // for the tests that must reach code the table of createComplexFFT does not select
-// (otfft_exp_test.cpp, otfft_sixstep_test.cpp).
+// (otfft_exp_test.cpp, otfft_sixstep_test.cpp, otfft_twophase_test.cpp).
 //
 // The classes are in the namespace of the backend, with the FFT_IF of that backend (the library
 // includes otfft_if.h inside the namespace), so it is declared here the same way.
@@ -29,6 +29,7 @@ namespace OTFFT_SSE2
     namespace OTFFT_AVXDIF16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIT16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_SixStep  { extern std::unique_ptr<FFT_IF> instance(); }
+    namespace OTFFT_TwoPhase { extern std::unique_ptr<FFT_IF> instance(); }
 }
 #endif
 #ifdef OTFFT_WITH_AVX
@@ -40,6 +41,7 @@ namespace OTFFT_AVX
     namespace OTFFT_AVXDIF16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIT16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_SixStep  { extern std::unique_ptr<FFT_IF> instance(); }
+    namespace OTFFT_TwoPhase { extern std::unique_ptr<FFT_IF> instance(); }
 }
 #endif
 #ifdef OTFFT_WITH_AVX2
@@ -51,6 +53,7 @@ namespace OTFFT_AVX2
     namespace OTFFT_AVXDIF16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_AVXDIT16 { extern std::unique_ptr<FFT_IF> instance(); }
     namespace OTFFT_SixStep  { extern std::unique_ptr<FFT_IF> instance(); }
+    namespace OTFFT_TwoPhase { extern std::unique_ptr<FFT_IF> instance(); }
 }
 #endif
 

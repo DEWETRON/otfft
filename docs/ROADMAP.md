@@ -69,7 +69,9 @@ Milestone 1b: Fixes and speed found by the benchmarks
     library and show no loss (one length, Bluestein N = 32,771, 0.91x with 12 threads). Still open: the eight-step thresholds (only reachable from 2^15 through the
     factory, no loss seen), two threads at 2^18 (SixStep 0.83x), and a run on the Intel notebook
     and the 9950X. Scaling
-    above the break-even improved for the lengths where the table uses SixStep
+    above the break-even: the TwoPhase algorithm (D35, spec CFFT-17 to CFFT-19) needs 0.60 to 0.83 of the time from
+    2^20 with 2 to 16 threads on the 9950X (AVX2 backend), and from 2^18 or 2^16 as the table says. Not measured:
+    the SSE2 and AVX backends, other CPUs. Earlier, scaling improved for the lengths where the table uses SixStep
     (R1.10: SixStep 1.5x to 2.5x faster from 2^19, N = 4,194,304 with 8 threads
     1.19x complex, 1.82x real); the table still picks SixStep where DIF8 is
     faster on the Intel notebook (R1.8).

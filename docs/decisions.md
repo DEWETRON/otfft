@@ -644,3 +644,31 @@ D34: build on Windows with clang-cl as well, because MSVC needs 80 minutes
     and will move when the image does.
 *   **Revisit when:** the MSVC job should become optional (run on request or on `master` only), or the
     speed of the clang-cl build is compared with GCC and MSVC.
+
+D35: a two-phase threaded FFT (TwoPhase) for 2^16 to 2^22, chosen by default with AVX2 and AVX-512
+--------------------------------------------------------------------------------------------------
+*   **What:** a new algorithm class `TwoPhase` (number 8; `src/otfft_twophase.h`, `src/otfft_algo_twophase.cpp`)
+    for the lengths 2^16 to 2^22: N = R x M, the R child FFTs of size M run as strips in cache-resident tiles on
+    their own thread (kernels of the DIF8 class), then one combining pass with the twiddle factors and the R-point FFTs
+    of strips of columns; one parallel region, one barrier. It is named `TwoPhase` in tuning files and in `ffttune`
+    (which has 8 candidates now). The built-in table gives it to the AVX2 and AVX-512 backends with more than one thread
+    from 2^18, and from 2^16 with 8 or more threads (spec CFFT-17 to CFFT-19). Roadmap R1.6.
+*   **Why:** the plans FFTW prints for 16 threads have this shape, and OTFFT's six-step code needs about 6.6 sweeps
+    over memory at N = 4,194,304 against 2.7 for FFTW (estimated from the bandwidth). With it OTFFT needs 0.60 to 0.83 of
+    its time from 2^20 for 2 to 16 threads (Ryzen 9 9950X, AVX2). In the prototype the time at 16 threads is 1.0x to 2.1x
+    that of FFTW instead of 2.4x to 3.4x (OTFFT without the input copy); the library was not compared with FFTW again
+    (`docs/benchmarks.md`, "Two-phase FFT for several threads").
+*   **Rejected:** FFTW's approach in detail (its source and codelets are GPL; only the structure that its plans show was
+    used, and the code is written from the existing OTFFT kernels); a new set of kernels (the Stockham kernels with
+    `n` and `s` already do the strided work); padding the rows of the work array (3% to 15%, but the work buffer has N
+    values and the placement of it is fixed by D31); one default for all backends (only AVX2 was measured); lengths
+    outside 2^16 to 2^22 (the kernels and the tile sizes were measured only there; 2^23 and 2^24 stay with SixStep).
+*   **Limit:** the default rule rests on **one CPU** (a Ryzen 9 9950X) and the AVX2 backend; the AVX-512 backend gets the
+    same rule unmeasured, the SSE2 and AVX backends were not measured with TwoPhase at all (the benchmark run was
+    interrupted) and keep the old table. Other CPUs may want other thresholds: `ffttune --threads T --out` finds them.
+    Only the forward complex transform was timed in the library. At 2^16 and 2^17 with fewer than 8 threads, and at 2^19
+    with 6 threads, it is slower or equal. It is about 1.2x to 2.2x slower than the existing code on one thread (prototype),
+    so it is never used with one thread. FFTW is still faster with 16 threads at most lengths.
+*   **Revisit when:** a measurement on another CPU (3900X, Intel) or with the SSE2, AVX and AVX-512 backends disagrees
+    with the rule; or the work buffer can be padded (D31); or the tile movement (the strided 64-byte pieces cost about twice the
+    bandwidth bound) is reworked.

@@ -2820,3 +2820,93 @@ Limits: one CPU and one compiler (GCC); AVX-512 here is the 256-bit AVX2 code co
 gain survives other CPUs (Intel clocks down under 512-bit load, but no 512-bit instructions are used here) is
 unknown; the 16-thread rounds were not pinned and the machine was not idle; the forward transform only. `AUTO` still
 must not choose the backend (D32): a 3% median gain on one CPU is not enough, and a decision needs Intel hardware.
+
+
+Two-phase FFT for several threads (R1.6, D35)
+---------------------------------------------
+
+Why FFTW is faster with many threads, and what OTFFT took from it. All on the Ryzen 9 9950X (16 cores, GCC 15.2,
+Ubuntu 26.04), 2026-11-26. Data in `docs/benchmark-data/2026-11-26-ryzen9950x-linux/two-phase/`.
+
+**What FFTW does.** `fftw_print_plan` (`prototype/fftw_plans.c`, FFTW 3.3.10, `FFTW_MEASURE`, 16 threads) shows the
+same shape for every length from 65,536 to 4,194,304: a Cooley-Tukey step N = R x M with R = 16 for N = 65,536 and
+R = 256 for N = 2^20 and 2^22. The R child transforms of size M run as a threaded loop; each thread does a whole child
+FFT on its own, with its working set in the L2 cache (N/16 = 4,096 points, 64 KB, for N = 65,536). One twiddle and
+butterfly pass over the columns follows, also split over the threads (small buffered strips, so the strided access
+stays cache friendly). That is two parallel phases and about two sweeps over memory. On one thread the plans use
+radix-32 and radix-64 codelets, so 3 passes for N = 4,096. The Ubuntu package uses plain AVX codelets (`t1fv_8_avx`),
+not AVX2 or FMA ones, so the gap is not wider instructions.
+
+**Where OTFFT lost.** (1) The OTFFT time in `otfft_bench` includes a copy of the input (13 us at 65,536, 339 us at
+2^20, 3,077 us at 2^22; `copy_ns`, section "Method"). (2) The six-step code has about ten barrier-separated loops
+and three explicit transposes. A barrier is cheap here (a parallel region 1.5 us, a barrier 0.6 us with 16 threads,
+measured), so the cost is the extra passes over memory: at N = 4,194,304 one full read-and-write sweep of 64 MB takes
+2.2 ms with 16 threads (61 GB/s, copying 64 MB to 64 MB); FFTW needed 6.0 ms (about 2.7 sweeps), OTFFT 14.5 ms without
+the copy (about 6.6 sweeps). This is an estimate from the bandwidth; `perf` counters were not available
+(`perf_event_paranoid` 4). (3) The threaded table (D25) was measured on the Ryzen 9 3900X and picks DIF4, which does
+not use threads below 2^18, at 2^16 and 2^17: `ffttune --threads 16` on the 9950X finds SixStep fastest from 2^16.
+
+**What was built.** The `TwoPhase` class (`src/otfft_twophase.h`, `src/otfft_algo_twophase.cpp`), algorithm number 8,
+for 2^16 to 2^22: N = R x M with M between 512 and 2,048; a work item of phase 1 is a strip of C = 4, 8 or 16 children,
+gathered into a tile of M x C values, transformed completely with the Stockham kernel of the DIF8 class (n = M, s = C),
+and stored to `y[k*R + r]`; a work item of phase 2 is a strip of C columns: twiddle factors (two small tables, one
+complex multiply per value), the kernel with n = R, s = C, and a store to `x[k + q*M]`. One parallel region, one
+barrier. Tiles of at most 2^13 values per thread. The scale factor of `fwd`, `fwdu`, `invu` and `invn` is folded into
+the twiddle table, so the kernels run unscaled. Shapes per length (log2 M, C): 2^16 (9, 16), 2^17 and 2^18 (9, 4),
+2^19 (10, 4), 2^20 (10, 8), 2^21 (10, 4), 2^22 (11, 4).
+
+**Prototype, 16 threads** (a scratch program, `prototype/twophase3.cpp`, which also holds the sweep of ten (M, C)
+shapes; only the program was kept, not its printed output). Forward transform in microseconds per call, median of at
+least 21 runs, best shape per length, rows of the work array padded by 8 values; "OTFFT now" is the library before
+this change without the input copy; FFTW varies by 15% or more between runs, so it is a range:
+
+| N | OTFFT now | Two-phase | FFTW |
+| ---: | ---: | ---: | ---: |
+| 65,536 | 134 | 64 | 31 |
+| 131,072 | 264 | 141 | 73 to 106 |
+| 262,144 | 361 | 247 | 158 to 200 |
+| 524,288 | 1,041 | 521 | 281 |
+| 1,048,576 | 1,464 | 793 | 586 to 617 |
+| 2,097,152 | 4,872 | 2,752 | 1,623 to 1,815 |
+| 4,194,304 | 14,915 | 7,282 | 6,114 to 7,301 |
+
+An ablation (child FFT, column FFT or twiddle step switched off in turn) showed that 190 us of the 2.1 ms of phase 1
+at N = 2,097,152 is compute; the rest is moving data, about twice the bandwidth bound. Huge pages made no difference.
+Padding the rows of the work array gave 3% to 15% (not in the library: its work buffer has N values). The sweep of the
+shapes moved the results by 10% to 15%; no shape wins everywhere. On one thread the prototype was 1.2x to 2.2x
+slower than the existing code, so TwoPhase is a threaded algorithm only.
+
+**In the library** (`otfft_bench --kinds complex --sizes pow2all --lib OTFFT-avx2 --threads T`, forward transform with
+the input copy, median of 3 runs, one run at a time, the default table against a tuning file that gives TwoPhase to
+2^16 to 2^22; `library/*.csv`, `library/force.txt`). Each cell is default time / TwoPhase time in microseconds
+= the ratio (below 1: TwoPhase is faster):
+
+| Threads | 2^16 | 2^17 | 2^18 | 2^19 | 2^20 | 2^21 | 2^22 |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2 | 149 / 188 = **1.26** | 328 / 387 = **1.18** | 1,015 / 795 = **0.78** | 2,141 / 1,576 = **0.74** | 4,946 / 3,537 = **0.72** | 14,339 / 11,888 = **0.83** | 33,373 / 26,306 = **0.79** |
+| 3 | 147 / 141 = **0.96** | 324 / 282 = **0.87** | 704 / 559 = **0.79** | 1,504 / 1,100 = **0.73** | 3,476 / 2,557 = **0.74** | 11,622 / 8,635 = **0.74** | 26,716 / 19,238 = **0.72** |
+| 4 | 147 / 131 = **0.89** | 326 / 359 = **1.10** | 547 / 426 = **0.78** | 1,169 / 966 = **0.83** | 2,758 / 2,193 = **0.79** | 10,221 / 7,504 = **0.73** | 23,743 / 17,214 = **0.73** |
+| 6 | 145 / 119 = **0.82** | 326 / 262 = **0.81** | 387 / 367 = **0.95** | 846 / 867 = **1.02** | 2,020 / 1,644 = **0.81** | 8,899 / 5,981 = **0.67** | 21,942 / 14,139 = **0.64** |
+| 8 | 151 / 114 = **0.76** | 325 / 217 = **0.67** | 481 / 403 = **0.84** | 912 / 766 = **0.84** | 2,001 / 1,464 = **0.73** | 8,369 / 6,121 = **0.73** | 20,634 / 14,054 = **0.68** |
+| 12 | 144 / 102 = **0.71** | 326 / 180 = **0.55** | 412 / 355 = **0.86** | 1,115 / 683 = **0.61** | 1,995 / 1,235 = **0.62** | 7,162 / 4,672 = **0.65** | 18,431 / 11,064 = **0.60** |
+| 16 | 144 / 120 = **0.83** | 326 / 191 = **0.59** | 443 / 357 = **0.81** | 1,219 / 730 = **0.60** | 2,045 / 1,466 = **0.72** | 6,020 / 4,693 = **0.78** | 17,723 / 11,473 = **0.65** |
+
+*   **From 2^20, TwoPhase needs 0.60 to 0.83 of the time with every thread count from 2 to 16.**
+*   **At 2^18 and 2^19 it wins with 2 or more threads (0.60 to 0.95), with one tie: 1.02 at 2^19 with 6 threads.**
+*   **At 2^16 and 2^17 it wins from 8 threads (0.55 to 0.83) and loses with 2 threads (1.26, 1.18) and at 2^17 with
+    4 threads (1.10).**
+
+The built-in table follows this (`selectAlgorithm` in `src/otfft_algo.cpp`): with the AVX2 and AVX-512 backends and
+more than one thread, TwoPhase from 2^18 to 2^22 and, with 8 or more threads, also at 2^16 and 2^17. A tuning file
+overrides it.
+
+Limits: **one CPU and one compiler.** The default rule comes from the AVX2 backend on the 9950X only; the SSE2 and AVX
+backends keep the old table (TwoPhase is available there through a tuning file and passes the tests, its speed there
+was not measured). The AVX-512 backend gets the AVX2 rule without a measurement. The Ryzen 9 3900X, the Intel notebook
+and CPUs with a different cache layout were not measured; the rule may be wrong there (`ffttune` finds the right
+choice on a machine). Only the forward complex transform with the input copy was timed in the library; the inverse,
+the real FFT and the DCT (which use the complex transform with N/2) were tested for results, not timed. With 16
+threads FFTW is still faster at most lengths (prototype: 1.0x to 2.1x of FFTW's time; the library was not compared with FFTW again after this change). Each thread holds
+two tiles of up to 2^13 complex values (256 KB) allocated with the plan, and `ffttune --threads T` is the way to
+check the choice for T threads. The benchmark runs of the SSE2 and AVX backends were interrupted (the machine was
+needed for builds).

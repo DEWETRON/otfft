@@ -72,6 +72,22 @@ Rules
     region around the whole step from 2^19 (D20). (`otfft_sixstep_test:
     TestSixStepOneThread, TestSixStepThreeThreads, TestSixStepEightThreads`; with 3 and 8
     threads the eight sections and the guided chunks split unevenly.)
+*   **CFFT-17** `[done]` The TwoPhase class (a threaded complex FFT in two parallel phases: child FFTs of
+    size M in cache-resident tiles, then one combining pass; D35) exists for the lengths 2^16 to 2^22. On every
+    backend (SSE2, AVX, AVX2, AVX-512 if built) it gives the same result as the DIF8 class at every point (relative
+    error below 1e-13 in the 2-norm of the whole array) and matches the direct sum, for all six transform functions
+    (`fwd`, `fwd0`, `fwdu`, `inv`, `invu`, `invn`), with 1, 3 and 8 threads (the strips split unevenly with 3 and 8).
+    (`otfft_twophase_test: TestTwoPhaseBinsOneThread, TestTwoPhaseBinsThreeThreads, TestTwoPhaseBinsEightThreads,
+    TestTwoPhaseWholeArraySmallLengthsFiveThreads, TestTwoPhaseWholeArrayLargestLengthEightThreads`)
+*   **CFFT-18** `[done]` A TwoPhase plan keeps working when the thread count changes after the plan was made:
+    it never runs more threads than the plan has tiles for or than `omp_get_max_threads()` allows at the call.
+    For other lengths the class refuses: `setup` throws `std::domain_error`.
+    (`TestTwoPhasePlanSurvivesThreadCountChange`, `TestTwoPhaseOtherLengthsAreRefused`)
+*   **CFFT-19** `[done]` The built-in table gives TwoPhase to the AVX2 and AVX-512 backends when more than one
+    OpenMP thread is configured: for 2^18 to 2^22, and for 2^16 and 2^17 with 8 or more threads. Never with one thread,
+    never outside 2^16 to 2^22, never for the SSE2 and AVX backends. A tuning file wins over this rule. The rule comes from
+    one CPU (a Ryzen 9 9950X, AVX2 backend, 2 to 16 threads). (`TestTwoPhaseDefaultTable,
+    TestTwoPhaseTuningFileWinsOverDefaultTable`; the speed is in `docs/benchmarks.md`, not in a test)
 *   **CFFT-14** `[done]` In the AVX and AVX2 backends the radix-3, 5 and 7 core passes of the
     mixed radix code (a factor 3, 5 or 7 that is not the last one) work on two values of q at
     once when s is even, forward and inverse, serial and OpenMP (N >= 2^19, D30), and give the same

@@ -1,0 +1,8 @@
+otfft-tuning 1
+avx2 threaded 16 TwoPhase
+avx2 threaded 17 TwoPhase
+avx2 threaded 18 TwoPhase
+avx2 threaded 19 TwoPhase
+avx2 threaded 20 TwoPhase
+avx2 threaded 21 TwoPhase
+avx2 threaded 22 TwoPhase

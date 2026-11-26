@@ -48,8 +48,8 @@ namespace OTFFT
 
         bool parseAlgorithm(const std::string& s, int& out)
         {
-            static const char* const names[] = {"DIF4", "DIT4", "DIF8", "DIT8", "DIF16", "DIT16", "SixStep"};
-            for (int i = 0; i < 7; ++i)
+            static const char* const names[] = {"DIF4", "DIT4", "DIF8", "DIT8", "DIF16", "DIT16", "SixStep", "TwoPhase"};
+            for (int i = 0; i < 8; ++i)
             {
                 if (s == names[i])
                 {
@@ -151,7 +151,12 @@ namespace OTFFT
             }
             if (!parseAlgorithm(w[3], algorithm))
             {
-                error = lineError(line, "unknown algorithm '" + w[3] + "' (DIF4, DIT4, DIF8, DIT8, DIF16, DIT16, SixStep)");
+                error = lineError(line, "unknown algorithm '" + w[3] + "' (DIF4, DIT4, DIF8, DIT8, DIF16, DIT16, SixStep, TwoPhase)");
+                return false;
+            }
+            if (algorithm == 8 && (log_N < Tuning::TWOPHASE_MIN_LOG || log_N > Tuning::TWOPHASE_MAX_LOG))
+            {
+                error = lineError(line, "TwoPhase exists for the lengths 2^16 to 2^22 only");
                 return false;
             }
             scratch[backend][w[1] == "threaded" ? 1 : 0][log_N] = algorithm;

@@ -38,7 +38,7 @@ extern bool ffttune_measure_avx2(int, int, double, double[ffttune::kAlgorithms])
 namespace
 {
     constexpr std::array<const char*, ffttune::kAlgorithms> kNames = {"DIF4",  "DIT4",  "DIF8",   "DIT8",
-                                                                     "DIF16", "DIT16", "SixStep"};
+                                                                     "DIF16", "DIT16", "SixStep", "TwoPhase"};
 
     struct Options
     {
@@ -174,7 +174,7 @@ int main(int argc, char** argv)
 
     std::printf("# ffttune: backend %s, %d thread(s), median of %d batches of about %.0f ms\n", o.backend.c_str(),
                 o.threads, o.repeats, o.batchMs);
-    std::printf("# time in microseconds of one forward plus one inverse transform; '-' = wrong result\n");
+    std::printf("# time in microseconds of one forward plus one inverse transform; '-' = wrong result or not available for this length\n");
     std::printf("%6s", "log2N");
     for (int a = 0; a < ffttune::kAlgorithms; a++)
     {
@@ -225,7 +225,14 @@ int main(int argc, char** argv)
         std::fflush(stdout);
 
         char line[96];
-        std::snprintf(line, sizeof line, "case %2d: obj = FFT%d::instance(); obj->setup2(log_N); break;", n, best + 1);
+        if (best == 7)
+        {
+            std::snprintf(line, sizeof line, "case %2d: obj = FFT_TWOPHASE::instance(); obj->setup2(log_N); break;", n);
+        }
+        else
+        {
+            std::snprintf(line, sizeof line, "case %2d: obj = FFT%d::instance(); obj->setup2(log_N); break;", n, best + 1);
+        }
         lines.emplace_back(line);
         entries.push_back({n, best, tie});
     }

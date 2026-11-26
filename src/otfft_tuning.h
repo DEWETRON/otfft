@@ -16,7 +16,12 @@ namespace OTFFT
             BACKEND_COUNT = 4
         };
 
-        // Algorithm number (1 to 7, as in otfft_algo.cpp) loaded for this backend, table and
+        // The lengths 2^TWOPHASE_MIN_LOG to 2^TWOPHASE_MAX_LOG are the ones the algorithm TwoPhase
+        // (number 8, otfft_twophase.h, D35) exists for.
+        constexpr int TWOPHASE_MIN_LOG = 16;
+        constexpr int TWOPHASE_MAX_LOG = 22;
+
+        // Algorithm number (1 to 8, as in otfft_algo.cpp) loaded for this backend, table and
         // length 2^log_N, or 0 if none: then the built-in table applies. Thread safe.
         int lookup(Backend backend, bool threaded, int log_N) noexcept;
     }
