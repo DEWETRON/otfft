@@ -642,7 +642,7 @@ D34: build on Windows with clang-cl as well, because MSVC needs 80 minutes
     prove results, not speed); `/favor:INTEL64` is ignored with a warning; the same SSE3 problem exists for
     Clang on Linux with `-msse2` and was not touched; the path of `libomp` belongs to the Visual Studio 18 image
     and will move when the image does.
-*   **Revisit when:** the MSVC job should become optional (run on request or on `master` only), or the
+*   **Revisit when:** the MSVC job should become optional (run on request or on `master` only; done in D36), or the
     speed of the clang-cl build is compared with GCC and MSVC.
 
 D35: a two-phase threaded FFT (TwoPhase) for 2^16 to 2^22, chosen by default with AVX2 and AVX-512
@@ -672,3 +672,23 @@ D35: a two-phase threaded FFT (TwoPhase) for 2^16 to 2^22, chosen by default wit
 *   **Revisit when:** a measurement on another CPU (3900X, Intel) or with the SSE2, AVX and AVX-512 backends disagrees
     with the rule; or the work buffer can be padded (D31); or the tile movement (the strided 64-byte pieces cost about twice the
     bandwidth bound) is reworked.
+
+D36: the MSVC job runs after a merge and on request, not on pull requests
+-------------------------------------------------------------------------
+*   **What:** in `.github/workflows/cmake.yml` the MSVC build is its own job (`msvc`, "windows-latest, MSVC") with
+    `if: github.event_name != 'pull_request'`: it runs on every push to `master` and when started by hand
+    (`workflow_dispatch`: "Run workflow", or `gh workflow run CMake --ref <branch>`). The Linux jobs and the clang-cl job
+    (D34) still run on every pull request.
+*   **Why:** the MSVC build took 79 and 42 minutes in two runs of 2026-11-26 (about 5 minutes with clang-cl), so every
+    pull request waited up to an hour and a quarter for the slowest job. Nothing requires the check (the repository
+    has no branch protection or ruleset).
+*   **Rejected:** dropping the MSVC build (MSVC is what Windows users build with and code that only MSVC rejects must
+    still be found); running it on pull requests that touch some paths (a path list that misses a case gives false
+    confidence; the build breaks on headers that most pull requests touch); a `labeled` trigger (every label change
+    would start all jobs again); a matrix entry with skipped steps (it would report success without testing anything).
+*   **Limit:** a change that only MSVC rejects is found after the merge, not before. The step is cheap to repeat: start
+    the job by hand on the branch before merging when the change touches Windows-specific code, intrinsics or the
+    CMake flags of the MSVC branch. The job is not required, so a merge does not wait for it, and a failure on
+    `master` has to be fixed by a follow-up pull request.
+*   **Revisit when:** MSVC builds get much faster, an MSVC-only break reaches `master` more than once (then run it on pull
+    requests again), or a required-checks rule is added to the repository (it would need the job name to be listed).
