@@ -606,3 +606,18 @@ D32: an opt-in AVX-512 backend, built from the AVX2 code, never chosen automatic
 *   **Revisit when:** a run on AVX-512 hardware exists (then FAC-15 can become `[done]` and `AUTO` can be
     decided), or the 512-bit kernels are written.
 
+
+D33: switch off the instruction sets a backend must not use
+-----------------------------------------------------------
+*   **What:** on GCC and Clang the SSE2 backend is built with `-mno-avx -msse2`, the AVX backend with
+    `-mno-avx2 -mno-fma -mavx`, and the AVX2 backend with `-mno-avx512f -mavx2 -mfma`. Spec BLD-10 is unchanged.
+*   **Why:** `-msse2` and `-mavx` only add features. The GCC 15.2 of the Ubuntu 26.04 GitHub runner defines
+    `__AVX2__`, `__AVX__` and `__FMA__` with no `-m` flag at all, so CI built the SSE2 and AVX backends with AVX2
+    and FMA (found with a diagnostic run that dumped the predefined macros). The backend test of D21 failed on
+    Linux CI since 2026-11-24 and passed on every machine whose compiler targets plain x86-64. A backend built
+    that way would also fault with an illegal instruction on a CPU without AVX2, which is what the SSE2 backend
+    exists for.
+*   **Rejected:** setting `-march=x86-64` for everything (the AVX2 and AVX-512 backends need their own flags
+    anyway, and the order of `-march` and `-m` flags is easy to get wrong).
+*   **Limit:** the Clang and Intel compiler branches use the same or no flags; only GCC was checked. MSVC selects the
+    instruction set with `/arch` and is not affected.

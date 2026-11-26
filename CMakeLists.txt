@@ -275,16 +275,18 @@ if (CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
   set(DEFAULT_FLAGS
     " -std=c++11 -frounding-math -fno-finite-math-only ${OTFFT_SNAN_FLAG} -pedantic -Wall -Wextra -fpermissive ${OpenMP_CXX_FLAGS} "
   )
+  # -msse2 and -mavx only add features. Some compilers (the Ubuntu 26.04 GCC on the GitHub runners) enable AVX2
+  # and FMA by default, so each backend switches off what it must not use (D33).
   set(SSE2_FLAGS
-    " ${DEFAULT_FLAGS} -msse2 -DUSE_SSE2 -DOTFFT_NAMESPACE=OTFFT_SSE2 "
+    " ${DEFAULT_FLAGS} -mno-avx -msse2 -DUSE_SSE2 -DOTFFT_NAMESPACE=OTFFT_SSE2 "
   )
   set(AVX_FLAGS
-    " ${DEFAULT_FLAGS} -mavx -DUSE_AVX -DOTFFT_NAMESPACE=OTFFT_AVX "
+    " ${DEFAULT_FLAGS} -mno-avx2 -mno-fma -mavx -DUSE_AVX -DOTFFT_NAMESPACE=OTFFT_AVX "
   )
   # -mavx2 does not enable FMA in GCC and Clang; the AVX2 backend uses it (otfft_misc.h tests __FMA__,
   # as MSVC defines it for /arch:AVX2) and is chosen at run time only if the CPU has FMA too (D21).
   set(AVX2_FLAGS
-    " ${DEFAULT_FLAGS} -mavx2 -mfma -DUSE_AVX2 -DOTFFT_NAMESPACE=OTFFT_AVX2 "
+    " ${DEFAULT_FLAGS} -mno-avx512f -mavx2 -mfma -DUSE_AVX2 -DOTFFT_NAMESPACE=OTFFT_AVX2 "
   )
   # The AVX-512 backend: the code of the AVX2 backend compiled for AVX-512 (VEX and EVEX encodings, the
   # compiler keeps 256-bit vectors by default); it needs AVX512F, AVX512DQ and AVX512VL at run time.
