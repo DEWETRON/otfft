@@ -26,12 +26,22 @@ jobs:
           - os: windows-latest
             name: windows-latest
             cmake-flags: ""
+          # MSVC needs about 80 minutes for the three backends (one file takes 20 minutes), clang-cl about 5 (D34)
+          - os: windows-latest
+            name: windows-latest, clang-cl
+            cmake-flags: -T ClangCL -DOpenMP_C_FLAGS=/openmp -DOpenMP_CXX_FLAGS=/openmp -DOpenMP_C_LIB_NAMES=libomp -DOpenMP_CXX_LIB_NAMES=libomp "-DOpenMP_libomp_LIBRARY=C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/Llvm/x64/lib/libomp.lib"
           - os: ubuntu-latest
             name: ubuntu-latest, AVX-512 backend
             cmake-flags: -DOTFFT_WITH_AVX512=ON
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Put the clang-cl OpenMP runtime on PATH
+      if: contains(matrix.name, 'clang-cl')
+      shell: pwsh
+      run: |
+        "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Tools\Llvm\x64\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} ${{ matrix.cmake-flags }}
