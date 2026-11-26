@@ -22,17 +22,15 @@ jobs:
         include:
           - os: windows-latest
             name: windows-latest, clang-cl
-            cmake-flags: -T ClangCL
+            cmake-flags: -T ClangCL -DOpenMP_C_FLAGS=/openmp -DOpenMP_CXX_FLAGS=/openmp -DOpenMP_C_LIB_NAMES=libomp -DOpenMP_CXX_LIB_NAMES=libomp "-DOpenMP_libomp_LIBRARY=C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/Llvm/x64/lib/libomp.lib"
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Find libomp
+    - name: Put the clang-cl OpenMP runtime on PATH
       shell: pwsh
       run: |
-        Get-ChildItem -Recurse -ErrorAction SilentlyContinue -Include libomp*,libiomp* -Path 'C:\Program Files\LLVM','C:\Program Files\Microsoft Visual Studio','C:\msys64\clang64','C:\Program Files (x86)\Microsoft Visual Studio' | Select-Object -First 40 FullName
-        clang-cl --version
-        Get-Command clang-cl | Select-Object Source
+        "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Tools\Llvm\x64\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} ${{ matrix.cmake-flags }}
