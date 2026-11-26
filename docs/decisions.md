@@ -624,3 +624,21 @@ D33: switch off the instruction sets a backend must not use
     anyway, and the order of `-march` and `-m` flags is easy to get wrong).
 *   **Limit:** the Clang and Intel compiler branches use the same or no flags; only GCC was checked. MSVC selects the
     instruction set with `/arch` and is not affected.
+
+D34: build on Windows with clang-cl as well, because MSVC needs 80 minutes
+--------------------------------------------------------------------------
+*   **What:** the CMake branch for GCC and Clang excludes clang-cl (`AND NOT MSVC`), which takes the MSVC branch
+    and adds `-mfma` (AVX2, AVX-512) and `-msse3` (SSE2). The CI has a job "windows-latest, clang-cl"
+    (`-T ClangCL`, Clang 22.1.3, `libomp` given by hand). The MSVC job stays. Spec BLD-11.
+*   **Why:** the MSVC job of 2026-11-26 took 79 minutes to build (tests: 1 minute); the heaviest files are
+    `otfft_algo_mixed.cpp` and `otfft_algo_sixstep.cpp` at 20 to 25 minutes each, once per backend. The clang-cl job
+    builds in about 5 minutes and passes all 5 tests (79 cases, the backend flag test included).
+*   **Rejected:** replacing the MSVC job right away (MSVC is what Windows users build with, and nothing here shows
+    that the code behaves the same under both); `clang++` with Ninja (not needed, clang-cl runs inside the
+    existing generator); dropping OpenMP for clang-cl (the thresholds are part of the tests).
+*   **Limit:** one run of one clang-cl version; the speed of the code it builds was not measured (the tests
+    prove results, not speed); `/favor:INTEL64` is ignored with a warning; the same SSE3 problem exists for
+    Clang on Linux with `-msse2` and was not touched; the path of `libomp` belongs to the Visual Studio 18 image
+    and will move when the image does.
+*   **Revisit when:** the MSVC job should become optional (run on request or on `master` only), or the
+    speed of the clang-cl build is compared with GCC and MSVC.

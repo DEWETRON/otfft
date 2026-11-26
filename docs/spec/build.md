@@ -53,6 +53,11 @@ Rules
     are not compiled with AVX-512. (D32.) (`otfft_backend_test: TestAvx512BackendUsesAvx512WithAvx2AndFma`
     and the `compiledWithAvx512` checks of the other backends; the GCC branch was built and tested, the
     Clang and MSVC branches were **not built**.)
+*   **BLD-11** `[done]` With clang-cl (`-T ClangCL` in the Visual Studio generator) the library builds with the MSVC
+    options: `/arch:` for the backends, `-mfma` added for AVX2 and AVX-512 (clang-cl does not enable FMA with
+    `/arch:AVX2`), `-msse3` added for SSE2 (the SSE2 code uses SSE3 intrinsics). OpenMP needs `libomp` from
+    the Visual Studio LLVM given to CMake by hand, see `.github/workflows/cmake.yml`. (D34.)
+    (`otfft_backend_test`, and the whole suite in the CI job "windows-latest, clang-cl")
 
 Decided
 -------
