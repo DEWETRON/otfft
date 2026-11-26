@@ -244,8 +244,8 @@ SetFullOptimization()
 
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 
-# Treat GNU Compiler and CLang Compiler the same
-if (CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+# Treat GNU Compiler and CLang Compiler the same; clang-cl takes the MSVC command line and goes to the MSVC branch
+if ((CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang") AND NOT MSVC)
   message(STATUS "Optimize for GNU-like compiler")
   if (OTFFT_WITH_SSE2)
     set(OTFFT_BACKENDS_FLAGS
@@ -375,11 +375,16 @@ elseif (MSVC OR ${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
   set(AVX_FLAGS
     " ${DEFAULT_FLAGS} /arch:AVX /DUSE_AVX /DOTFFT_NAMESPACE=OTFFT_AVX "
   )
+  # clang-cl, unlike MSVC, does not enable FMA with /arch:AVX2 (D21)
+  set(OTFFT_CLANG_CL_FMA "")
+  if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+    set(OTFFT_CLANG_CL_FMA "-mfma")
+  endif()
   set(AVX2_FLAGS
-    " ${DEFAULT_FLAGS} /arch:AVX2 /DUSE_AVX2 /DOTFFT_NAMESPACE=OTFFT_AVX2 "
+    " ${DEFAULT_FLAGS} /arch:AVX2 ${OTFFT_CLANG_CL_FMA} /DUSE_AVX2 /DOTFFT_NAMESPACE=OTFFT_AVX2 "
   )
   set(AVX512_FLAGS
-    " ${DEFAULT_FLAGS} /arch:AVX512 /DUSE_AVX512 /DOTFFT_NAMESPACE=OTFFT_AVX512 "
+    " ${DEFAULT_FLAGS} /arch:AVX512 ${OTFFT_CLANG_CL_FMA} /DUSE_AVX512 /DOTFFT_NAMESPACE=OTFFT_AVX512 "
   )
 endif()
 

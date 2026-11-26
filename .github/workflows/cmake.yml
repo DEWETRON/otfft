@@ -26,6 +26,9 @@ jobs:
           - os: windows-latest
             name: windows-latest
             cmake-flags: ""
+          - os: windows-latest
+            name: windows-latest, clang-cl
+            cmake-flags: -T ClangCL
           - os: ubuntu-latest
             name: ubuntu-latest, AVX-512 backend
             cmake-flags: -DOTFFT_WITH_AVX512=ON
