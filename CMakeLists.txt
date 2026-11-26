@@ -361,8 +361,14 @@ elseif (MSVC OR ${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
     set(DEFAULT_FLAGS
       " ${ADDITIONAL_FLAGS} /Oi /favor:INTEL64 ${OpenMP_CXX_FLAGS} "
     )
+    # The SSE2 code uses SSE3 intrinsics (_mm_addsub_pd, _mm_hadd_pd); MSVC accepts them anywhere and
+    # inc/otfft_complex.h assumes SSE3 on x64, clang-cl needs the feature switched on.
+    set(OTFFT_CLANG_CL_SSE3 "")
+    if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+      set(OTFFT_CLANG_CL_SSE3 "-msse3")
+    endif()
     set(SSE2_FLAGS
-      " ${DEFAULT_FLAGS} /DUSE_SSE2 /DOTFFT_NAMESPACE=OTFFT_SSE2 "
+      " ${DEFAULT_FLAGS} ${OTFFT_CLANG_CL_SSE3} /DUSE_SSE2 /DOTFFT_NAMESPACE=OTFFT_SSE2 "
     )
   else()
     set(DEFAULT_FLAGS
