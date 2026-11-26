@@ -1,0 +1,33 @@
+== machine
+Do 26. Nov 10:33:16 CET 2026
+Linux 7.0.0-44-generic x86_64
+model name	: AMD Ryzen 9 9950X 16-Core Processor
+flags:
+fma avx2 avx512f avx512dq avx512ifma avx512cd avx512bw avx512vl avx512_bf16 avx512vbmi avx512_vbmi2 avx512_vnni avx512_bitalg avx512_vpopcntdq avx512_vp2intersect 
+g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+b45cfb0 Merge pull request #61 from DEWETRON/fix-ci-default-isa
+== build (unit tests + library only)
+test binary: build-avx512/Release/otfft.test
+== AVX-512, backend and tuning tests
+[doctest] run with "--help" for options
+===============================================================================
+[doctest] test cases:  5 |  5 passed | 0 failed | 74 skipped
+[doctest] assertions: 21 | 21 passed | 0 failed |
+[doctest] Status: SUCCESS!
+== whole suite
+===============================================================================
+[doctest] test cases:       79 |       79 passed | 0 failed | 0 skipped
+[doctest] assertions: 30082563 | 30082563 passed | 0 failed |
+[doctest] Status: SUCCESS!
+== speed: AVX2 vs AVX-512 plan (about 1 minute)
+        N      avx2 us    avx512 us    ratio
+      256          0.2          0.2     0.94
+     1024          0.8          0.8     1.01
+     4096          4.1          4.1     1.00
+    16384         18.3         16.4     0.89
+    65536        132.7        129.3     0.97
+   262144        348.9        354.0     1.01
+  1048576       1244.0       1239.3     1.00
+     1000          1.1          1.1     1.00
+    10000         15.8         15.4     0.97
+   100000        194.3        234.9     1.21

@@ -26,9 +26,10 @@ Rules
     still work. (D32.) (`otfft_avx512_test: TestAutoStillWorks, TestComplexFftOnRequest,
     TestBluesteinOnRequest, TestRealFftAndDctOnRequest`; the throwing half runs on a CPU without
     AVX-512 and was run on a Ryzen 9 3900X)
-*   **FAC-15** `[built]` On a CPU that can run it, the AVX-512 backend gives the same results as the
-    default backend (complex, Bluestein, real FFT and DCT). The test exists
-    (`otfft_avx512_test`, same cases) but has **not been run on AVX-512 hardware**.
+*   **FAC-15** `[done]` On a CPU that can run it, the AVX-512 backend gives the same results as the
+    default backend (complex, Bluestein, real FFT and DCT). (`otfft_avx512_test`, same cases; run on a
+    Ryzen 9 9950X with GCC 15.2 on 2026-11-26, 79 of 79 test cases pass, data in
+    `docs/benchmark-data/2026-11-26-ryzen9950x-linux/`. Only that one CPU and compiler.)
 *   **FAC-6** `[built]` All transform methods are `const noexcept`, but a
     complex, real or DCT object owns an internal work buffer (`FFT::work` in
     `src/otfft_base.h`) that every call uses. **Do not share one object between

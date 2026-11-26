@@ -603,6 +603,9 @@ D32: an opt-in AVX-512 backend, built from the AVX2 code, never chosen automatic
     detection reads CPUID and XGETBV directly; it was written from the Intel documentation and has not
     been checked on a CPU where the bits are set (the test uses `__builtin_cpu_supports` as a second opinion on
     GCC and Clang, and fails if the two disagree on such a CPU).
+*   **Update 2026-11-26:** the run on a Ryzen 9 9950X exists (GCC 15.2): the whole suite passes, the CPUID
+    detection and `__builtin_cpu_supports` agree, and the speed is that of AVX2 within about 15%
+    (`docs/benchmarks.md`). FAC-15 is `[done]`. The limits above that concern Clang, MSVC and Intel CPUs stand.
 *   **Revisit when:** a run on AVX-512 hardware exists (then FAC-15 can become `[done]` and `AUTO` can be
     decided), or the 512-bit kernels are written.
 
