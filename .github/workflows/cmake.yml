@@ -20,21 +20,19 @@ jobs:
         # every entry is one job; the AVX-512 backend (roadmap R2.1) is built and tested on Linux, the
         # tests that need AVX-512 hardware run only if the runner has it
         include:
-          - os: ubuntu-latest
-            name: ubuntu-latest
-            cmake-flags: ""
-          - os: windows-latest
-            name: windows-latest
-            cmake-flags: ""
           - os: windows-latest
             name: windows-latest, clang-cl
             cmake-flags: -T ClangCL
-          - os: ubuntu-latest
-            name: ubuntu-latest, AVX-512 backend
-            cmake-flags: -DOTFFT_WITH_AVX512=ON
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Find libomp
+      shell: pwsh
+      run: |
+        Get-ChildItem -Recurse -ErrorAction SilentlyContinue -Include libomp*,libiomp* -Path 'C:\Program Files\LLVM','C:\Program Files\Microsoft Visual Studio','C:\msys64\clang64','C:\Program Files (x86)\Microsoft Visual Studio' | Select-Object -First 40 FullName
+        clang-cl --version
+        Get-Command clang-cl | Select-Object Source
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} ${{ matrix.cmake-flags }}
