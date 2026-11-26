@@ -64,6 +64,12 @@ Method
 *   **Copying:** OTFFT complex and DCT transforms work in place, so each
     timed run includes copying the input into the work buffer. The other
     libraries (and OTFFT real) work out of place and do not copy.
+    Since 2026-11-26 the CSV file has a column `copy_ns` with the time of that copy (measured
+    the same way, 0 where there is none) and `benchmarks/report.py --no-copy` takes it off the
+    time of OTFFT. Measured on the Ryzen 9 9950X with one core: 13 us for N = 65,536, 49 us for
+    262,144, 339 us for 1,048,576 and 3,077 us for 4,194,304 (16 bytes per point). That is 6%
+    of the one-thread time at N = 1,048,576 and 10% to 17% of the 16-thread times from
+    N = 65,536; older CSV files have no such column.
 *   **Flops:** MFLOPS are "equivalent": 5 N log2(N) for complex and 2.5 N log2(N)
     for real and DCT, divided by the measured time (the benchFFT convention).
     Higher is better. They are for comparing libraries, not real operation counts.
