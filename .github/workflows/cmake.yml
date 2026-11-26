@@ -23,10 +23,8 @@ jobs:
           - os: ubuntu-latest
             name: ubuntu-latest
             cmake-flags: ""
-          - os: windows-latest
-            name: windows-latest
-            cmake-flags: ""
-          # MSVC needs about 80 minutes for the three backends (one file takes 20 minutes), clang-cl about 5 (D34)
+          # clang-cl builds the three backends in about 5 minutes; the MSVC build (job "msvc" below) needs 40 to
+          # 80 minutes, so it does not run on pull requests (D34, D36)
           - os: windows-latest
             name: windows-latest, clang-cl
             cmake-flags: -T ClangCL -DOpenMP_C_FLAGS=/openmp -DOpenMP_CXX_FLAGS=/openmp -DOpenMP_C_LIB_NAMES=libomp -DOpenMP_CXX_LIB_NAMES=libomp "-DOpenMP_libomp_LIBRARY=C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/Llvm/x64/lib/libomp.lib"
@@ -45,6 +43,27 @@ jobs:
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} ${{ matrix.cmake-flags }}
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --parallel
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+
+  # MSVC is what Windows users build with, but it needs 40 to 80 minutes (one source file takes 20 minutes).
+  # It runs after a merge to master and on request ("Run workflow" in the Actions tab, or
+  # `gh workflow run CMake --ref <branch>`), not on pull requests (D36). The same steps as above.
+  msvc:
+    name: windows-latest, MSVC
+    if: github.event_name != 'pull_request'
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --parallel
