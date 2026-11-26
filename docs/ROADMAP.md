@@ -162,10 +162,11 @@ Milestone 2: Platforms
     (the AVX2 code compiled for AVX512F, DQ and VL), run-time detection including the operating
     system state, `OPTIMIZED_FFT_AVX512` (explicit only, never `AUTO`), the `avx512` name in tuning
     files, and tests; built and tested with GCC on a CPU **without** AVX-512. Still open: the 512-bit
-    kernels (upstream 11.6e has none, only helper functions in `otfft_misc.h`), a run on AVX-512
-    hardware (the Ryzen 9 9950X; the test of FAC-15 has never run), a benchmark against AVX2,
-    the decision whether `AUTO` may choose it (frequency effects on some Intel CPUs), the Clang and
+    kernels (upstream 11.6e has none, only helper functions in `otfft_misc.h`), the decision whether `AUTO` may choose it (frequency effects on some Intel CPUs), the Clang and
     MSVC builds, and `ffttune` and `otfft_bench` support for the backend.
+    Run on the Ryzen 9 9950X (2026-11-26): FAC-15 passes (all 79 test cases) and the backend is as
+    fast as AVX2 within about 15% at 16 lengths, one thread (section "AVX-512 backend on the Ryzen 9
+    9950X" of `docs/benchmarks.md`); a benchmark with `otfft_bench` and more than one thread is still open.
 *   [ ] **R2.2** Support ARM64 (NEON), including a CI job and the same
     run-time backend choice.
 

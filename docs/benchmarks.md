@@ -2704,3 +2704,61 @@ known to be good on others** (4 KB aliasing exists on Intel CPUs too, but the of
 the CPU); the cause was not isolated; the real FFT, DCT and Bluestein were not scanned for their own best
 distance, they only got the one of the complex FFT.
 
+
+
+AVX-512 backend on the Ryzen 9 9950X
+------------------------------------
+
+First run of the AVX-512 backend (D32, roadmap R2.1) on a CPU that has AVX-512. Data:
+`docs/benchmark-data/2026-11-26-ryzen9950x-linux/`.
+
+| | |
+|---|---|
+| CPU | AMD Ryzen 9 9950X, 16 cores / 32 threads, AVX2, FMA, AVX512F/DQ/VL/BW and more |
+| Software | Ubuntu 26.04, GCC 15.2, `-DOTFFT_WITH_AVX512=ON`, commit b45cfb0 |
+| Program | `tools/avx512_quick.sh --full`, then an ad-hoc program (not in the repository) that plans the same length with `OPTIMIZED_FFT_AVX2` and `OPTIMIZED_FFT_AVX512` and times `fwd0`, one thread, pinned to one core, best of 8 interleaved rounds of 0.3 s |
+
+Correctness: the AVX-512, backend and tuning tests pass (5 of 5 cases), and the whole suite passes (79 of 79 cases,
+30,082,563 assertions).
+
+Speed, one thread, complex FFT, microseconds, AVX-512 over AVX2 (`avx512-quick-result.txt`, a first single run):
+
+| N | AVX2 | AVX-512 | ratio |
+|---|---|---|---|
+| 256 | 0.2 | 0.2 | 0.94 |
+| 1,024 | 0.8 | 0.8 | 1.01 |
+| 4,096 | 4.1 | 4.1 | 1.00 |
+| 16,384 | 18.3 | 16.4 | 0.89 |
+| 65,536 | 132.7 | 129.3 | 0.97 |
+| 262,144 | 348.9 | 354.0 | 1.01 |
+| 1,048,576 | 1244.0 | 1239.3 | 1.00 |
+| 1,000 | 1.1 | 1.1 | 1.00 |
+| 10,000 | 15.8 | 15.4 | 0.97 |
+| 100,000 | 194.3 | 234.9 | 1.21 |
+
+Repeated run (`avx512-vs-avx2-repeat.txt`, best of 8 rounds):
+
+| N | AVX2 | AVX-512 | ratio |
+|---|---|---|---|
+| 100,000 | 222.8 | 186.8 | 0.84 |
+| 99,999 (Bluestein) | 2870.2 | 2339.9 | 0.82 |
+| 65,536 | 114.1 | 129.8 | 1.14 |
+| 131,072 | 259.9 | 226.4 | 0.87 |
+| 50,000 | 104.7 | 103.9 | 0.99 |
+| 200,000 | 394.1 | 379.4 | 0.96 |
+
+What this shows:
+
+*   **The backend is correct on AVX-512 hardware and about as fast as AVX2.** It has no 512-bit kernels; it is the
+    AVX2 code compiled with AVX-512 enabled, so no gain is expected.
+*   **N = 100,000 is not reliably slower.** The first run gave 1.21; two later runs of a separate program gave
+    0.97 and 0.84. The same length measured 194 to 235 us (AVX-512) and 187 to 224 us (AVX2) in different
+    processes. Run to run the ratio of one length can move by 20% or more; this fits the placement effect of
+    D31 (the buffers' addresses change with the process) but that was not checked.
+*   **Within one process the numbers are stable** (rounds of one length differ by about 1%), so the spread of
+    the ratios over lengths (0.82 to 1.14) is not timing noise inside a run. The cause was not traced.
+
+Limits: one CPU, one compiler (GCC), one thread, forward complex FFT and Bluestein only; the real FFT, DCT, the
+inverse and the OpenMP code were not timed; `otfft_bench` cannot select this backend yet, so there is no
+comparison with FFTW; the repeated run used a program that is not in the repository. `AUTO` must not choose
+the backend on this evidence (D32).
